@@ -1,0 +1,97 @@
+2025/03/02 14:58:14 http2: server: error reading preface from client //./pipe/docker_engine: file has already been closed
+#0 building with "default" instance using docker driver
+
+#1 [flask_backend internal] load .dockerignore
+#1 transferring context: 2B 0.0s done
+#1 DONE 0.0s
+
+#2 [flask_backend internal] load build definition from Dockerfile
+#2 transferring dockerfile: 405B 0.0s done
+#2 DONE 0.1s
+
+#3 [flask_backend internal] load metadata for docker.io/library/python:3.10
+#3 ...
+
+#4 [frontend internal] load .dockerignore
+#4 transferring context: 2B done
+#4 DONE 0.0s
+
+#5 [frontend internal] load build definition from Dockerfile
+#5 transferring dockerfile: 793B 0.0s done
+#5 DONE 0.0s
+
+#6 [express_backend internal] load build definition from Dockerfile
+#6 transferring dockerfile: 438B 0.0s done
+#6 DONE 0.0s
+
+#7 [express_backend internal] load .dockerignore
+#7 transferring context: 2B done
+#7 DONE 0.1s
+
+#8 [express_backend internal] load metadata for docker.io/library/node:23
+#8 ...
+
+#3 [flask_backend internal] load metadata for docker.io/library/python:3.10
+#3 DONE 1.2s
+
+#9 [frontend internal] load metadata for docker.io/library/nginx:latest
+#9 DONE 1.2s
+
+#8 [express_backend internal] load metadata for docker.io/library/node:23
+#8 DONE 1.2s
+
+#10 [frontend 1/5] FROM docker.io/library/node:23@sha256:c29271c7f2b4788fe9b90a7506d790dc8f2ff46132e1b70e71bf0c0679c8451c
+#10 DONE 0.0s
+
+#11 [flask_backend 1/5] FROM docker.io/library/python:3.10@sha256:e70cd7b54564482c0dee8cd6d8e314450aac59ea0ff669ffa715207ea0e04fa6
+#11 DONE 0.0s
+
+#12 [flask_backend internal] load build context
+#12 transferring context: 876B done
+#12 DONE 0.0s
+
+#13 [flask_backend 2/5] WORKDIR /app
+#13 CACHED
+
+#14 [flask_backend 3/5] COPY requirements.txt .
+#14 CACHED
+
+#15 [frontend internal] load build context
+#15 transferring context: 1.73kB 0.1s done
+#15 DONE 0.1s
+
+#16 [frontend stage-1 1/3] FROM docker.io/library/nginx:latest@sha256:9d6b58feebd2dbd3c56ab5853333d627cc6e281011cfd6050fa4bcf2072c9496
+#16 CACHED
+
+#17 [frontend build 3/6] COPY package*.json ./
+#17 CACHED
+
+#18 [frontend build 5/6] COPY . .
+#18 CACHED
+
+#19 [frontend build 4/6] RUN npm install
+#19 CACHED
+
+#20 [frontend build 6/6] RUN npm run build && ls -R /app
+#20 CACHED
+
+#21 [frontend stage-1 2/3] COPY --from=build /app/build /usr/share/nginx/html
+#21 ERROR: failed to calculate checksum of ref 49ad4595-0fdd-423e-a846-70e3d61d5e1b::tnlc2va6r0oyhqymdhbxa4igj: "/app/build": not found
+
+#22 [express_backend internal] load build context
+#22 transferring context: 68.73kB 0.1s done
+#22 DONE 0.1s
+
+#23 [frontend 2/5] WORKDIR /app
+#23 CACHED
+
+#24 [express_backend 3/5] COPY package.json package-lock.json ./
+#24 CANCELED
+
+#25 [flask_backend 4/5] RUN pip install --no-cache-dir -r requirements.txt
+#25 1.042 runc run failed: container process is already dead
+#25 CANCELED
+------
+ > [frontend stage-1 2/3] COPY --from=build /app/build /usr/share/nginx/html:
+------
+failed to solve: failed to compute cache key: failed to calculate checksum of ref 49ad4595-0fdd-423e-a846-70e3d61d5e1b::tnlc2va6r0oyhqymdhbxa4igj: "/app/build": not found

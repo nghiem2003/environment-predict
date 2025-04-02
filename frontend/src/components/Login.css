@@ -1,0 +1,78 @@
+/* Center the entire login container on the page */
+.login-container {
+  max-width: 400px;
+  margin: 100px auto; /* Center vertically and horizontally */
+  padding: 20px;
+  background-color: #f9f9f9;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  font-family: Arial, sans-serif;
+}
+
+/* Center the Login title */
+.login-container h1 {
+  font-size: 24px;
+  color: #007bff; /* Blue color for the title */
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+/* Style the input fields */
+.login-container .input {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 15px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 16px;
+  box-sizing: border-box;
+  background-color: #fdfdfd; /* Light background for better visibility */
+}
+
+/* Focus state for input fields */
+.login-container input:focus {
+  border-color: #007bff;
+  outline: none;
+  box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+}
+
+/* Style the Login button */
+.login-container button {
+  width: 100%;
+  padding: 10px;
+  background-color: #007bff;
+  color: white;
+  font-size: 16px;
+  font-weight: bold;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+/* Hover state for the button */
+.login-container button:hover {
+  background-color: #0056b3;
+}
+
+/* Error message styling */
+.login-container p {
+  color: red;
+  font-size: 14px;
+  text-align: center;
+  margin-top: 10px;
+}
+
+/* Make the login form responsive */
+@media (max-width: 480px) {
+  .login-container {
+    padding: 15px;
+    font-size: 14px;
+  }
+
+  .login-container input,
+  .login-container button {
+    font-size: 14px;
+  }
+}

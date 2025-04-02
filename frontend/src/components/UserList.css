@@ -1,0 +1,38 @@
+/* Container to handle overflow */
+.table-container {
+  max-width: 100%;
+  overflow-x: auto; /* Horizontal scroll for large tables */
+  overflow-y: auto; /* Vertical scroll for large tables */
+  margin: 20px 0;
+}
+
+/* Basic table styling */
+table {
+  width: 100%; /* Make the table full width */
+  border-collapse: collapse; /* Remove gaps between table cells */
+}
+
+/* Table header styling */
+th, td {
+  border: 1px solid #ddd;
+  padding: 8px 12px;
+  text-align: left;
+}
+
+/* Header cell styling */
+th {
+  background-color: #f4f4f4;
+  font-weight: bold;
+}
+
+/* Row hover effect for better visibility */
+tr:hover {
+  background-color: #f1f1f1;
+}
+
+/* Responsive table */
+@media (max-width: 768px) {
+  table {
+    font-size: 14px; /* Make text smaller on smaller screens */
+  }
+}

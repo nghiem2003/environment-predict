@@ -1,0 +1,7 @@
+flask
+numpy
+pickle5
+scikit-learn==1.5.2
+mlxtend==0.23.4
+lightgbm==4.6.0
+xgboost==2.1.4

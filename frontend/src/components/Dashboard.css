@@ -1,0 +1,64 @@
+.dashboard-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background-color: #f4f4f4;
+  padding: 20px;
+}
+
+.dashboard-card {
+  width: 70%;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  table-layout: fixed;
+  display: block;
+  overflow: hidden;
+}
+
+table th,
+table td {
+  border: 1px solid #ddd;
+  padding: 8px;
+  text-align: center;
+  word-wrap: break-word;
+  white-space: nowrap; /* Keeps text in a single line */
+  overflow: hidden;
+}
+
+table th {
+  background-color: #f2f2f2;
+  color: #333;
+}
+
+tbody {
+  display: block;
+  max-height: 50vh; /* Limits height to prevent overflow */
+  overflow-y: auto; /* Enables scrolling */
+  width: 100%;
+}
+
+.view-details-btn {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.view-details-btn:hover {
+  background-color: #0056b3;
+}
