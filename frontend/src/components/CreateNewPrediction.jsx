@@ -86,30 +86,7 @@ const CreateNewPrediction = () => {
     reader.readAsText(file);
   };
 
-  const handleInputChange = (event) => {
-    const { name, value } = event.target;
-    setInputs({
-      ...inputs,
-      [name]: parseFloat(value),
-    });
-  };
-
-  const handleSubmitSingle = async (e) => {
-    e.preventDefault();
-
-    try {
-      await axios.post('api/express/predictions', {
-        userId,
-        areaId: selectedAreaId,
-        modelName,
-        inputs,
-      });
-      alert('Single prediction success!');
-    } catch {
-      alert('Single prediction failed!');
-    }
-  };
-
+  
   const handleSubmitBatch = async (e) => {
     e.preventDefault();
 
@@ -133,6 +110,30 @@ const CreateNewPrediction = () => {
     }
   };
 
+
+  const handleInputChange = (event) => {
+    const { name, value } = event.target;
+    setInputs({
+      ...inputs,
+      [name]: parseFloat(value),
+    });
+  };
+
+  const handleSubmitSingle = async (e) => {
+    e.preventDefault();
+
+    try {
+      await axios.post('api/express/predictions', {
+        userId,
+        areaId: selectedAreaId,
+        modelName,
+        inputs,
+      });
+      alert('Single prediction success!');
+    } catch {
+      alert('Single prediction failed!');
+    }
+  };
   const filteredModels = allModels.filter((m) => m.type === areaType);
 
   return (
@@ -203,7 +204,37 @@ const CreateNewPrediction = () => {
       )}
 
       {activeTab === 'batch' && (
-        <form className="batch-form">
+        <form className="prediction-form">
+          <input type="number" value={userId || ''} readOnly required />
+
+          <select
+            value={selectedAreaId}
+            onChange={(e) => {
+              const area = areas.find((a) => a.id === +e.target.value);
+              setSelectedAreaId(e.target.value);
+              setAreaType(area?.area_type);
+            }}
+          >
+            <option value="">Select Area</option>
+            {areas.map((area) => (
+              <option key={area.id} value={area.id}>
+                {area.name}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={modelName}
+            onChange={(e) => setModelName(e.target.value)}
+            disabled={!areaType}
+          >
+            <option value="">Select Model</option>
+            {filteredModels.map((model) => (
+              <option key={model.value} value={model.value}>
+                {model.label}
+              </option>
+            ))}
+          </select>
           <input
             type="file"
             accept=".csv"

@@ -8,8 +8,18 @@ const Prediction = sequelize.define(
     user_id: { type: DataTypes.INTEGER, allowNull: false },
     area_id: { type: DataTypes.INTEGER, allowNull: false },
     prediction_text: { type: DataTypes.TEXT, allowNull: false },
+    createdAt: {
+      type: DataTypes.DATE,
+      defaultValue: Sequelize.NOW,
+      allowNull: false,
+    },
+    updatedAt: {
+      type: DataTypes.DATE,
+      defaultValue: Sequelize.NOW, 
+      allowNull: false,
+    }
   },
-  { timestamps: false, tableName: 'diagnose_predictions' }
+  { timestamps: true, tableName: 'diagnose_predictions' }
 );
 
 Prediction.associate = (models) => {

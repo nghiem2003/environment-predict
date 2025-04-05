@@ -7,7 +7,7 @@ const getToken = () => {
 
 // Create an Axios instance with default headers
 const axiosInstance = axios.create({
-  baseURL: 'http://localhost:8082', // Replace with your API base URL
+  baseURL: 'http://localhost:5000', // Replace with your API base URL
 });
 
 // Add a request interceptor to add the token to headers before each request

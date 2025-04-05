@@ -5,7 +5,7 @@ const {
   getAllUser,
   deactiveUser,
   createManagerUser,
-  createAdminUser,
+  //createAdminUser,
 } = require('../controllers/authController');
 const { authenticate, authorize } = require('../middlewares/authMiddleware');
 const router = express.Router();
@@ -26,5 +26,5 @@ router.post(
   createManagerUser
 );
 
-router.post('/create-admin', createAdminUser);
+//router.post('/create-admin', createAdminUser);
 module.exports = router;

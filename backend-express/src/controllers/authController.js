@@ -5,21 +5,22 @@ const jwt = require('jsonwebtoken');
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    const user = await User.findOne({ where: { email, hashedPassword } });
+    
+    const user = await User.findOne({ where: { email:email } });
+    const isPasswordMatch = await bcrypt.compare(password,user.password)
     if (!user) return res.status(401).json({ error: 'Invalid credentials' });
+
     if (user.status == 'inactivate')
       return res.status(403).json({ error: 'Your account is deactivated' });
     const token = jwt.sign({ id: user.id, role: user.role }, 'SECRET_KEY');
 
-    res.json({ token, role: user.role });
+    res.status(200).json({ token, role: user.role });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
 
-exports.createManagerUser = async (res, req) => {
+exports.createManagerUser = async (req, res) => {
   try {
     const { email, password, address = null, phone = null } = req.body;
     const isExist = await User.findOne({ where: { email } });
