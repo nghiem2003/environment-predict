@@ -32,6 +32,9 @@ Prediction.associate = (models) => {
     foreignKey: 'prediction_id',
     otherKey: 'nature_element_id',
   });
+  Prediction.belongsTo(models.User, {
+  foreignKey: 'user_id',
+});
 };
 
 module.exports = Prediction;

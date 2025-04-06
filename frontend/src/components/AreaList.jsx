@@ -111,8 +111,10 @@ const AreaList = () => {
           onChange={(e) => setAreaType(e.target.value)}
           value={areaType}
           className="filter-select"
+          
         >
-          <option value="">Select Area Type</option>
+          <option value="" disabled>Select Area Type</option>
+          <option value="">All</option>
           <option value="oyster">Oyster</option>
           <option value="cobia">Cobia</option>
         </select>

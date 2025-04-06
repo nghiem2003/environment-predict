@@ -121,7 +121,7 @@ exports.getPredictionDetails = async (req, res) => {
 
     res.json(prediction);
   } catch (error) {
-    console.error('Error fetching prediction details:', error.message);
+    //console.error('Error fetching prediction details:', error.message);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
@@ -150,11 +150,11 @@ exports.getAllPredictionsWithFilters = async (req, res) => {
 
     // Fetch predictions with filters, pagination, and includes
     const predictions = await Prediction.findAndCountAll({
-      where,
+      //where,
       include: [
-        {
+          {
           model: User,
-          attributes: ['id', 'email', 'role'], // Include user details
+          attributes: ['id','username', 'email', 'role'], // Include user details
         },
         {
           model: Area,
@@ -169,19 +169,20 @@ exports.getAllPredictionsWithFilters = async (req, res) => {
           ], // Include area details
         },
       ],
-      limit: parseInt(limit, 10), // Convert limit to integer
-      offset: parseInt(offset, 10), // Convert offset to integer
       order: [['id', 'DESC']], // Sort by most recent predictions
     });
 
-    res.json({
-      total: predictions.count, // Total number of matching records
-      limit: parseInt(limit, 10),
-      offset: parseInt(offset, 10),
-      data: predictions.rows, // Paginated predictions
-    });
+     if (predictions.length === 0) {
+      console.log('no record found');
+      return res
+        .status(404)
+        .json({ error: 'No predictions found for this user' });
+    }
+    res.json(predictions);
   } catch (error) {
     console.error('Error fetching predictions with filters:', error.message);
+    console.log('eror:',error);
+    
     res.status(500).json({ error: 'Internal server error' });
   }
 };

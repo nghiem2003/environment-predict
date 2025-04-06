@@ -105,7 +105,7 @@ const handleSubmitBatch = async (e) => {
 
     // Map each header to the corresponding value in the row
     for (let i = 0; i < headers.length; i++) {
-      obj[headers[i]] = parts[i];  // Key: header[i], Value: parts[i]
+      obj[headers[i]] = parseFloat(parts[i]);  // Key: header[i], Value: parts[i]
     }
 
     return obj;  // Return the object for the current row

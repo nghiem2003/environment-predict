@@ -156,7 +156,6 @@ const UserList = () => {
             <th>Phone</th>
             <th>Role</th>
             <th>Status</th>
-            <th>Password</th>
             <th>Actions</th>
           </tr>
         </thead>

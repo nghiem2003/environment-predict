@@ -46,7 +46,11 @@ exports.createManagerUser = async (req, res) => {
 exports.getAllUser = async (req, res) => {
   try {
     
-    const userList = await User.findAll();
+    const userList = await User.findAll({ order: [
+    // Custom ordering for role: admin first, then expert
+   
+    ['username', 'ASC'], // Then order by name descending
+  ],});
     return res.status(200).json({ data: userList });
   } catch (e) {
     return res.status(500).json({ error: 'Internal server error' });
@@ -58,7 +62,8 @@ exports.deactiveUser = async (req, res) => {
     const { username } = req.body;
     const user = await User.findOne({ username: username });
     if (!user) return res.status(404).json({ error: 'User not found' });
-    user.status = 'inactivate';
+    
+    user.status = 'inactive';
     await user.save();
     return res.status(200).json({ message: `User ${username} is deactivated` });
   } catch (e) {

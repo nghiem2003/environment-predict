@@ -12,6 +12,7 @@ const Dashboard = () => {
   const [showModal, setShowModal] = useState(false);
   const [selectedPredictionId, setSelectedPredictionId] = useState(null);
   const [userId, setUserId] = useState(null);
+  const [userRole,setUserRole] = useState(null)
   const [predictionList, setPredictionList] = useState([]);
 
   useEffect(() => {
@@ -20,6 +21,7 @@ const Dashboard = () => {
         const decodedToken = jwtDecode(token); // Decode the JWT token
         console.log(decodedToken);
         setUserId(decodedToken.id); // Assuming `id` is the field for userId in the token
+        setUserRole(decodedToken.role)
         setTimeout(100);
         console.log(userId);
         if(decodedToken.role === 'admin') {
@@ -27,7 +29,9 @@ const Dashboard = () => {
           
           axios
           .get(`/api/express/predictions/admin`).then((response) => {
-            setPredictionList(response.data);
+            setPredictionList(response.data.rows);
+            console.log(response.data);
+            
           })
           .catch((error) => {
             console.error('Error fetching prediction details:', error);
@@ -70,6 +74,8 @@ const Dashboard = () => {
           <thead>
             <tr>
               <th>ID</th>
+              {userRole === 'admin' ?<th>Creator</th> : <></>}
+              <th>Area</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -78,6 +84,8 @@ const Dashboard = () => {
               predictionList.map((item) => (
                 <tr>
                   <td className='predict-id'>Prediction#{item.id}</td>
+                  {userRole === 'admin' ?<td>{item.User.username}</td> : <></>}
+                  <td>{item.Area.name}</td>
                   <td className='action'>
                     <button
                       className="view-details-btn"

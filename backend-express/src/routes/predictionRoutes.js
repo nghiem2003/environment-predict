@@ -19,19 +19,21 @@ router.post(
   //authorize(['expert', 'admin']),
   createPrediction
 );
-router.get('/:areaId/latest', getLatestPrediction);
-router.get(
-  '/:predictionId',
-  authenticate,
-  authorize(['expert', 'admin']),
-  getPredictionDetails
-);
 router.get(
   '/admin',
   authenticate,
   authorize(['admin']),
   getAllPredictionsWithFilters
 );
+router.get('/:areaId/latest', getLatestPrediction);
+
+router.get(
+  '/:predictionId',
+  authenticate,
+  authorize(['expert', 'admin']),
+  getPredictionDetails
+);
+
 
 router.get(
   '/user/:userId',

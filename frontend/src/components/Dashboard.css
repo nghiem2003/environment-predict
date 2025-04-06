@@ -39,15 +39,15 @@ table td {
   overflow: hidden;
 }
 
+
 table th {
   background-color: #f2f2f2;
   color: #333;
 }
 
 tbody {
-  display: block;
   max-height: 50vh; /* Limits height to prevent overflow */
-  overflow-y: auto; /* Enables scrolling */
+  overflow-y: scroll; /* Enables scrolling */
   width: 100%;
 }
 
