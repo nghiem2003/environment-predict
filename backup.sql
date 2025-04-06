@@ -560,22 +560,22 @@ COPY public.diagnose_prediction_natureelements (id, prediction_id, nature_elemen
 -- Data for Name: diagnose_predictions; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.diagnose_predictions (id, user_id, area_id, prediction_text) FROM stdin;
-12	2	8	-1
-13	2	2	-1
-14	2	8	-1
-15	1	3	-1
-16	1	3	-1
-17	2	2	3
-18	2	3	-1
-19	2	3	-1
-20	2	3	-1
-21	2	3	0
-22	2	3	-1
-23	2	3	-1
-24	2	3	-1
-25	2	5	13
-26	2	4	-1
+COPY public.diagnose_predictions (id, user_id, area_id, prediction_text,createdAt,updatedAt) FROM stdin;
+12	2	8	-1	2024-01-15T12:34:56.000Z
+13	2	2	-1  2024-02-14T08:00:00.000Z
+14	2	8	-1  2024-05-05T05:05:05.000Z
+15	1	3	-1  2024-11-11T11:11:11.000Z
+16	1	3	-1  2025-02-28T23:59:59.000Z
+17	2	2	3   2025-03-10T12:34:56.000Z
+18	2	3	-1  2025-03-15T08:05:12.000Z
+19	2	3	-1  2025-03-25T19:15:33.000Z
+20	2	3	-1  2025-03-30T21:45:12.000Z
+21	2	3	0   2025-03-10T12:34:56.000Z
+22	2	3	-1  2025-02-05T06:45:00.000Z
+23	2	3	-1  2024-12-15T05:45:23.000Z
+24	2	3	-1  2024-10-20T19:55:12.000Z
+25	2	5	13  2024-11-30T23:01:01.000Z
+26	2	4	-1  2025-03-15T08:05:12.000Z
 \.
 
 
@@ -585,9 +585,9 @@ COPY public.diagnose_predictions (id, user_id, area_id, prediction_text) FROM st
 -- Data for Name: users; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.users (id, username, password, role) FROM stdin;
-1	admin1	1234	admin
-2	expert1	1234	expert
+COPY public.users (id, name,email, password, role) FROM stdin;
+1	Admin1 admin1@gmail.com	$2b$10$8drYopD10fl9OyxWHCybXeDccD4h2sZa4v2sx5FmDP/RBLfYhv7LO	admin
+2	Expert1 expert1@gmail.com	$2b$10$Wuk6i5.psEePYk78HjdrGed2B8DcXOxUDG292OzhV6BKnUBBgtZza	expert
 \.
 
 
