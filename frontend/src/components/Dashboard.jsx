@@ -7,7 +7,7 @@ import './Dashboard.css';
 
 const Dashboard = () => {
   const { token } = useSelector((state) => state.auth);
-  console.log(token);
+  console.log('The token',token);
 
   const [showModal, setShowModal] = useState(false);
   const [selectedPredictionId, setSelectedPredictionId] = useState(null);
@@ -22,6 +22,17 @@ const Dashboard = () => {
         setUserId(decodedToken.id); // Assuming `id` is the field for userId in the token
         setTimeout(100);
         console.log(userId);
+        if(decodedToken.role === 'admin') {
+          console.log('start ftching');
+          
+          axios
+          .get(`/api/express/predictions/admin`).then((response) => {
+            setPredictionList(response.data);
+          })
+          .catch((error) => {
+            console.error('Error fetching prediction details:', error);
+          });
+        }else{
         axios
           .get(`/api/express/predictions/user/${decodedToken.id}`)
           .then((response) => {
@@ -30,6 +41,7 @@ const Dashboard = () => {
           .catch((error) => {
             console.error('Error fetching prediction details:', error);
           });
+        }
       } catch (error) {
         console.error('Error decoding token:', error);
         alert('Invalid token. Please log in again.');
@@ -65,8 +77,8 @@ const Dashboard = () => {
             {predictionList.length > 0 ? (
               predictionList.map((item) => (
                 <tr>
-                  <td>{item.id}</td>
-                  <td>
+                  <td className='predict-id'>Prediction#{item.id}</td>
+                  <td className='action'>
                     <button
                       className="view-details-btn"
                       onClick={() => handleViewDetails(item.id)}
@@ -77,7 +89,7 @@ const Dashboard = () => {
                 </tr>
               ))
             ) : (
-              <></>
+              <tr><td className='predict-id'></td><td className='action'></td></tr>
             )}
           </tbody>
         </table>

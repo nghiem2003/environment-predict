@@ -1,38 +1,162 @@
-/* Container to handle overflow */
-.table-container {
-  max-width: 100%;
-  overflow-x: auto; /* Horizontal scroll for large tables */
-  overflow-y: auto; /* Vertical scroll for large tables */
-  margin: 20px 0;
+/* UserManagementPage.css */
+* {
+  box-sizing: border-box;
 }
 
-/* Basic table styling */
-table {
-  width: 100%; /* Make the table full width */
-  border-collapse: collapse; /* Remove gaps between table cells */
+.user-management {
+  max-width: 1200px;
+  margin: 20px auto;
+  background: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
 }
 
-/* Table header styling */
-th, td {
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.search-input {
+  padding: 10px;
+  width: 250px;
+  margin: 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.add-btn {
+  padding: 10px 20px;
+  background-color: #28a745;
+  border: none;
+  color: #fff;
+  border-radius: 4px;
+  cursor: pointer;
+  margin: 10px;
+}
+
+.add-btn:hover {
+  background-color: #218838;
+}
+
+.user-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+
+.user-table th,
+.user-table td {
+  padding: 12px;
   border: 1px solid #ddd;
-  padding: 8px 12px;
-  text-align: left;
+  text-align: center;
+  font-size: 14px;
 }
 
-/* Header cell styling */
-th {
-  background-color: #f4f4f4;
-  font-weight: bold;
+.user-table th {
+  background-color: #f8f9fa;
 }
 
-/* Row hover effect for better visibility */
-tr:hover {
-  background-color: #f1f1f1;
+.user-table td button {
+  padding: 6px 12px;
+  margin: 2px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
 }
 
-/* Responsive table */
-@media (max-width: 768px) {
-  table {
-    font-size: 14px; /* Make text smaller on smaller screens */
-  }
+.user-table td button:first-child {
+  background-color: #007bff;
+  color: #fff;
+}
+
+.user-table td button:last-child {
+  background-color: #dc3545;
+  color: #fff;
+}
+
+.user-table td button:hover {
+  opacity: 0.8;
+}
+
+/* Popup styles */
+.popup {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+}
+
+.popup-content {
+  background: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  width: 400px;
+  max-width: 90%;
+  text-align: center;
+  box-shadow: 0 0 15px rgba(0,0,0,0.2);
+}
+
+.popup-content h3 {
+  margin-bottom: 20px;
+  font-size: 18px;
+}
+
+.popup-content form,
+.popup-content .popup-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.popup-content input,
+.popup-content select {
+  padding: 10px;
+  margin-bottom: 15px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.popup-actions {
+  display: flex;
+  justify-content: space-around;
+}
+
+.popup-actions button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.popup-actions button:first-child {
+  background-color: #007bff;
+  color: #fff;
+}
+
+.popup-actions button:last-child {
+  background-color: #dc3545;
+  color: #fff;
+}
+
+.popup-actions button:hover {
+  opacity: 0.8;
+}
+
+.revealed-password {
+  margin-top: 15px;
+  font-size: 16px;
+  color: #333;
 }

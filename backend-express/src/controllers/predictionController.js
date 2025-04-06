@@ -32,6 +32,7 @@ exports.createPrediction = async (req, res) => {
       user_id: userId,
       area_id: areaId,
       prediction_text: prediction,
+      ...(req.body.createdAt && { createdAt: req.body.createdAt, updatedAt: req.body.createdAt }),
     });
 
     for (const [elementName, value] of Object.entries(inputs)) {
@@ -128,6 +129,8 @@ exports.getPredictionDetails = async (req, res) => {
 exports.getAllPredictionsWithFilters = async (req, res) => {
   try {
     // Ensure the user is an admin
+    console.log('Doing fetch');
+    
     if (req.user.role !== 'admin') {
       return res.status(403).json({ error: 'Access denied. Admins only.' });
     }
@@ -151,7 +154,7 @@ exports.getAllPredictionsWithFilters = async (req, res) => {
       include: [
         {
           model: User,
-          attributes: ['id', 'username', 'role'], // Include user details
+          attributes: ['id', 'email', 'role'], // Include user details
         },
         {
           model: Area,
@@ -209,6 +212,7 @@ exports.getPredictionsByUser = async (req, res) => {
     });
 
     if (predictions.length === 0) {
+      console.log('no record found');
       return res
         .status(404)
         .json({ error: 'No predictions found for this user' });
@@ -221,6 +225,8 @@ exports.getPredictionsByUser = async (req, res) => {
 };
 
 exports.createBatchPrediction = async (req, res) => {
+  console.log('Batch Processing');
+  
   const { userId, areaId, modelName, data } = req.body;
   try {
     const endpoint = modelName.includes('oyster')
@@ -231,7 +237,8 @@ exports.createBatchPrediction = async (req, res) => {
     const predictionsResult = [];
 
     for (const inputs of data) {
-      const flaskResponse = await axios.post(flaskUrl, inputs, {
+      const {createdAt, ...natureElements} = inputs
+      const flaskResponse = await axios.post(flaskUrl, natureElements, {
         params: { model: modelName },
       });
       const { prediction } = flaskResponse.data;
@@ -240,6 +247,8 @@ exports.createBatchPrediction = async (req, res) => {
         user_id: userId,
         area_id: areaId,
         prediction_text: prediction,
+        ...(createdAt && { createdAt: createdAt, updatedAt: createdAt }),
+
       });
       for (const [elementName, value] of Object.entries(inputs)) {
       const entry = await NatureElement.findOne({

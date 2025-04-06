@@ -8,7 +8,9 @@ exports.login = async (req, res) => {
     
     const user = await User.findOne({ where: { email:email } });
     const isPasswordMatch = await bcrypt.compare(password,user.password)
-    if (!user) return res.status(401).json({ error: 'Invalid credentials' });
+    console.log(isPasswordMatch);
+    
+    if (!user && !isPasswordMatch) return res.status(401).json({ error: 'Invalid credentials' });
 
     if (user.status == 'inactivate')
       return res.status(403).json({ error: 'Your account is deactivated' });
@@ -43,7 +45,8 @@ exports.createManagerUser = async (req, res) => {
 
 exports.getAllUser = async (req, res) => {
   try {
-    const userList = await User.getAllUser();
+    
+    const userList = await User.findAll();
     return res.status(200).json({ data: userList });
   } catch (e) {
     return res.status(500).json({ error: 'Internal server error' });
@@ -62,6 +65,20 @@ exports.deactiveUser = async (req, res) => {
     return res.status(500).json({ error: e.message });
   }
 };
+
+exports.activateUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await User.findOne({ where: { id } });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    user.status = 'active';
+    await user.save();
+    return res.status(200).json({ message: `User ${user.username} is activated` });
+  } catch (e) {
+    return res.status(500).json({ error: e.message });
+  }
+};
+
 
 exports.updateUserById = async (req, res) => {
   try {

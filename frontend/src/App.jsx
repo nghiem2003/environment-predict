@@ -17,6 +17,8 @@ import CreatePrediction from './components/CreateNewPrediction';
 import ProtectedRoute from './components/ProtectedRoute';
 import 'leaflet/dist/leaflet.css';
 import './App.css'; // Import CSS for header and footer
+import AreaList from './components/AreaList';
+import UserList from './components/UserList';
 
 const App = () => {
   const navigate = useNavigate();
@@ -106,11 +108,29 @@ const App = () => {
               }
             />
             <Route path="/Login" element={<Login />} />
+            
+            
             <Route
               path="/dashboard"
               element={
                 <ProtectedRoute roles={['expert', 'admin']}>
                   <Dashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/areas"
+              element={
+                <ProtectedRoute roles={['admin']}>
+                  <AreaList />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/user-list"
+              element={
+                <ProtectedRoute roles={['admin']}>
+                  <UserList />
                 </ProtectedRoute>
               }
             />

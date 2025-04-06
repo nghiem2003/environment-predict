@@ -30,6 +30,7 @@ table {
 
 table th,
 table td {
+  width: 100%;
   border: 1px solid #ddd;
   padding: 8px;
   text-align: center;
@@ -61,4 +62,12 @@ tbody {
 
 .view-details-btn:hover {
   background-color: #0056b3;
+}
+
+
+.predict-id {
+  width: 70%;
+}
+.action {
+  width: 30%;
 }

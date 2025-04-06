@@ -77,38 +77,56 @@ const CreateNewPrediction = () => {
   }, []);
 
   const handleCSVUpload = (e) => {
-    const file = e.target.files[0];
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const text = event.target.result;
-      setCsvElements(text.split(/\r?\n/).filter(Boolean));
-    };
-    reader.readAsText(file);
+  const file = e.target.files[0];
+  const reader = new FileReader();
+
+  reader.onload = (event) => {
+    const text = event.target.result;
+    // Split the CSV content into lines, remove any empty lines
+    const csvElements = text.split(/\r?\n/).filter(Boolean);
+
+    // Store the lines in state (first line is the header, the rest are data rows)
+    setCsvElements(csvElements);
   };
 
+  reader.readAsText(file);
+};
+
+const handleSubmitBatch = async (e) => {
+  e.preventDefault();
   
-  const handleSubmitBatch = async (e) => {
-    e.preventDefault();
+  // Get the header (keys)
+  const headers = csvElements[0].split(',');  // Split the first line into headers
 
-    const data = csvElements.map((line) => {
-      const parts = line.split(',');
-      const obj = {};
-      for (let i = 0; i < parts.length; i += 2) obj[parts[i]] = parts[i + 1];
-      return obj;
-    });
+  // Process the remaining lines (data rows)
+  const data = csvElements.slice(1).map((line) => {
+    const parts = line.split(',');  // Split each data line into parts
+    const obj = {};
 
-    try {
-      await axios.post('api/express/predictions/batch', {
-        userId,
-        areaId: selectedAreaId,
-        modelName,
-        data,
-      });
-      alert('Batch prediction success!');
-    } catch {
-      alert('Batch prediction failed!');
+    // Map each header to the corresponding value in the row
+    for (let i = 0; i < headers.length; i++) {
+      obj[headers[i]] = parts[i];  // Key: header[i], Value: parts[i]
     }
-  };
+
+    return obj;  // Return the object for the current row
+  });
+
+  // Log the processed data
+  console.log('Processed data:', data);
+
+  // Send the data to your backend API
+  try {
+    await axios.post('api/express/predictions/batch', {
+      userId,
+      areaId: selectedAreaId,
+      modelName,
+      data,
+    });
+    alert('Batch prediction success!');
+  } catch (error) {
+    alert('Batch prediction failed!');
+  }
+};
 
 
   const handleInputChange = (event) => {

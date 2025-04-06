@@ -5,6 +5,7 @@ const {
   getAllUser,
   deactiveUser,
   createManagerUser,
+  activateUser
   //createAdminUser,
 } = require('../controllers/authController');
 const { authenticate, authorize } = require('../middlewares/authMiddleware');
@@ -19,6 +20,7 @@ router.patch(
   authorize(['admin']),
   deactiveUser
 );
+router.patch('/activate/:id', authenticate, authorize(['admin']), activateUser);
 router.post(
   '/create-user',
   authenticate,

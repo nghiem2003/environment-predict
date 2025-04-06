@@ -11,7 +11,7 @@ const { authenticate, authorize } = require('../middlewares/authMiddleware');
 
 const router = express.Router();
 
-router.post('/batch',authenticate,authorize(['expert']),createBatchPrediction)
+router.post('/batch',authenticate,authorize(['expert']),createBatchPrediction);
 
 router.post(
   '/',
