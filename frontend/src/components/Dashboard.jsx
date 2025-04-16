@@ -8,7 +8,9 @@ import './Dashboard.css';
 const Dashboard = () => {
   const { token } = useSelector((state) => state.auth);
   console.log('The token',token);
-
+  const [currentPage, setCurrentPage] = useState(0);
+  const [totalPredictions, setTotalPredictions] = useState(0);
+  const predictionsPerPage = 10;
   const [showModal, setShowModal] = useState(false);
   const [selectedPredictionId, setSelectedPredictionId] = useState(null);
   const [userId, setUserId] = useState(null);
@@ -28,19 +30,33 @@ const Dashboard = () => {
           console.log('start ftching');
           
           axios
-          .get(`/api/express/predictions/admin`).then((response) => {
+          .get(`/api/express/predictions/admin`,{
+            params: {
+              limit: 10, // Limit number of results per page
+              offset: currentPage * 10,
+            }
+          }
+          ).then((response) => {
             setPredictionList(response.data.rows);
             console.log(response.data);
-            
+            setTotalPredictions(response.data.count); // Set total areas for pagination
           })
           .catch((error) => {
             console.error('Error fetching prediction details:', error);
           });
         }else{
         axios
-          .get(`/api/express/predictions/user/${decodedToken.id}`)
+          .get(`/api/express/predictions/user/${decodedToken.id}`,{
+            params: {
+              limit: 10, // Limit number of results per page
+              offset: currentPage * 10,
+            }
+          })
           .then((response) => {
             setPredictionList(response.data);
+             setTotalPredictions(response.data.length);
+             console.log(response.data);
+
           })
           .catch((error) => {
             console.error('Error fetching prediction details:', error);
@@ -51,7 +67,7 @@ const Dashboard = () => {
         alert('Invalid token. Please log in again.');
       }
     }
-  }, []);
+  }, [currentPage]);
 
   useEffect(() => {}, [predictionList]);
 
@@ -63,6 +79,19 @@ const Dashboard = () => {
   const closeModal = () => {
     setShowModal(false);
     setSelectedPredictionId(null);
+  };
+
+    const totalPages = Math.ceil(totalPredictions / predictionsPerPage);
+  const handleNextPage = () => {
+    if (currentPage < totalPages - 1) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  const handlePrevPage = () => {
+    if (currentPage > 0) {
+      setCurrentPage(currentPage - 1);
+    }
   };
 
   return (
@@ -101,6 +130,15 @@ const Dashboard = () => {
             )}
           </tbody>
         </table>
+        <div className="pagination">
+        <button onClick={handlePrevPage} disabled={currentPage === 0}>
+          Previous
+        </button>
+        <span>Page {currentPage + 1} of {totalPages}</span>
+        <button onClick={handleNextPage} disabled={currentPage === totalPages - 1}>
+          Next
+        </button>
+      </div>
       </div>
 
       {showModal && (

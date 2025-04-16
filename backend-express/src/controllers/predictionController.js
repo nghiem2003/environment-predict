@@ -61,7 +61,8 @@ exports.createPrediction = async (req, res) => {
 exports.getLatestPrediction = async (req, res) => {
   try {
     const { areaId } = req.params;
-
+    console.log('areaId:', areaId); 
+    
     // Find the latest prediction for the area
     const prediction = await Prediction.findOne({
       where: { area_id: areaId },
@@ -76,11 +77,15 @@ exports.getLatestPrediction = async (req, res) => {
       ],
     });
 
+
+
     if (!prediction)
       return res.status(404).json({ error: 'No predictions found' });
 
     res.json(prediction);
   } catch (error) {
+    console.log(error.message);
+    
     res.status(500).json({ error: error.message });
   }
 };
@@ -143,13 +148,7 @@ exports.getAllPredictionsWithFilters = async (req, res) => {
       offset = 0,
     } = req.query;
 
-    // Build the where clause dynamically
-    const where = {};
-    if (userId) where.user_id = userId;
-    if (areaId) where.area_id = areaId;
-
-    // Fetch predictions with filters, pagination, and includes
-    const predictions = await Prediction.findAndCountAll({
+    const options = {
       //where,
       include: [
           {
@@ -161,7 +160,6 @@ exports.getAllPredictionsWithFilters = async (req, res) => {
           attributes: [
             'id',
             'name',
-            'address',
             'latitude',
             'longitude',
             'area',
@@ -170,7 +168,22 @@ exports.getAllPredictionsWithFilters = async (req, res) => {
         },
       ],
       order: [['id', 'DESC']], // Sort by most recent predictions
-    });
+    }
+
+    if (limit) {
+      options.limit = parseInt(limit, 10); // Convert limit to an integer
+    }
+    if (offset) {
+      options.offset = parseInt(offset, 10); // Convert offset to an integer
+    }
+
+    // Build the where clause dynamically
+    const where = {};
+    if (userId) where.user_id = userId;
+    if (areaId) where.area_id = areaId;
+
+    // Fetch predictions with filters, pagination, and includes
+    const predictions = await Prediction.findAndCountAll(options);
 
      if (predictions.length === 0) {
       console.log('no record found');
@@ -201,7 +214,6 @@ exports.getPredictionsByUser = async (req, res) => {
           attributes: [
             'id',
             'name',
-            'address',
             'latitude',
             'longitude',
             'area',

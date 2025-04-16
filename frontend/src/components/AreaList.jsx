@@ -3,6 +3,9 @@ import axios from '../axios';
 import './AreaList.css';
 
 const AreaList = () => {
+  const [currentPage, setCurrentPage] = useState(0);
+  const [totalAreas, setTotalAreas] = useState(0);
+  const areasPerPage = 10;  // Number of areas per page
   const [areas, setAreas] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [areaType, setAreaType] = useState('');
@@ -11,11 +14,12 @@ const AreaList = () => {
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [selectedArea, setSelectedArea] = useState(null);
+  const [regionList, setRegionList] = useState([]);
   const [newArea, setNewArea] = useState({
     areaName: '',
     lat: '',
     long: '',
-    address: '',
+    region: '',
     area_type: 'oyster',
   });
 
@@ -30,11 +34,17 @@ const AreaList = () => {
           lat_max: latRange.max,
           long_min: longRange.min,
           long_max: longRange.max,
+          limit: 10, // Limit number of results per page
+          offset: currentPage * 10,
         },
       });
-      setAreas(response.data);
-      console.log(response.data);
-      
+      setAreas(response.data.areas);
+      setTotalAreas(response.data.total); // Set total areas for pagination
+      console.log(response.data.areas);
+      console.log(response.data.total);
+      const regionResponse = await axios.get('/api/express/areas/region');
+      setRegionList(regionResponse.data); // Set regions for the dropdown
+      console.log(regionResponse.data);
     } catch (error) {
       console.error('Error fetching areas:', error);
     }
@@ -43,7 +53,7 @@ const AreaList = () => {
   // Fetch areas when dependencies change
   useEffect(() => {
     fetchAreas();
-  }, [searchTerm, areaType, latRange, longRange]);
+  }, [searchTerm, areaType, latRange, longRange, currentPage]);
 
   const handleAddArea = async (e) => {
     e.preventDefault();
@@ -57,7 +67,7 @@ const AreaList = () => {
       }
       setIsPopupOpen(false); // Close the popup after successful creation
       fetchAreas(); // Refresh the area list
-      setNewArea({ areaName: '', lat: '', long: '', address: '', area_type: 'oyster' });
+      setNewArea({ areaName: '', lat: '', long: '', region: '', area_type: 'oyster' });
     } catch (error) {
       console.error('Error saving area:', error);
     }
@@ -82,7 +92,9 @@ const AreaList = () => {
   };
 
   const handleInputChange = (e) => {
-    const { name, value } = e.target;    
+    const { name, value } = e.target;  
+    console.log(name,',',value);
+      
     setNewArea((prevState) => {
         const updatedState = {
       ...prevState,
@@ -97,6 +109,18 @@ const AreaList = () => {
     setSearchTerm(e.target.value);
   };
 
+  const totalPages = Math.ceil(totalAreas / areasPerPage);
+  const handleNextPage = () => {
+    if (currentPage < totalPages - 1) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  const handlePrevPage = () => {
+    if (currentPage > 0) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
   return (
     <div className="app">
       <div className="header">
@@ -172,7 +196,7 @@ const AreaList = () => {
                 <td>{area.area_type}</td>
                 <td>{area.latitude}</td>
                 <td>{area.longitude}</td>
-                <td>{area.address}</td>
+                <td>{area.Region?.province},{area.Region?.name}</td>
                 <td>
                   <button onClick={() => handleUpdate(area.id)}>Update</button>
                   <button onClick={() => setIsDeleteConfirmOpen(true) && setSelectedArea(area)}>
@@ -188,7 +212,15 @@ const AreaList = () => {
           )}
         </tbody>
       </table>
-
+          <div className="pagination">
+        <button onClick={handlePrevPage} disabled={currentPage === 0}>
+          Previous
+        </button>
+        <span>Page {currentPage + 1} of {totalPages}</span>
+        <button onClick={handleNextPage} disabled={currentPage === totalPages - 1}>
+          Next
+        </button>
+      </div>
       {/* Add/Update Area Popup */}
       {isPopupOpen && (
         <div className="popup">
@@ -216,13 +248,19 @@ const AreaList = () => {
                 value={newArea.longitude}
                 onChange={(e)=> handleInputChange(e)}
               />
-              <input
-                type="text"
-                name="address"
-                placeholder="Address"
-                value={newArea.address}
-                onChange={(e)=> handleInputChange(e)}
-              />
+              <select
+        name="region"
+        value={regionList.find((region) => region.id === newArea.region)?.id || ''}
+        onChange={(e) =>handleInputChange(e)}
+        id="region"
+      >
+        <option value="" disabled>Select a region</option>
+        {regionList.map((region) => (
+          <option key={region.id} value={region.id}>
+            {region.province},{region.name} 
+          </option>
+        ))}
+      </select>
               <select
                 name="area_type"
                 value={newArea.area_type}
@@ -235,7 +273,7 @@ const AreaList = () => {
               <button type="submit">Save</button>
               <button type="button" onClick={() =>{ 
                 setIsPopupOpen(false)
-                setNewArea({ areaName: '', lat: '', long: '', address: '', area_type: 'oyster' });
+                setNewArea({ areaName: '', lat: '', long: '', region: '', area_type: 'oyster' });
                 }}>
                 Cancel
               </button>

@@ -8,6 +8,7 @@ const User = sequelize.define(
     username: { type: DataTypes.STRING, unique: true, allowNull: false },
     password: { type: DataTypes.STRING, allowNull: false },
     email: { type: DataTypes.STRING, unique: true, allowNull: false },
+    region: {type: DataTypes.UUID, allowNull: true},
     address: { type: DataTypes.STRING, allowNull: true },
     phone: { type: DataTypes.STRING, allowNull: true },
     role: {

@@ -15,9 +15,9 @@ const WelcomePage = () => {
       .then((response) => {
         console.log(response);
 
-        setAreas(response.data);
+        setAreas(response.data.areas);
 
-        setFilteredAreas(response.data);
+        setFilteredAreas(response.data.areas);
       })
       .catch((error) => console.error('Error fetching areas:', error));
   }, []);
@@ -47,7 +47,7 @@ const WelcomePage = () => {
         <ul>
           {filteredAreas.map((area) => (
             <li key={area.id} onClick={() => handleAreaSelect(area.id)}>
-              {area.name}
+              {area.Region?.province},{area.Region?.name},{area.name}
             </li>
           ))}
         </ul>

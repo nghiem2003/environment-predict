@@ -3,9 +3,9 @@ import { MapContainer, TileLayer, Circle, Popup } from 'react-leaflet';
 import { LatLng } from 'leaflet';
 import 'leaflet/dist/leaflet.css'; // Import Leaflet CSS
 
-const MapView = ({ latitude, longitude, result }) => {
+const MapView = ({ latitude, longitude, result, area }) => {
   const center = new LatLng(latitude, longitude);
-
+  const color = result == 1 ? 'blue' : result == 0 ? 'yellow' : 'red'
   return (
     <div style={{ width: '100%', height: '400px' }}>
       <MapContainer
@@ -21,12 +21,12 @@ const MapView = ({ latitude, longitude, result }) => {
         {/* Circle Marker */}
         <Circle
           center={center}
-          radius={5000} // Example radius in meters
+          radius={area} // Example radius in meters
           pathOptions={{
-            fillColor: result == 1 ? 'blue' : result == 0 ? 'yellow' : 'red',
+            fillColor: color,
             fillOpacity: 0.2,
-            strokeColor: result == 1 ? 'blue' : result == 0 ? 'yellow' : 'red',
-            strokeOpacity: 0.5,
+            color: color,
+            opacity: 0.5,
           }}
         >
           <Popup>

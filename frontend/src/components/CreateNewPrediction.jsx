@@ -8,6 +8,7 @@ const CreateNewPrediction = () => {
   const { token } = useSelector((state) => state.auth);
   const [userId, setUserId] = useState(null);
   const [areas, setAreas] = useState([]);
+  const [region, setRegion] = useState('');
   const [selectedAreaId, setSelectedAreaId] = useState('');
   const [areaType, setAreaType] = useState('');
   const [modelName, setModelName] = useState('');
@@ -54,6 +55,9 @@ const CreateNewPrediction = () => {
       try {
         const decodedToken = jwtDecode(token); // Decode the JWT token
         setUserId(decodedToken.id); // Assuming `id` is the field for userId in the token
+        setRegion(decodedToken.region); // Assuming `region` is the field for region in the token
+        console.log(decodedToken);
+        
       } catch (error) {
         console.error('Error decoding token:', error);
         alert('Invalid token. Please log in again.');
@@ -66,10 +70,17 @@ const CreateNewPrediction = () => {
     const fetchAreas = async () => {
       try {
         const response = await axios.get('api/express/areas');
-        setAreas(response.data);
+        console.log(response.data);
+        console.log(response.data.areas[0].region);
+        const decodedToken = jwtDecode(token); 
+        console.log(decodedToken.region);
+        
+        const areaList = response.data.areas.filter((area) => area.region === decodedToken.region);
+        console.log('arealist:',areaList);
+        setAreas(areaList);
       } catch (error) {
         console.error('Error fetching areas:', error);
-        alert('Failed to fetch areas. Please try again.');
+        //alert('Failed to fetch areas. Please try again.');
       }
     };
 
@@ -185,11 +196,13 @@ const handleSubmitBatch = async (e) => {
             }}
           >
             <option value="">Select Area</option>
-            {areas.map((area) => (
+            {areas.length > 0 ? areas.map((area) => (
               <option key={area.id} value={area.id}>
                 {area.name}
               </option>
-            ))}
+            )) : (
+              <option value="">Loading areas...</option>
+            )}
           </select>
 
           <select

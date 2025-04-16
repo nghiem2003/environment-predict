@@ -5,6 +5,7 @@ import './UserList.css';
 const UserList = () => {
   const [users, setUsers] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [regionList, setRegionList] = useState([]);
   const [isUserPopupOpen, setIsUserPopupOpen] = useState(false);
   const [isConfirmPopupOpen, setIsConfirmPopupOpen] = useState(false);
   const [isShowPasswordPopupOpen, setIsShowPasswordPopupOpen] = useState(false);
@@ -17,8 +18,8 @@ const UserList = () => {
     address: '',
     phone: '',
     password: '',
+    region:''
   });
-  const [revealedPassword, setRevealedPassword] = useState(null);
 
   // Fetch users from the API
   const fetchUsers = async () => {
@@ -29,6 +30,8 @@ const UserList = () => {
       console.log(response.data.data);
       
       setUsers(response.data.data || []);
+      const regionResponse = await axios.get('/api/express/areas/region');
+      setRegionList(regionResponse.data); 
     } catch (error) {
       console.error('Error fetching users:', error);
     }
@@ -83,6 +86,7 @@ const UserList = () => {
       address: user.address,
       phone: user.phone,
       password: '', // leave password empty when updating
+      region:user.region,
     });
     setIsUserPopupOpen(true);
   };
@@ -231,6 +235,18 @@ const UserList = () => {
                 value={userPopupData.phone}
                 onChange={handlePopupInputChange}
               />
+              <select
+        name="region"
+        value={regionList.find((region) => region.id === userPopupData.region)}
+        onChange={(e) =>handlePopupInputChange(e)}
+        id="region">
+        <option value="" disabled>Select a region</option>
+        {regionList.map((region) => (
+          <option key={region.id} value={region.id}>
+            {region.province},{region.name} 
+          </option>
+        ))}
+      </select>
               {userPopupData.id ? <></> : <input
                 type="password"
                 name="password"

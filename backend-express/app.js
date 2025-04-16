@@ -7,6 +7,7 @@ const sequelize = require('./src/config/db.js');
 const cors = require('cors');
 const morgan = require('morgan')
 const helmet = require('helmet')
+const Region = require('./src/models/Region.js')
 
 const app = express();
 

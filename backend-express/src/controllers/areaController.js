@@ -1,9 +1,9 @@
 const { Op } = require('sequelize');
 const { Area } = require('../models');
-
+const { Region } = require('../models');
 exports.getAllAreas = async (req, res) => {
   try {
-    const { search, area_type, lat_min, lat_max, long_min, long_max } = req.query;
+    const { search, area_type, lat_min, lat_max, long_min, long_max,limit,offset } = req.query;
 
     // Start with an empty query object
     let query = {};
@@ -32,11 +32,27 @@ exports.getAllAreas = async (req, res) => {
       if (long_max) query.longitude[Op.lte] = long_max;  // Less than or equal to long_max
     }
 
-    // Query the database with the built query object
-    const areas = await Area.findAll({ where: query });
+    const options = {
+      where: query,
+      include: {
+        model: Region,
+        as: 'Region',  // This should match the alias used in your association
+        required: false,  // If you want to include Areas even if they don't have an associated Region
+        attributes: ['id', 'name', 'province'] // Specify the attributes you want to include from the Region model
+      }
+    };
 
+    if (limit) {
+      options.limit = parseInt(limit, 10); // Convert limit to an integer
+    }
+    if (offset) {
+      options.offset = parseInt(offset, 10); // Convert offset to an integer
+    }
+    // Query the database with the built query object
+    const areas = await Area.findAll(options);
+    const total = await Area.count(); // Count total records matching the query
     // Return the areas as a response
-    res.json(areas);
+    res.status(200).json({areas:areas, total:total}); // Return areas and total count
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -45,8 +61,14 @@ exports.getAllAreas = async (req, res) => {
 exports.getAreaById = async (req, res) => {
   try {
     const { id } = req.params; // Extract ID from request parameters
-    const area = await Area.findOne({ where: { id: id } }); // Query database by ID
-    res.json(area);
+    const area = await Area.findOne({ 
+      where: { id: id },
+      include: {
+      model: Region,
+      as: 'Region',  // This should match the alias used in your association
+      required: false  // If you want to include Areas even if they don't have an associated Region
+  } }); // Query database by ID
+    res.status(200).json(area);
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -54,7 +76,7 @@ exports.getAreaById = async (req, res) => {
 
 exports.createArea = async (req, res) => {
   try {
-    const { name, latitude, longitude, address, area_type } = req.body;
+    const { name, latitude, longitude, region, area_type } = req.body;
 
     // Validate area_type (must be either 'oyster' or 'cobia')
     if (area_type !== 'oyster' && area_type !== 'cobia') {
@@ -66,7 +88,7 @@ exports.createArea = async (req, res) => {
       name,
       latitude,
       longitude,
-      address,
+      region,
       area:1000,
       area_type,
     });
@@ -103,7 +125,7 @@ exports.deleteArea = async (req, res) => {
 exports.updateArea = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, latitude, longitude, address, area_type } = req.body;
+    const { name, latitude, longitude, region, area_type } = req.body;
 
     // Validate area_type (must be either 'oyster' or 'cobia')
     if (area_type !== 'oyster' && area_type !== 'cobia') {
@@ -121,7 +143,7 @@ exports.updateArea = async (req, res) => {
     area.name = name || area.name;
     area.latitude = latitude || area.latitude;
     area.longitude = longitude || area.longitude;
-    area.address = address || area.address;
+    area.region = region || area.region;
     area.area_type = area_type;
 
     // Save the updated area

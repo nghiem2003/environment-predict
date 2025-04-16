@@ -1,4 +1,4 @@
-const { User } = require('../models');
+const { User, Region } = require('../models');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 
@@ -11,10 +11,10 @@ exports.login = async (req, res) => {
     console.log(isPasswordMatch);
     
     if (!user && !isPasswordMatch) return res.status(401).json({ error: 'Invalid credentials' });
-
+    
     if (user.status == 'inactivate')
       return res.status(403).json({ error: 'Your account is deactivated' });
-    const token = jwt.sign({ id: user.id, role: user.role }, 'SECRET_KEY');
+    const token = jwt.sign({ id: user.id, role: user.role, region:user.region }, 'SECRET_KEY');
 
     res.status(200).json({ token, role: user.role });
   } catch (error) {
@@ -24,7 +24,7 @@ exports.login = async (req, res) => {
 
 exports.createManagerUser = async (req, res) => {
   try {
-    const { email, password, address = null, phone = null } = req.body;
+    const { email, password, address = null, phone = null,region } = req.body;
     const isExist = await User.findOne({ where: { email } });
     if (isExist) return res.status(403).json({ error: 'User existed' });
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -34,6 +34,7 @@ exports.createManagerUser = async (req, res) => {
       password: hashedPassword,
       address,
       phone,
+      region,
       status: 'active',
       role: 'expert',
     });
