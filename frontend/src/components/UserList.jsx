@@ -228,6 +228,7 @@ const UserList = () => {
                 placeholder="Name"
                 value={userPopupData.name}
                 onChange={handlePopupInputChange}
+                required
               />
               <input
                 type="email"
@@ -235,6 +236,7 @@ const UserList = () => {
                 placeholder="Email"
                 value={userPopupData.email}
                 onChange={handlePopupInputChange}
+                required
               />
               <input
                 type="text"
@@ -242,6 +244,7 @@ const UserList = () => {
                 placeholder="Address"
                 value={userPopupData.address}
                 onChange={handlePopupInputChange}
+                required
               />
               <input
                 type="text"
@@ -249,13 +252,15 @@ const UserList = () => {
                 placeholder="Phone"
                 value={userPopupData.phone}
                 onChange={handlePopupInputChange}
+                required
               />
               <input
+              placeholder='Select region'
               type='text'
         name="region"
         value={getRegionNameFromId(userPopupData.region)}
-        onFocus={() => setIsRegionPopup(true)
-        }
+        onFocus={() => setIsRegionPopup(true)}
+        required
         id="region"/>
         <ul>
         {isRegionPopup ? regionList.map((region) => (
