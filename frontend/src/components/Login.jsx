@@ -1,16 +1,38 @@
-import React, { useState } from 'react';
-import { useDispatch } from 'react-redux';
-import { login } from '../redux/authSlice';
+import React, { useState, useEffect } from 'react';
+import { jwtDecode } from 'jwt-decode';
+import { login, logout } from '../redux/authSlice';
 import { useNavigate } from 'react-router-dom';
+import { useSelector, useDispatch } from 'react-redux';
 import axios from '../axios';
 import './Login.css';
 
 const Login = () => {
+   const { token } = useSelector((state) => state.auth);
+  console.log('The token',token);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const dispatch = useDispatch();
   const navigate = useNavigate();
+
+   useEffect(() => {
+      if (token) {
+        try {
+          const decodedToken = jwtDecode(token); // Decode the JWT token
+          const exp = decodedToken.exp * 1000
+          const now = Date.now()
+          if(now > exp ) {
+            dispatch(logout())
+            navigate('/')
+          }
+          navigate('/dashboard');
+          
+        } catch (error) {
+          console.error('Error decoding token:', error);
+          alert('Invalid token. Please log in again.');
+        }
+      }
+    }, [token]);
 
   const handleLogin = async () => {
     try {

@@ -107,7 +107,8 @@ exports.deleteArea = async (req, res) => {
 
     // Find the area by ID
     const area = await Area.findOne({ where: { id } });
-
+    console.log(area.name);
+    
     if (!area) {
       return res.status(404).json({ error: 'Area not found.' });
     }

@@ -1,11 +1,29 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { MapContainer, TileLayer, Circle, Popup } from 'react-leaflet';
 import { LatLng } from 'leaflet';
 import 'leaflet/dist/leaflet.css'; // Import Leaflet CSS
 
-const MapView = ({ latitude, longitude, result, area }) => {
+const MapView = ({ latitude = 0, longitude = 0, result = -2, area = 100 }) => {
+
+
   const center = new LatLng(latitude, longitude);
-  const color = result == 1 ? 'blue' : result == 0 ? 'yellow' : 'red'
+  console.log(center);
+  let color;
+  switch (result) {
+    case 1:
+      color = 'green'
+      break;
+    case 0:
+      color = ' yellow'
+      break;
+    case -1:
+      color = 'red'
+      break;
+    case -2:
+      color = 'blue'
+    default:
+      break;
+  }
   return (
     <div style={{ width: '100%', height: '400px' }}>
       <MapContainer

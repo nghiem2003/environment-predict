@@ -30,7 +30,7 @@ const UserList = () => {
       console.log(response.data.data);
       
       setUsers(response.data.data || []);
-      const regionResponse = await axios.get('/api/express/areas/region');
+      const regionResponse = await axios.get('/api/express/areas/regions');
       setRegionList(regionResponse.data); 
     } catch (error) {
       console.error('Error fetching users:', error);
@@ -94,6 +94,10 @@ const UserList = () => {
   // Deactivate user confirmation popup
   const handleDeactivateUser = async (id) => {
     try {
+
+      
+      console.log('trying to deactive');
+      
       await axios.patch(`/api/express/auth/deactivate/${id}`);
       setIsConfirmPopupOpen(false);
       fetchUsers();

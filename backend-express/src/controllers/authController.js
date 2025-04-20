@@ -8,13 +8,12 @@ exports.login = async (req, res) => {
     
     const user = await User.findOne({ where: { email:email } });
     const isPasswordMatch = await bcrypt.compare(password,user.password)
-    console.log(isPasswordMatch);
     
     if (!user && !isPasswordMatch) return res.status(401).json({ error: 'Invalid credentials' });
     
-    if (user.status == 'inactivate')
+    if (user.status === 'inactivate')
       return res.status(403).json({ error: 'Your account is deactivated' });
-    const token = jwt.sign({ id: user.id, role: user.role, region:user.region }, 'SECRET_KEY');
+    const token = jwt.sign({ id: user.id, role: user.role, region:user.region }, 'SECRET_KEY',{expiresIn: '10d'});
 
     res.status(200).json({ token, role: user.role });
   } catch (error) {
@@ -49,8 +48,7 @@ exports.getAllUser = async (req, res) => {
     
     const userList = await User.findAll({ order: [
     // Custom ordering for role: admin first, then expert
-   
-    ['username', 'ASC'], // Then order by name descending
+    ['id', 'ASC'], // Then order by name descending
   ],});
     return res.status(200).json({ data: userList });
   } catch (e) {
@@ -60,14 +58,19 @@ exports.getAllUser = async (req, res) => {
 
 exports.deactiveUser = async (req, res) => {
   try {
-    const { username } = req.body;
-    const user = await User.findOne({ username: username });
+    const { id } = req.params;
+    console.log(id);
+    
+    const user = await User.findOne({where:{ id: id} });
     if (!user) return res.status(404).json({ error: 'User not found' });
+    console.log(user);
     
     user.status = 'inactive';
     await user.save();
-    return res.status(200).json({ message: `User ${username} is deactivated` });
+    return res.status(200).json({ message: `User ${user.username} is deactivated` });
   } catch (e) {
+    console.log(e);
+    
     return res.status(500).json({ error: e.message });
   }
 };

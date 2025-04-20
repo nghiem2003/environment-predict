@@ -5,9 +5,12 @@ const Region = require('../models/Region.js')
 const Area = require('../models/Area.js')
 const router = express.Router();
 
+
+
 router.get('/', getAllAreas);
+router.get('/area/:id', getAreaById);
 router.get('/regions', async (req,res) => {return res.status(200).json(await Region.findAll())}); // Get areas by region
-router.get('/:id', getAreaById);
+
 router.get('/area-list',authenticate,authorize(['admin']))
 router.get('/region/:id', async (req,res) => { // Get areas by region ID
     const regionId = req.params.id;

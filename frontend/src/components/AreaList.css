@@ -66,6 +66,7 @@
 
 .area-table {
   width: 100%;
+  overflow-x: scroll;
   border-collapse: collapse;
   margin-top: 20px;
 }
@@ -270,4 +271,14 @@ button {
 /* Optional: Make the buttons a bit more prominent */
 .pagination button:active {
   background-color: #004085;
+}
+
+.delete-confirm-button {
+  background-color: #dc3545;
+  margin: 5px;
+}
+
+.delete-deny-button {
+  background-color: #0056b3;
+  margin: 5px;
 }

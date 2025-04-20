@@ -42,7 +42,7 @@ const AreaList = () => {
       setTotalAreas(response.data.total); // Set total areas for pagination
       console.log(response.data.areas);
       console.log(response.data.total);
-      const regionResponse = await axios.get('/api/express/areas/region');
+      const regionResponse = await axios.get('/api/express/areas/regions');
       setRegionList(regionResponse.data); // Set regions for the dropdown
       console.log(regionResponse.data);
     } catch (error) {
@@ -75,6 +75,8 @@ const AreaList = () => {
 
   const handleDelete = async (id) => {
     try {
+      console.log('trying to delete');
+      
       await axios.delete(`/api/express/areas/${id}`);
       setIsDeleteConfirmOpen(false); // Close delete confirmation
       fetchAreas(); // Refresh the area list after deletion
@@ -199,7 +201,12 @@ const AreaList = () => {
                 <td>{area.Region?.province},{area.Region?.name}</td>
                 <td>
                   <button onClick={() => handleUpdate(area.id)}>Update</button>
-                  <button onClick={() => setIsDeleteConfirmOpen(true) && setSelectedArea(area)}>
+                  <button onClick={() => {
+                    setIsDeleteConfirmOpen(true)
+                    setSelectedArea(area)
+                    console.log(area);
+                    
+                    }}>
                     Delete
                   </button>
                 </td>
@@ -286,9 +293,9 @@ const AreaList = () => {
       {isDeleteConfirmOpen && (
         <div className="popup">
           <div className="popup-content">
-            <h3>Are you sure you want to delete this area?</h3>
-            <button onClick={() => handleDelete(selectedArea.id)}>Yes</button>
-            <button onClick={() => setIsDeleteConfirmOpen(false)}>No</button>
+            <h3>Are you sure you want to delete this area? {selectedArea.name} </h3>
+            <button className='delete-confirm-button' onClick={() => handleDelete(selectedArea.id)}>Yes</button>
+            <button className='delete-deny-button' onClick={() => setIsDeleteConfirmOpen(false)}>No</button>
           </div>
         </div>
       )}
