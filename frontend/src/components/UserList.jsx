@@ -4,6 +4,7 @@ import './UserList.css';
 
 const UserList = () => {
   const [users, setUsers] = useState([]);
+  const [isRegionPopup,setIsRegionPopup] = useState(false)
   const [searchTerm, setSearchTerm] = useState('');
   const [regionList, setRegionList] = useState([]);
   const [isUserPopupOpen, setIsUserPopupOpen] = useState(false);
@@ -50,6 +51,8 @@ const UserList = () => {
 
   // Input change for popup form
   const handlePopupInputChange = (e) => {
+    console.log(e.target.value,'and',e.target.name,'and',e.target.key);
+    
     const { name, value } = e.target;
     console.log(name,value);
     
@@ -247,20 +250,23 @@ const UserList = () => {
                 value={userPopupData.phone}
                 onChange={handlePopupInputChange}
               />
-              <select
+              <input
+              type='text'
         name="region"
         value={getRegionNameFromId(userPopupData.region)}
-        onChange={(e) =>handlePopupInputChange(e)}
-        onClickCapture={console.log('hi')
+        onFocus={() => setIsRegionPopup(true)
         }
-        id="region">
-        <option value="" disabled>Select a region</option>
-        {regionList.map((region) => (
-          <option key={region.id} value={region.name}>
+        id="region"/>
+        <ul>
+        {isRegionPopup ? regionList.map((region) => (
+          <li key={region.id} value={region.name} onClick={() => 
+          {handlePopupInputChange({target:{name:'region',value:region.id}})
+          setIsRegionPopup(false)
+          }}>
             {region.province},{region.name} 
-          </option>
-        ))}
-      </select>
+          </li>
+        )) : null }
+        </ul>
               {userPopupData.id ? <></> : <input
                 type="password"
                 name="password"
