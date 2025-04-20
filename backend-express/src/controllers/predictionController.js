@@ -207,13 +207,18 @@ exports.getPredictionsByUser = async (req, res) => {
   try {
     const { userId } = req.params;
 
-    // Fetch predictions made by the user
-    const predictions = await Prediction.findAll({
+    const {limit = 10, offset = 0} = req.query
+
+    const options = {
+      //where,
       where: { user_id: userId },
       include: [
+          {
+          model: User,
+          attributes: ['id','username', 'email', 'role'], // Include user details
+        },
         {
           model: Area,
-          as: 'Area',
           attributes: [
             'id',
             'name',
@@ -221,11 +226,21 @@ exports.getPredictionsByUser = async (req, res) => {
             'longitude',
             'area',
             'area_type',
-          ], // Area details
+          ], // Include area details
         },
       ],
-      order: [['id', 'DESC']], // Sort predictions by most recent
-    });
+      order: [['id', 'DESC']], // Sort by most recent predictions
+    }
+
+    if (limit) {
+      options.limit = parseInt(limit, 10); // Convert limit to an integer
+    }
+    if (offset) {
+      options.offset = parseInt(offset, 10); // Convert offset to an integer
+    }
+
+    // Fetch predictions made by the user
+    const predictions = await Prediction.findAll(options);
 
     if (predictions.length === 0) {
       console.log('no record found');
