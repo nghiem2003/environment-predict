@@ -19,8 +19,7 @@ const authorize = (roles) => (req, res, next) => {
   if (!roles.includes(req.user.role)) {
     return res.status(403).json({ error: 'Forbidden' });
   }
-  console.log('passed authorize');
-  console.log(req.user);
+  console.log('passed authorize')
   
   next();
 }catch(e){

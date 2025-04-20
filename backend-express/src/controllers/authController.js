@@ -63,7 +63,6 @@ exports.deactiveUser = async (req, res) => {
     
     const user = await User.findOne({where:{ id: id} });
     if (!user) return res.status(404).json({ error: 'User not found' });
-    console.log(user);
     
     user.status = 'inactive';
     await user.save();
@@ -91,12 +90,19 @@ exports.activateUser = async (req, res) => {
 
 exports.updateUserById = async (req, res) => {
   try {
-    const { username = null, address = null, phone = null } = req.body;
-    const user = await User.findOne({ id: req.body.id });
+    const { id } = req.params
+    console.log(req.body);
+    
+    const { name = null, address = null, phone = null, region = null } = req.body;
+    const user = await User.findOne({where:{ id: id } });
     if (!user) res.status(404).json({ message: 'User not found' });
-    user.username = username ? username.trim() : user.username;
+    console.log(user);
+    
+    user.username = name ? name : user.username;
     user.address = address ? address : user.address;
     user.phone = phone ? phone : user.phone;
+    user.region = region? region : user.region
+    
     await user.save();
     return res.status(200).json({ message: 'Update successful' });
   } catch (e) {

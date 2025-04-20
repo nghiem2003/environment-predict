@@ -93,6 +93,8 @@ exports.getLatestPrediction = async (req, res) => {
 exports.getPredictionDetails = async (req, res) => {
   try {
     const { predictionId } = req.params;
+    console.log(predictionId);
+    
     // Fetch prediction by ID with associated area and natural elements
     const prediction = await Prediction.findOne({
       where: { id: predictionId },
@@ -103,10 +105,10 @@ exports.getPredictionDetails = async (req, res) => {
           attributes: [
             'id',
             'name',
-            'address',
             'latitude',
             'longitude',
             'area',
+            'region',
             'area_type',
           ], // Area details
         },
@@ -119,7 +121,8 @@ exports.getPredictionDetails = async (req, res) => {
         },
       ],
     });
-
+    console.log(prediction);
+    
     if (!prediction) {
       return res.status(404).json({ error: 'Prediction not found' });
     }

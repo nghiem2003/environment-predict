@@ -42,9 +42,17 @@ const UserList = () => {
     fetchUsers();
   }, [searchTerm]);
 
+  const getRegionNameFromId = (id) => {
+  const region = regionList.find((r) => r.id === id);
+  return region ? region.name : '';
+};
+
+
   // Input change for popup form
   const handlePopupInputChange = (e) => {
     const { name, value } = e.target;
+    console.log(name,value);
+    
     setUserPopupData((prev) => ({
       ...prev,
       [name]: value,
@@ -241,12 +249,14 @@ const UserList = () => {
               />
               <select
         name="region"
-        value={regionList.find((region) => region.id === userPopupData.region)}
+        value={getRegionNameFromId(userPopupData.region)}
         onChange={(e) =>handlePopupInputChange(e)}
+        onClickCapture={console.log('hi')
+        }
         id="region">
         <option value="" disabled>Select a region</option>
         {regionList.map((region) => (
-          <option key={region.id} value={region.id}>
+          <option key={region.id} value={region.name}>
             {region.province},{region.name} 
           </option>
         ))}
