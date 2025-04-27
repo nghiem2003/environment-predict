@@ -282,14 +282,20 @@ exports.createBatchPrediction = async (req, res) => {
 
       });
       for (const [elementName, value] of Object.entries(inputs)) {
+      if(elementName === 'createdAt') continue;
+      console.log(elementName);
+      console.log(value);
+      
+      
       const entry = await NatureElement.findOne({
         where: { name: elementName },
       });
-
+      console.log(JSON.stringify(entry));
+      
       await PredictionNatureElement.create({
         prediction_id: predictionRecord.id,
         nature_element_id: entry.id,
-        value,
+        value: value,
       });
     }
     console.log('done added');
@@ -303,6 +309,8 @@ exports.createBatchPrediction = async (req, res) => {
 
     res.json({ predictions: predictionsResult, model_used: modelName });
   } catch (error) {
+    console.log(error);
+    
     res.status(500).json({ error: error.message });
   }
 };

@@ -39,7 +39,8 @@ services:
     networks:
       - proxy_network
     restart: always
-
+    ports:
+      - '5001:5001'
   frontend:
     build: ./frontend
     container_name: frontend

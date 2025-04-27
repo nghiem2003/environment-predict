@@ -3,6 +3,7 @@ import { jwtDecode } from 'jwt-decode'; // Import without braces
 import axios from '../axios';
 import { useSelector } from 'react-redux';
 import './CreateNewPrediction.css';
+import { toast } from 'react-toastify'
 
 const CreateNewPrediction = () => {
   const { token } = useSelector((state) => state.auth);
@@ -105,6 +106,8 @@ const CreateNewPrediction = () => {
 
 const handleSubmitBatch = async (e) => {
   e.preventDefault();
+  try {
+  if(!selectedAreaId || !modelName) throw new Error('You need to select area and model')
   
   // Get the header (keys)
   const headers = csvElements[0].split(',');  // Split the first line into headers
@@ -124,18 +127,20 @@ const handleSubmitBatch = async (e) => {
 
   // Log the processed data
   console.log('Processed data:', data);
-
+  
   // Send the data to your backend API
-  try {
+  
     await axios.post('api/express/predictions/batch', {
       userId,
       areaId: selectedAreaId,
       modelName,
       data,
     });
-    alert('Batch prediction success!');
+    toast.success('Created predictions from file successful!')
   } catch (error) {
-    alert('Batch prediction failed!');
+    console.log('error',error);
+     toast.error(`${error}`)
+    //alert('Batch prediction failed!\nError:',error);
   }
 };
 
@@ -158,9 +163,9 @@ const handleSubmitBatch = async (e) => {
         modelName,
         inputs,
       });
-      alert('Single prediction success!');
-    } catch {
-      alert('Single prediction failed!');
+      toast.success('Created single prediction successful!')
+    } catch(e) {
+      toast.error(`${e}`)
     }
   };
   const filteredModels = allModels.filter((m) => m.type === areaType);
@@ -245,8 +250,9 @@ const handleSubmitBatch = async (e) => {
               setSelectedAreaId(e.target.value);
               setAreaType(area?.area_type);
             }}
+            required
           >
-            <option value="">Select Area</option>
+            <option value="" required>Select Area</option>
             {areas.map((area) => (
               <option key={area.id} value={area.id}>
                 {area.name}
@@ -258,8 +264,9 @@ const handleSubmitBatch = async (e) => {
             value={modelName}
             onChange={(e) => setModelName(e.target.value)}
             disabled={!areaType}
+            required
           >
-            <option value="">Select Model</option>
+            <option value="" required>Select Model</option>
             {filteredModels.map((model) => (
               <option key={model.value} value={model.value}>
                 {model.label}

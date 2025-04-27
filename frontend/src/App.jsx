@@ -9,6 +9,8 @@ import {
 import { useSelector, useDispatch } from 'react-redux';
 import { logout } from './redux/authSlice';
 import Login from './components/Login';
+import 'react-toastify/dist/ReactToastify.css';
+import { ToastContainer } from 'react-toastify';
 import Dashboard from './components/Dashboard';
 import WelcomePage from './components/WelcomePage';
 import Prediction from './components/Prediction';
@@ -96,6 +98,7 @@ const App = () => {
 
   return (
     <div className="app-container">
+      <ToastContainer />
       <Header />
       <div className="app-body">
         {isSidebarVisible && <Sidebar />}
@@ -155,6 +158,7 @@ const App = () => {
         </div>
       </div>
      {/* <Footer /> */}
+      
     </div>
   );
 };
