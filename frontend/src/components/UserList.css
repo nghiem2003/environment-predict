@@ -1,10 +1,11 @@
 /* UserManagementPage.css */
 * {
   box-sizing: border-box;
+  
 }
 
 .user-management {
-  max-width: 1200px;
+  max-width: 70%;
   margin: 20px auto;
   background: #fff;
   padding: 20px;
@@ -44,6 +45,7 @@
 
 .user-table {
   width: 100%;
+  overflow-x: scroll;
   border-collapse: collapse;
   margin-top: 20px;
 }

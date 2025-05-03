@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import './WelcomePage.css';
 import { useNavigate } from 'react-router-dom';
 import axios from '../axios';
+import { useTranslation } from 'react-i18next';
 
 const WelcomePage = () => {
+  const { t } = useTranslation()
   const [areas, setAreas] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredAreas, setFilteredAreas] = useState([]);
@@ -36,10 +38,10 @@ const WelcomePage = () => {
 
   return (
     <div>
-      <h1>Welcome</h1>
+      <h1>{t('welcomePage.title')}</h1>
       <input
         type="text"
-        placeholder="Search for an area..."
+        placeholder={t('welcomePage.searchPlaceholder')}
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
       />

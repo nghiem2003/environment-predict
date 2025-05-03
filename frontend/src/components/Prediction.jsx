@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import axios from '../axios';
 import MapView from './MapView'; // Ensure the MapView component is imported correctly
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import './Prediction.css';
+import { useTranslation } from 'react-i18next';
 
 const Prediction = () => {
+  const { t } = useTranslation()
+  const navigate = useNavigate()
   const isLoading = false;
   const { areaId } = useParams();
   console.log('areaId:', areaId);
@@ -14,11 +17,11 @@ const Prediction = () => {
   // Helper function to format prediction text
   const getPredictionText = (prediction) => {
     if (prediction.prediction_text == -1) {
-      return 'The environment is unsuitable or dangerous for growth';
+      return t('prediction.unsuitable');
     } else if (prediction.prediction_text == 1) {
-      return 'The environment is excellent for oyster growth';
+      return t('prediction.excellent');
     } else {
-      return 'The environment is suitable for growth';
+      return t('prediction.suitable');
     }
   };
 
@@ -60,16 +63,18 @@ const Prediction = () => {
     fetchPrediction();
   }, [areaId]);
   return (
-    <div className="prediction-tab">
+    <>
       {
         !area ? (
       <div className="prediction-container">
-        Loading area data...
+        <a href='/' >{t('prediction.return')}</a>
+        {t('prediction.loadingArea')}
       </div>
     ) :
       prediction ? 
       <div className="prediction-container">
-      <h1>Prediction in {area.name}</h1>
+        <a href='/' >{t('prediction.return')}</a>
+      <h1>{t('prediction.title', { area: area.name })}</h1>
       <p>{getPredictionText(prediction)}</p>
       <MapView
         latitude={area?.latitude}
@@ -78,8 +83,9 @@ const Prediction = () => {
         area={area?.area}
       />
     </div>: <div className="prediction-container">
-       <h1>Prediction in {area.name}</h1>
-      <div>No prediction has been made.Click <a href='/'>here</a> to come back to welcome page</div>
+      <a href='/' >{t('prediction.return')}</a>
+       <h1>{t('prediction.title', { area: area.name })}</h1>
+      <div> {t('prediction.noPrediction')}{' '}<a href='/'>{t('prediction.goBack')}</a></div>
   <MapView
         latitude={area?.latitude}
         longitude={area?.longitude}
@@ -89,7 +95,7 @@ const Prediction = () => {
   </div>
       }
     
-    </div>
+    </>
   );
 };
 

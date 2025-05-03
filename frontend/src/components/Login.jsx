@@ -5,8 +5,11 @@ import { useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import axios from '../axios';
 import './Login.css';
+import { useTranslation } from 'react-i18next';
+import { toast } from 'react-toastify'
 
 const Login = () => {
+  const { t } = useTranslation();
    const { token } = useSelector((state) => state.auth);
   console.log('The token',token);
   const [email, setEmail] = useState('');
@@ -29,7 +32,7 @@ const Login = () => {
           
         } catch (error) {
           console.error('Error decoding token:', error);
-          alert('Invalid token. Please log in again.');
+          toast.error(t('login.invalidToken'));
         }
       }
     }, [token]);
@@ -56,28 +59,28 @@ const Login = () => {
       // Navigate to the dashboard after successful login
       navigate('/dashboard');
     } catch (error) {
-      setError('Invalid username or password. Please try again.');
+      setError(t('login.invalidCredentials'));
     }
   };
 
   return (
     <div className="login-container">
-      <h1>Login</h1>
+      <h1>{t('login.title')}</h1>
       <input
         className="input"
         type="text"
-        placeholder="Email"
+        placeholder={t('login.email')}
         value={email}
         onChange={(e) => setEmail(e.target.value)}
       />
       <input
         className="input"
         type="password"
-        placeholder="Password"
+        placeholder={t('login.password')}
         value={password}
         onChange={(e) => setPassword(e.target.value)}
       />
-      <button onClick={handleLogin}>Login</button>
+      <button onClick={handleLogin}>{t('login.button')}</button>
       {error && <p style={{ color: 'red' }}>{error}</p>}
     </div>
   );

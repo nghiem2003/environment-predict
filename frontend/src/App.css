@@ -28,6 +28,7 @@
   font-size: 14px;
   border-radius: 4px;
   cursor: pointer;
+  margin: 10px 10px 10px;
 }
 
 /* Main app body */
@@ -118,3 +119,18 @@
   color: white;
   border-bottom: 1px solid #ddd;
 }
+
+
+.language-switcher {
+  margin-left: auto;
+  display: flex;
+  gap: 10px;
+}
+
+.language-switcher button {
+  background: none;
+  border: 1px solid #ccc;
+  padding: 5px 10px;
+  cursor: pointer;
+}
+

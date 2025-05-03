@@ -4,8 +4,11 @@ import axios from '../axios';
 import { useSelector } from 'react-redux';
 import './CreateNewPrediction.css';
 import { toast } from 'react-toastify'
+import { useTranslation } from 'react-i18next';
+
 
 const CreateNewPrediction = () => {
+  const { t } = useTranslation();
   const { token } = useSelector((state) => state.auth);
   const [userId, setUserId] = useState(null);
   const [areas, setAreas] = useState([]);
@@ -168,23 +171,25 @@ const handleSubmitBatch = async (e) => {
       toast.error(`${e}`)
     }
   };
-  const filteredModels = allModels.filter((m) => m.type === areaType);
+  const filteredModels = areaType
+  ? allModels.filter((m) => m.type === areaType)
+  : [];
 
   return (
     <div className="prediction-container">
-      <h1>Prediction Form</h1>
+      <h1>{t('prediction_form.title')}</h1>
       <div className="tabs">
         <button
           className={activeTab === 'single' ? 'active' : ''}
           onClick={() => setActiveTab('single')}
         >
-          Single Prediction
+          {t('prediction_form.tabs.single')}
         </button>
         <button
           className={activeTab === 'batch' ? 'active' : ''}
           onClick={() => setActiveTab('batch')}
         >
-          Batch Prediction (CSV)
+          {t('prediction_form.tabs.batch')}
         </button>
       </div>
 
@@ -206,7 +211,7 @@ const handleSubmitBatch = async (e) => {
                 {area.name}
               </option>
             )) : (
-              <option value="">Loading areas...</option>
+              <option value="">{t('prediction_form.loading_areas')}</option>
             )}
           </select>
 
@@ -215,7 +220,7 @@ const handleSubmitBatch = async (e) => {
             onChange={(e) => setModelName(e.target.value)}
             disabled={!areaType}
           >
-            <option value="">Select Model</option>
+            <option value="">{t('prediction_form.select_model')}</option>
             {filteredModels.map((model) => (
               <option key={model.value} value={model.value}>
                 {model.label}
@@ -235,7 +240,7 @@ const handleSubmitBatch = async (e) => {
               />
             ))}
 
-          <button onClick={handleSubmitSingle}>Submit Single Prediction</button>
+          <button onClick={handleSubmitSingle}>{t('prediction_form.submit_single')}</button>
         </form>
       )}
 
@@ -252,7 +257,7 @@ const handleSubmitBatch = async (e) => {
             }}
             required
           >
-            <option value="" required>Select Area</option>
+            <option value="" required>{t('prediction_form.select_area')}</option>
             {areas.map((area) => (
               <option key={area.id} value={area.id}>
                 {area.name}
@@ -266,7 +271,7 @@ const handleSubmitBatch = async (e) => {
             disabled={!areaType}
             required
           >
-            <option value="" required>Select Model</option>
+            <option value="" required>{t('prediction_form.select_model')}</option>
             {filteredModels.map((model) => (
               <option key={model.value} value={model.value}>
                 {model.label}
@@ -279,7 +284,7 @@ const handleSubmitBatch = async (e) => {
             onChange={handleCSVUpload}
             required
           />
-          <button onClick={handleSubmitBatch}>Submit Batch Prediction</button>
+          <button onClick={handleSubmitBatch} disabled={!selectedAreaId || !modelName}>{t('prediction_form.submit_batch')}</button>
         </form>
       )}
     </div>

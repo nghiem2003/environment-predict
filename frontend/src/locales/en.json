@@ -1,0 +1,146 @@
+{
+"welcomePage": {
+    "title": "Welcome to the Aquaculture Prediction System",
+    "subtitle": "Select your area to start predicting the environment for oyster and cobia farming.",
+    "searchPlaceholder": "Search for an area..."
+  },
+  "userList": {
+    "activate":"Activate",
+    "deactivate": "Deactivate",
+    "searchPlaceholder": "Search by name or email",
+    "activeAccount":"Active",
+    "inactiveAccount": "Inactive",
+    "admin":"Admin",
+    "expert":"Expert",
+    "addUser": "Add New User",
+    "editUser": "Edit",
+    "createUser": "Add New User",
+    "name": "Name",
+    "email": "Email",
+    "address": "Address",
+    "phone": "Phone",
+    "password": "Password",
+    "role": "Role",
+    "status": "Status",
+    "actions": "Actions",
+    "region": "Region",
+    "selectRegion": "Select region",
+    "noUsers": "No users found",
+    "confirmDeactivate": "Are you sure you want to deactivate this user?"
+  },
+  "predictionDetails": {
+  "loading": "Loading prediction details...",
+  "title": "Prediction Details",
+  "id": "Prediction ID",
+  "area": "Area",
+  "areaType": "Area Type",
+  "predictionText": "Prediction",
+  "expertId": "Expert ID",
+  "naturalElements": "Natural Elements",
+  "element": "Element",
+  "value": "Value",
+  "unsuitable": "The environment is unsuitable or dangerous for growth",
+  "suitable": "The environment is suitable for growth",
+  "excellent": "The environment is excellent for oyster growth"
+},
+"prediction": {
+  "loadingArea": "Loading area data...",
+  "title": "Prediction in {{area}}",
+  "unsuitable": "The environment is unsuitable or dangerous for growth",
+  "suitable": "The environment is suitable for growth",
+  "excellent": "The environment is excellent for oyster growth",
+  "noPrediction": "No prediction has been made.",
+  "goBack": "Click here to come back to the welcome page",
+  "return": "Back"
+},
+"login": {
+  "title": "Login",
+  "email": "Email",
+  "password": "Password",
+  "button": "Login",
+  "invalidCredentials": "Invalid username or password. Please try again.",
+  "invalidToken": "Invalid token. Please log in again."
+},
+"dashboard": {
+  "title": "Dashboard",
+  "subtitle": "All Predictions",
+  "id": "ID",
+  "creator": "Creator",
+  "area": "Area",
+  "actions": "Actions",
+  "prediction": "Prediction",
+  "viewDetails": "View Details",
+  "noData": "No predictions found.",
+  "previous": "Previous",
+  "next": "Next",
+  "page": "Page",
+  "of": "of",
+  "invalidToken": "Invalid token. Please log in again."
+},
+  "prediction_form": {
+    "title": "Prediction Form",
+    "tabs": {
+      "single": "Single Prediction",
+      "batch": "Batch Prediction (CSV)"
+    },
+    "user_id": "User ID",
+    "select_area": "Select Area",
+    "select_model": "Select Model",
+    "submit_single": "Submit Single Prediction",
+    "submit_batch": "Submit Batch Prediction",
+    "loading_areas": "Loading areas..."
+  },
+  "area_list": {
+    "search_placeholder": "Search by area name",
+    "filter": {
+      "select_type": "Select Area Type",
+      "all": "All",
+      "oyster": "Oyster",
+      "cobia": "Cobia",
+      "min_lat": "Min Lat",
+      "max_lat": "Max Lat",
+      "min_long": "Min Long",
+      "max_long": "Max Long"
+    },
+    "add_button": "Add New Area",
+    "table": {
+      "name": "Area Name",
+      "type": "Area Type",
+      "lat": "Latitude",
+      "long": "Longitude",
+      "address": "Address",
+      "actions": "Actions",
+      "no_data": "No areas found"
+    },
+    "pagination": {
+      "previous": "Previous",
+      "next": "Next",
+      "page_info": "Page {{current}} of {{total}}"
+    },
+    "popup": {
+      "add": "Add New Area",
+      "update": "Update Area",
+      "name": "Area Name",
+      "delete":"Delete Area",
+      "latitude": "Latitude",
+      "longitude": "Longitude",
+      "select_region": "Select a region",
+      "type": "Area Type",
+      "save": "Save",
+      "cancel": "Cancel"
+    },
+    "confirm_delete": {
+      "title": "Are you sure you want to delete this area?",
+      "yes": "Yes",
+      "no": "No"
+    }
+  },
+   "sidebar": {
+    "title": "Prediction System",
+    "area_list": "View Area List",
+    "prediction_list": "View Prediction List",
+    "user_list": "View Users List",
+    "create_prediction": "Create Prediction",
+    "logout": "Logout"
+  }
+}

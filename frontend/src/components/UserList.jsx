@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import axios from '../axios';
 import './UserList.css';
+import { useTranslation } from 'react-i18next';
 
 const UserList = () => {
+  const { t } = useTranslation()
   const [users, setUsers] = useState([]);
   const [isRegionPopup,setIsRegionPopup] = useState(false)
   const [searchTerm, setSearchTerm] = useState('');
@@ -143,7 +145,7 @@ const UserList = () => {
       <div className="header">
         <input
           type="text"
-          placeholder="Search by name or email"
+          placeholder={t('userList.searchPlaceholder')}
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="search-input"
@@ -162,20 +164,20 @@ const UserList = () => {
             setIsUserPopupOpen(true);
           }}
         >
-          Add New User
+          {t('userList.addUser')}
         </button>
       </div>
 
       <table className="user-table">
         <thead>
           <tr>
-            <th>Name</th>
-            <th>Email</th>
-            <th>Address</th>
-            <th>Phone</th>
-            <th>Role</th>
-            <th>Status</th>
-            <th>Actions</th>
+            <th>{t('userList.fullName')}</th>
+            <th>{t('userList.email')}</th>
+            <th>{t('userList.address')}</th>
+            <th>{t('userList.phone')}</th>
+            <th>{t('userList.role')}</th>
+            <th>{t('userList.status')}</th>
+            <th>{t('userList.actions')}</th>
           </tr>
         </thead>
         <tbody>
@@ -186,10 +188,10 @@ const UserList = () => {
                 <td>{user.email}</td>
                 <td>{user.address}</td>
                 <td>{user.phone}</td>
-                <td>{user.role}</td>
-                <td>{user.status}</td>
+                <td>{user.role === 'admin' ? t('userList.admin') : t('userList.expert')}</td>
+                <td>{user.status === 'active' ? t('userList.activeAccount') : t('userList.inactiveAccount') }</td>
                 <td>
-                  <button style={{'background-color': "#007bff"}} onClick={() => handleModifyUser(user)}>Edit</button>
+                  <button style={{'background-color': "#007bff"}} onClick={() => handleModifyUser(user)}>{t('userList.editUser')}</button>
                   { user.role !== 'admin' ? user.status === 'active'? (
                     <button
                       onClick={() => {
@@ -197,11 +199,11 @@ const UserList = () => {
                         setIsConfirmPopupOpen(true);
                       }}
                     >
-                      Deactivate
+                      {t('userList.deactivate')}
                     </button>
                   ) : (
                     <button onClick={() => handleActivateUser(user.id)}>
-                      Activate
+                      {t('userList.activate')}
                     </button>
                   ) :<></>}
                   
@@ -210,7 +212,7 @@ const UserList = () => {
             ))
           ) : (
             <tr>
-              <td colSpan="8">No users found</td>
+              <td colSpan="8">{t('userList.noUsers')}</td>
             </tr>
           )}
         </tbody>
@@ -220,12 +222,12 @@ const UserList = () => {
       {isUserPopupOpen && (
         <div className="popup">
           <div className="popup-content">
-            <h3>{userPopupData.id ? 'Modify User' : 'Add New User'}</h3>
+            <h3>{userPopupData.id ? t('userList.editUser') : t('userList.addUser')}</h3>
             <form onSubmit={handleUserPopupSubmit}>
               <input
                 type="text"
                 name="name"
-                placeholder="Name"
+                placeholder={t('userList.fullName')}
                 value={userPopupData.name}
                 onChange={handlePopupInputChange}
                 required
@@ -233,7 +235,7 @@ const UserList = () => {
               <input
                 type="email"
                 name="email"
-                placeholder="Email"
+                placeholder={t('userList.email')}
                 value={userPopupData.email}
                 onChange={handlePopupInputChange}
                 required
@@ -241,7 +243,7 @@ const UserList = () => {
               <input
                 type="text"
                 name="address"
-                placeholder="Address"
+                placeholder={t('userList.address')}
                 value={userPopupData.address}
                 onChange={handlePopupInputChange}
                 required
@@ -249,13 +251,13 @@ const UserList = () => {
               <input
                 type="text"
                 name="phone"
-                placeholder="Phone"
+                placeholder={t('userList.phone')}
                 value={userPopupData.phone}
                 onChange={handlePopupInputChange}
                 required
               />
               <input
-              placeholder='Select region'
+              placeholder={t('userList.region')}
               type='text'
         name="region"
         value={getRegionNameFromId(userPopupData.region)}
@@ -264,7 +266,8 @@ const UserList = () => {
         id="region"/>
         <ul>
         {isRegionPopup ? regionList.map((region) => (
-          <li key={region.id} value={region.name} onClick={() => 
+          <li key={region.id} value={region.name} 
+          onClick={() => 
           {handlePopupInputChange({target:{name:'region',value:region.id}})
           setIsRegionPopup(false)
           }}>
@@ -275,14 +278,14 @@ const UserList = () => {
               {userPopupData.id ? <></> : <input
                 type="password"
                 name="password"
-                placeholder="Password"
+                placeholder={t('userList.password')}
                 value={userPopupData.password}
                 onChange={handlePopupInputChange}
               />}
               <div className="popup-actions">
-                <button type="submit">Save</button>
+                <button type="submit">{t('userList.save')}</button>
                 <button type="button" onClick={() => setIsUserPopupOpen(false)}>
-                  Cancel
+                   {t('userList.cancel')}
                 </button>
               </div>
             </form>
@@ -294,10 +297,10 @@ const UserList = () => {
       {isConfirmPopupOpen && (
         <div className="popup">
           <div className="popup-content">
-            <h3>Are you sure you want to deactivate this user?</h3>
+            <h3>{t('userList.deactivateConfirm')}</h3>
             <div className="popup-actions">
-              <button onClick={() => handleDeactivateUser(selectedUser.id)}>Yes</button>
-              <button onClick={() => setIsConfirmPopupOpen(false)}>No</button>
+              <button onClick={() => handleDeactivateUser(selectedUser.id)}>{t('userList.yes')}</button>
+              <button onClick={() => setIsConfirmPopupOpen(false)}>{t('userList.no')}</button>
             </div>
           </div>
         </div>

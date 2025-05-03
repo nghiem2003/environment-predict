@@ -21,8 +21,15 @@ import 'leaflet/dist/leaflet.css';
 import './App.css'; // Import CSS for header and footer
 import AreaList from './components/AreaList';
 import UserList from './components/UserList';
+import { useTranslation } from 'react-i18next';
+import LanguageSwitch from './components/LanguageSwitch';
 
 const App = () => {
+  const { t,i18n } = useTranslation()
+
+  const switchLanguage = (lng) => {
+    i18n.changeLanguage(lng)
+  }
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const location = useLocation();
@@ -41,20 +48,20 @@ const App = () => {
     const menuItems =
       role === 'admin'
         ? [
-            { label: 'View Area List', path: '/areas' },
-            { label: 'View Prediction List', path: '/dashboard' },
-            { label: 'View Users List', path: '/user-list' },
+            { label: t('sidebar.area_list'), path: '/areas' },
+            { label: t('sidebar.prediction_list'), path: '/dashboard' },
+            { label: t('sidebar.user_list'), path: '/user-list' },
           ]
         : role === 'expert'
         ? [
-            { label: 'View Prediction List', path: '/dashboard' },
-            { label: 'Create Prediction', path: '/create-prediction' },
+            { label: t('sidebar.prediction_list'), path: '/dashboard' },
+            { label: t('sidebar.create_prediction'), path: '/create-prediction' },
           ]
         : [];
 
     return (
       <aside className="sidebar">
-        <div className="sidebar-header">Prediction System</div>
+        <div className="sidebar-header">{t('sidebar.title')}</div>
         <ul>
           {menuItems.map((item) => (
             <li
@@ -66,8 +73,9 @@ const App = () => {
             </li>
           ))}
         </ul>
+        <LanguageSwitch />
         <button className="logout-button" onClick={handleLogout}>
-          Logout
+          {t('sidebar.logout')}
         </button>
       </aside>
     );
@@ -81,11 +89,14 @@ const App = () => {
         <h1 className="app-title" onClick={() => navigate('/')}>
           Prediction System
         </h1>
+        <div className='group'>
+        <LanguageSwitch />
         {!token && (
           <button className="login-button" onClick={() => navigate('/Login')}>
             Login
           </button>
         )}
+        </div>
       </header>
     );
   };
@@ -111,7 +122,6 @@ const App = () => {
               }
             />
             <Route path="/Login" element={<Login />} />
-            
             
             <Route
               path="/dashboard"

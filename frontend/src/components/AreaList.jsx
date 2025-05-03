@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import axios from '../axios';
 import './AreaList.css';
+import { useTranslation } from 'react-i18next';
 
 const AreaList = () => {
+  const { t } = useTranslation();
   const [currentPage, setCurrentPage] = useState(0);
   const [totalAreas, setTotalAreas] = useState(0);
   const areasPerPage = 10;  // Number of areas per page
@@ -128,7 +130,7 @@ const AreaList = () => {
       <div className="header">
         <input
           type="text"
-          placeholder="Search by area name"
+          placeholder={t('area_list.search_placeholder')}
           value={searchTerm}
           onChange={handleSearch}
           className="search-input"
@@ -139,55 +141,55 @@ const AreaList = () => {
           className="filter-select"
           
         >
-          <option value="" disabled>Select Area Type</option>
-          <option value="">All</option>
-          <option value="oyster">Oyster</option>
-          <option value="cobia">Cobia</option>
+          <option value="" disabled>{t('area_list.filter.select_type')}</option>
+          <option value="">{t('area_list.filter.all')}</option>
+          <option value="oyster">{t('area_list.filter.oyster')}</option>
+          <option value="cobia">{t('area_list.filter.cobia')}</option>
         </select>
         <div className="latlong-filter">
           <input
             type="number"
-            placeholder="Min Lat"
+            placeholder={t('area_list.filter.min_lat')}
             value={latRange.min}
             onChange={(e) => setLatRange({ ...latRange, min: e.target.value })}
             className="filter-input"
           />
           <input
             type="number"
-            placeholder="Max Lat"
+            placeholder={t('area_list.filter.max_lat')}
             value={latRange.max}
             onChange={(e) => setLatRange({ ...latRange, max: e.target.value })}
             className="filter-input"
           />
           <input
             type="number"
-            placeholder="Min Long"
+            placeholder={t('area_list.filter.min_long')}
             value={longRange.min}
             onChange={(e) => setLongRange({ ...longRange, min: e.target.value })}
             className="filter-input"
           />
           <input
             type="number"
-            placeholder="Max Long"
+            placeholder={t('area_list.filter.max_long')}
             value={longRange.max}
             onChange={(e) => setLongRange({ ...longRange, max: e.target.value })}
             className="filter-input"
           />
         </div>
         <button className="add-btn" onClick={() => setIsPopupOpen(true)}>
-          Add New Area
+          {t('area_list.add_button')}
         </button>
       </div>
 
       <table className="area-table">
         <thead>
           <tr>
-            <th>Area Name</th>
-            <th>Area Type</th>
-            <th>Latitude</th>
-            <th>Longitude</th>
-            <th>Address</th>
-            <th>Actions</th>
+            <th>{t('area_list.table.name')}</th>
+            <th>{t('area_list.table.type')}</th>
+            <th>{t('area_list.table.lat')}</th>
+            <th>{t('area_list.table.long')}</th>
+            <th>{t('area_list.table.address')}</th>
+            <th>{t('area_list.table.actions')}</th>
           </tr>
         </thead>
         <tbody>
@@ -200,39 +202,39 @@ const AreaList = () => {
                 <td>{area.longitude}</td>
                 <td>{area.Region?.province},{area.Region?.name}</td>
                 <td>
-                  <button onClick={() => handleUpdate(area.id)}>Update</button>
+                  <button onClick={() => handleUpdate(area.id)}>{t('area_list.popup.update')}</button>
                   <button onClick={() => {
                     setIsDeleteConfirmOpen(true)
                     setSelectedArea(area)
                     console.log(area);
                     
                     }}>
-                    Delete
+                      {t('area_list.popup.delete')}
                   </button>
                 </td>
               </tr>
             ))
           ) : (
             <tr>
-              <td colSpan="6">No areas found</td>
+              <td colSpan="6">{t('area_list.table.no_data')}</td>
             </tr>
           )}
         </tbody>
       </table>
           <div className="pagination">
         <button onClick={handlePrevPage} disabled={currentPage === 0}>
-          Previous
+          {t('area_list.pagination.previous')}
         </button>
-        <span>Page {currentPage + 1} of {totalPages}</span>
+        <span>{t('area_list.pagination.page_info', { current: currentPage + 1, total: totalPages })}</span>
         <button onClick={handleNextPage} disabled={currentPage === totalPages - 1}>
-          Next
+          {t('area_list.pagination.next')}
         </button>
       </div>
       {/* Add/Update Area Popup */}
       {isPopupOpen && (
         <div className="popup">
           <div className="popup-content">
-            <h3>{newArea.id ? 'Update Area' : 'Add New Area'}</h3>
+            <h3>{newArea.id ? t('area_list.popup.update') : t('area_list.popup.add')}</h3>
             <form onSubmit={handleAddArea}>
               <input
                 type="text"
@@ -261,7 +263,7 @@ const AreaList = () => {
         onChange={(e) =>handleInputChange(e)}
         id="region"
       >
-        <option value="" disabled>Select a region</option>
+        <option value="" disabled>{t('area_list.popup.select_region')}</option>
         {regionList.map((region) => (
           <option key={region.id} value={region.id}>
             {region.province},{region.name} 
@@ -274,10 +276,10 @@ const AreaList = () => {
                 onChange={(e)=>handleInputChange(e)}
                 disabled={newArea.id? true: false }
               >
-                <option value="oyster">Oyster</option>
-                <option value="cobia">Cobia</option>
+                <option value="oyster">{t('area_list.filter.oyster')}</option>
+                <option value="cobia">{t('area_list.filter.cobia')}</option>
               </select>
-              <button type="submit">Save</button>
+              <button type="submit">{t('area_list.popup.save')}</button>
               <button type="button" onClick={() =>{ 
                 setIsPopupOpen(false)
                 setNewArea({ areaName: '', lat: '', long: '', region: '', area_type: 'oyster' });
@@ -293,9 +295,9 @@ const AreaList = () => {
       {isDeleteConfirmOpen && (
         <div className="popup">
           <div className="popup-content">
-            <h3>Are you sure you want to delete this area? {selectedArea.name} </h3>
-            <button className='delete-confirm-button' onClick={() => handleDelete(selectedArea.id)}>Yes</button>
-            <button className='delete-deny-button' onClick={() => setIsDeleteConfirmOpen(false)}>No</button>
+            <h3>{t('area_list.confirm_delete.title')} {selectedArea?.name}?</h3>
+            <button className='delete-confirm-button' onClick={() => handleDelete(selectedArea.id)}>{t('area_list.confirm_delete.yes')}</button>
+            <button className='delete-deny-button' onClick={() => setIsDeleteConfirmOpen(false)}>{t('area_list.confirm_delete.no')}</button>
           </div>
         </div>
       )}

@@ -4,8 +4,12 @@ import PredictionDetails from './PredictionDetails';
 import { jwtDecode } from 'jwt-decode';
 import axios from '../axios';
 import './Dashboard.css';
+import { useTranslation } from 'react-i18next';
+import { toast } from 'react-toastify';
+
 
 const Dashboard = () => {
+  const { t } = useTranslation();
   const { token } = useSelector((state) => state.auth);
   console.log('The token',token);
   const [currentPage, setCurrentPage] = useState(0);
@@ -64,7 +68,7 @@ const Dashboard = () => {
         }
       } catch (error) {
         console.error('Error decoding token:', error);
-        alert('Invalid token. Please log in again.');
+        toast.error(t('dashboard.invalidToken'));
       }
     }
   }, [currentPage]);
@@ -97,22 +101,22 @@ const Dashboard = () => {
   return (
     <div className={`dashboard-container ${showModal ? 'blurred' : ''}`}>
       <div className="dashboard-card">
-        <h1>Dashboard</h1>
-        <h2>All Predictions</h2>
+        <h1>{t('dashboard.title')}</h1>
+        <h2>{t('dashboard.subtitle')}</h2>
         <table>
           <thead>
             <tr>
-              <th>ID</th>
-              {userRole === 'admin' ?<th>Creator</th> : <></>}
-              <th>Area</th>
-              <th>Actions</th>
+              <th>{t('dashboard.id')}</th>
+              {userRole === 'admin' ?<th>{t('dashboard.creator')}</th> : <></>}
+              <th>{t('dashboard.creator')}</th>
+              <th>{t('dashboard.actions')}</th>
             </tr>
           </thead>
           <tbody>
             {predictionList.length > 0 ? (
               predictionList.map((item) => (
                 <tr>
-                  <td className='predict-id'>Prediction#{item.id}</td>
+                  <td className='predict-id'>{t('dashboard.prediction')}#{item.id}</td>
                   {userRole === 'admin' ?<td>{item.User.username}</td> : <></>}
                   <td>{item.Area.name}</td>
                   <td className='action'>
@@ -120,23 +124,25 @@ const Dashboard = () => {
                       className="view-details-btn"
                       onClick={() => handleViewDetails(item.id)}
                     >
-                      View Details
+                      {t('dashboard.viewDetails')}
                     </button>
                   </td>
                 </tr>
               ))
             ) : (
-              <tr><td className='predict-id'></td><td className='action'></td></tr>
+              <tr>
+                <td colSpan={userRole === 'admin' ? 4 : 3}>{t('dashboard.noData')}</td>
+              </tr>
             )}
           </tbody>
         </table>
         <div className="pagination">
         <button onClick={handlePrevPage} disabled={currentPage === 0}>
-          Previous
+            {t('dashboard.previous')}
         </button>
-        <span>Page {currentPage + 1} of {totalPages}</span>
+        <span>{t('dashboard.page')} {currentPage + 1} {t('dashboard.of')}{' '}{totalPages}</span>
         <button onClick={handleNextPage} disabled={currentPage === totalPages - 1}>
-          Next
+          {t('dashboard.next')}
         </button>
       </div>
       </div>

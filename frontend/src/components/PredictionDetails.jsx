@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import axios from '../axios';
 import './PredictionDetails.css';
+import { useTranslation } from 'react-i18next';
 
 const PredictionDetails = ({ predictionId }) => {
   const [prediction, setPrediction] = useState(null);
-
+  const { t } = useTranslation()
   useEffect(() => {
     axios
       .get(`/api/express/predictions/${predictionId}`)
@@ -17,7 +18,7 @@ const PredictionDetails = ({ predictionId }) => {
   }, [predictionId]);
 
   if (!prediction)
-    return <div className="loading">Loading prediction details...</div>;
+    return <div className="loading">{t('predictionDetails.loading')}</div>;
 
   const getPredictionText = (prediction) => {
     if (prediction.prediction_text == -1) {
@@ -30,26 +31,26 @@ const PredictionDetails = ({ predictionId }) => {
   };
   return (
     <div className="prediction-details-container">
-      <h1 className="title">Prediction Details</h1>
-      <h2>Prediction ID: {prediction.id}</h2>
+      <h1 className="title">{t('predictionDetails.title')}</h1>
+      <h2>{t('predictionDetails.id')}: {prediction.id}</h2>
       <p>
-        <strong>Area:</strong> {prediction.Area.name}, {prediction.Area.address}
+        <strong>{t('predictionDetails.area')}:</strong> {prediction.Area.name}, {prediction.Area.address}
       </p>
       <p>
-        <strong>Area Type:</strong> {prediction.Area.area_type}
+        <strong>{t('predictionDetails.areaType')}:</strong> {prediction.Area.area_type}
       </p>
       <p>
-        <strong>Prediction Text:</strong> {getPredictionText(prediction)}
+        <strong>{t('predictionDetails.predictionText')}:</strong> {getPredictionText(prediction)}
       </p>
       <p>
-        <strong>Expert ID:</strong> {prediction.user_id}
+        <strong>{t('predictionDetails.expertId')}:</strong> {prediction.user_id}
       </p>
-      <h3>Natural Elements</h3>
+      <h3>{t('predictionDetails.naturalElements')}</h3>
       <table className="elements-table">
         <thead>
           <tr>
-            <th>Element</th>
-            <th>Value</th>
+            <th>{t('predictionDetails.element')}</th>
+            <th>{t('predictionDetails.value')}</th>
           </tr>
         </thead>
         <tbody>
