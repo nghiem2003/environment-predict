@@ -126,7 +126,7 @@ exports.deleteArea = async (req, res) => {
 exports.updateArea = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, latitude, longitude, region, area_type } = req.body;
+    const { name, latitude, longitude, region, area , area_type } = req.body;
 
     // Validate area_type (must be either 'oyster' or 'cobia')
     if (area_type !== 'oyster' && area_type !== 'cobia') {
@@ -134,24 +134,25 @@ exports.updateArea = async (req, res) => {
     }
 
     // Find the area by ID
-    const area = await Area.findOne({ where: { id } });
+    const selectedArea = await Area.findOne({ where: { id } });
 
-    if (!area) {
+    if (!selectedArea) {
       return res.status(404).json({ error: 'Area not found.' });
     }
 
     // Update the area
-    area.name = name || area.name;
-    area.latitude = latitude || area.latitude;
-    area.longitude = longitude || area.longitude;
-    area.region = region || area.region;
-    area.area_type = area_type;
+    selectedArea.name = name || area.name;
+    selectedArea.latitude = latitude || area.latitude;
+    selectedArea.longitude = longitude || area.longitude;
+    selectedArea.area = area || area.area
+    selectedArea.region = region || area.region;
+    selectedArea.area_type = area_type;
 
     // Save the updated area
-    await area.save();
-    console.log(area);
+    await selectedArea.save();
+    console.log(selectedArea);
     
-    res.status(200).json(area);
+    res.status(200).json(selectedArea);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

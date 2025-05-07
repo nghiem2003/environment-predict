@@ -24,6 +24,8 @@
     "status": "Trạng thái",
     "actions": "Thao tác",
     "region": "Khu vực",
+     "save":"Lưu",
+    "cancel":"Huỷ",
     "selectRegion": "Chọn khu vực",
     "noUsers": "Không tìm thấy người dùng nào",
     "confirmDeactivate": "Bạn có chắc muốn vô hiệu hóa người dùng này không?"
@@ -117,6 +119,7 @@
       "page_info": "Trang {{current}} của {{total}}"
     },
     "popup": {
+       "selectFromMap":"Chọn toạ độ khu vực từ bản đồ",
       "add": "Thêm khu vực mới",
       "update": "Cập nhật khu vực",
       "delete":"Xoá Khu Vực",

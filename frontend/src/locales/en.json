@@ -24,6 +24,8 @@
     "status": "Status",
     "actions": "Actions",
     "region": "Region",
+    "save":"Save",
+    "cancel":"Cancel",
     "selectRegion": "Select region",
     "noUsers": "No users found",
     "confirmDeactivate": "Are you sure you want to deactivate this user?"
@@ -118,6 +120,7 @@
       "page_info": "Page {{current}} of {{total}}"
     },
     "popup": {
+      "selectFromMap":"Select coordination from map",
       "add": "Add New Area",
       "update": "Update Area",
       "name": "Area Name",

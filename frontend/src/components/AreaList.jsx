@@ -2,6 +2,16 @@ import React, { useState, useEffect } from 'react';
 import axios from '../axios';
 import './AreaList.css';
 import { useTranslation } from 'react-i18next';
+import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
+
+// delete L.Icon.Default.prototype._getIconUrl;
+// L.Icon.Default.mergeOptions({
+//   iconRetinaUrl: require('leaflet/dist/images/marker-icon-2x.png'),
+//   iconUrl: require('leaflet/dist/images/marker-icon.png'),
+//   shadowUrl: require('leaflet/dist/images/marker-shadow.png'),
+// });
 
 const AreaList = () => {
   const { t } = useTranslation();
@@ -21,6 +31,7 @@ const AreaList = () => {
     areaName: '',
     lat: '',
     long: '',
+    area: '', //default
     region: '',
     area_type: 'oyster',
   });
@@ -125,6 +136,23 @@ const AreaList = () => {
       setCurrentPage(currentPage - 1);
     }
   };
+
+
+   function LocationMarker({ setCoordinates }) {
+    const [position, setPosition] = useState(null);
+
+    useMapEvents({
+      click(e) {
+        setPosition(e.latlng);
+        setCoordinates(e.latlng);
+      },
+    });
+
+    return position === null ? null : <Marker position={position} />;
+  }
+
+
+
   return (
     <div className="app">
       <div className="header">
@@ -235,6 +263,7 @@ const AreaList = () => {
         <div className="popup">
           <div className="popup-content">
             <h3>{newArea.id ? t('area_list.popup.update') : t('area_list.popup.add')}</h3>
+            <div className='horizontal-flex'>
             <form onSubmit={handleAddArea}>
               <input
                 type="text"
@@ -256,6 +285,13 @@ const AreaList = () => {
                 placeholder="Longitude"
                 value={newArea.longitude}
                 onChange={(e)=> handleInputChange(e)}
+              />
+              <input
+                type="text"
+                name="name"
+                placeholder="Area's area"
+                value={newArea.area}
+                onChange={(e) =>handleInputChange(e)}
               />
               <select
         name="region"
@@ -279,6 +315,7 @@ const AreaList = () => {
                 <option value="oyster">{t('area_list.filter.oyster')}</option>
                 <option value="cobia">{t('area_list.filter.cobia')}</option>
               </select>
+              
               <button type="submit">{t('area_list.popup.save')}</button>
               <button type="button" onClick={() =>{ 
                 setIsPopupOpen(false)
@@ -287,6 +324,20 @@ const AreaList = () => {
                 Cancel
               </button>
             </form>
+            
+              
+              <MapContainer center={[16.047079, 108.206230]} zoom={6} style={{ height: '300px', width: '300px', marginTop: '10px' }}>
+                <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution="&copy; OpenStreetMap contributors" />
+                <LocationMarker setCoordinates={(latlng) => {
+                  setNewArea((prev) => ({
+                    ...prev,
+                    latitude: latlng.lat,
+                    longitude: latlng.lng,
+                  }));
+                }} />
+              </MapContainer> 
+              
+            </div>
           </div>
         </div>
       )}

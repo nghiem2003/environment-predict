@@ -75,10 +75,9 @@ const CreateNewPrediction = () => {
       try {
         const response = await axios.get('api/express/areas');
         console.log(response.data);
-        console.log(response.data.areas[0].region);
+        //console.log(response.data.areas[0].region);
         const decodedToken = jwtDecode(token); 
         console.log(decodedToken.region);
-        
         const areaList = response.data.areas.filter((area) => area.region === decodedToken.region);
         console.log('arealist:',areaList);
         setAreas(areaList);
