@@ -3,14 +3,23 @@ const { Area } = require('../models');
 const { Region } = require('../models');
 exports.getAllAreas = async (req, res) => {
   try {
-    const { search, area_type, lat_min, lat_max, long_min, long_max,limit,offset } = req.query;
+    const {
+      search,
+      area_type,
+      lat_min,
+      lat_max,
+      long_min,
+      long_max,
+      limit,
+      offset,
+    } = req.query;
 
     // Start with an empty query object
     let query = {};
 
     // If a search term is provided, add it to the query (search by name)
     if (search) {
-      query.name = { [Op.like]: `%${search}%` };  // Sequelize query for partial match
+      query.name = { [Op.like]: `%${search}%` }; // Sequelize query for partial match
     }
 
     // If area_type is provided, filter by area type
@@ -21,25 +30,25 @@ exports.getAllAreas = async (req, res) => {
     // If latitude range is provided, filter by latitudes
     if (lat_min || lat_max) {
       query.latitude = {}; // Adjusted for the correct column name
-      if (lat_min) query.latitude[Op.gte] = lat_min;  // Greater than or equal to lat_min
-      if (lat_max) query.latitude[Op.lte] = lat_max;  // Less than or equal to lat_max
+      if (lat_min) query.latitude[Op.gte] = lat_min; // Greater than or equal to lat_min
+      if (lat_max) query.latitude[Op.lte] = lat_max; // Less than or equal to lat_max
     }
 
     // If longitude range is provided, filter by longitudes
     if (long_min || long_max) {
       query.longitude = {}; // Adjusted for the correct column name
-      if (long_min) query.longitude[Op.gte] = long_min;  // Greater than or equal to long_min
-      if (long_max) query.longitude[Op.lte] = long_max;  // Less than or equal to long_max
+      if (long_min) query.longitude[Op.gte] = long_min; // Greater than or equal to long_min
+      if (long_max) query.longitude[Op.lte] = long_max; // Less than or equal to long_max
     }
 
     const options = {
       where: query,
       include: {
         model: Region,
-        as: 'Region',  // This should match the alias used in your association
-        required: false,  // If you want to include Areas even if they don't have an associated Region
-        attributes: ['id', 'name', 'province'] // Specify the attributes you want to include from the Region model
-      }
+        as: 'Region', // This should match the alias used in your association
+        required: false, // If you want to include Areas even if they don't have an associated Region
+        attributes: ['id', 'name', 'province'], // Specify the attributes you want to include from the Region model
+      },
     };
 
     if (limit) {
@@ -48,11 +57,12 @@ exports.getAllAreas = async (req, res) => {
     if (offset) {
       options.offset = parseInt(offset, 10); // Convert offset to an integer
     }
+    options.order = [['region', 'DESC']];
     // Query the database with the built query object
     const areas = await Area.findAll(options);
-    const total = await Area.count(); // Count total records matching the query
+    const total = await Area.count(options); // Count total records matching the query
     // Return the areas as a response
-    res.status(200).json({areas:areas, total:total}); // Return areas and total count
+    res.status(200).json({ areas: areas, total: total }); // Return areas and total count
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -61,13 +71,14 @@ exports.getAllAreas = async (req, res) => {
 exports.getAreaById = async (req, res) => {
   try {
     const { id } = req.params; // Extract ID from request parameters
-    const area = await Area.findOne({ 
+    const area = await Area.findOne({
       where: { id: id },
       include: {
-      model: Region,
-      as: 'Region',  // This should match the alias used in your association
-      required: false  // If you want to include Areas even if they don't have an associated Region
-  } }); // Query database by ID
+        model: Region,
+        as: 'Region', // This should match the alias used in your association
+        required: false, // If you want to include Areas even if they don't have an associated Region
+      },
+    }); // Query database by ID
     res.status(200).json(area);
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -80,7 +91,9 @@ exports.createArea = async (req, res) => {
 
     // Validate area_type (must be either 'oyster' or 'cobia')
     if (area_type !== 'oyster' && area_type !== 'cobia') {
-      return res.status(400).json({ error: 'Invalid area_type. It must be either "oyster" or "cobia".' });
+      return res.status(400).json({
+        error: 'Invalid area_type. It must be either "oyster" or "cobia".',
+      });
     }
 
     // Create the new area in the database
@@ -89,7 +102,7 @@ exports.createArea = async (req, res) => {
       latitude,
       longitude,
       region,
-      area:1000,
+      area: 1000,
       area_type,
     });
 
@@ -108,7 +121,7 @@ exports.deleteArea = async (req, res) => {
     // Find the area by ID
     const area = await Area.findOne({ where: { id } });
     console.log(area.name);
-    
+
     if (!area) {
       return res.status(404).json({ error: 'Area not found.' });
     }
@@ -126,11 +139,13 @@ exports.deleteArea = async (req, res) => {
 exports.updateArea = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, latitude, longitude, region, area , area_type } = req.body;
+    const { name, latitude, longitude, region, area, area_type } = req.body;
 
     // Validate area_type (must be either 'oyster' or 'cobia')
     if (area_type !== 'oyster' && area_type !== 'cobia') {
-      return res.status(400).json({ error: 'Invalid area_type. It must be either "oyster" or "cobia".' });
+      return res.status(400).json({
+        error: 'Invalid area_type. It must be either "oyster" or "cobia".',
+      });
     }
 
     // Find the area by ID
@@ -144,14 +159,14 @@ exports.updateArea = async (req, res) => {
     selectedArea.name = name || area.name;
     selectedArea.latitude = latitude || area.latitude;
     selectedArea.longitude = longitude || area.longitude;
-    selectedArea.area = area || area.area
+    selectedArea.area = area || area.area;
     selectedArea.region = region || area.region;
     selectedArea.area_type = area_type;
 
     // Save the updated area
     await selectedArea.save();
     console.log(selectedArea);
-    
+
     res.status(200).json(selectedArea);
   } catch (error) {
     res.status(500).json({ error: error.message });

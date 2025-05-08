@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import axios from '../axios';
-import './PredictionDetails.css';
 import { useTranslation } from 'react-i18next';
+import { Typography, Descriptions, Table, Spin } from 'antd';
+
+const { Title, Text } = Typography;
 
 const PredictionDetails = ({ predictionId }) => {
   const [prediction, setPrediction] = useState(null);
-  const { t } = useTranslation()
+  const { t } = useTranslation();
   useEffect(() => {
     axios
       .get(`/api/express/predictions/${predictionId}`)
@@ -18,50 +20,84 @@ const PredictionDetails = ({ predictionId }) => {
   }, [predictionId]);
 
   if (!prediction)
-    return <div className="loading">{t('predictionDetails.loading')}</div>;
+    return (
+      <Spin
+        tip={t('predictionDetails.loading')}
+        style={{ width: '100%', margin: '32px 0' }}
+      />
+    );
 
   const getPredictionText = (prediction) => {
     if (prediction.prediction_text == -1) {
-      return 'The environment is unsuitable or dangerous for growth';
+      return (
+        t('predictionDetails.unsuitable') ||
+        'The environment is unsuitable or dangerous for growth'
+      );
     } else if (prediction.prediction_text == 1) {
-      return 'The environment is excellent for oyster growth';
+      return (
+        t('predictionDetails.excellent') ||
+        'The environment is excellent for oyster growth'
+      );
     } else {
-      return 'The environment is suitable for growth';
+      return (
+        t('predictionDetails.suitable') ||
+        'The environment is suitable for growth'
+      );
     }
   };
+
+  const columns = [
+    {
+      title: t('predictionDetails.element'),
+      dataIndex: 'name',
+      key: 'name',
+    },
+    {
+      title: t('predictionDetails.value'),
+      dataIndex: ['PredictionNatureElement', 'value'],
+      key: 'value',
+      render: (_, record) => record.PredictionNatureElement.value,
+    },
+  ];
+
   return (
-    <div className="prediction-details-container">
-      <h1 className="title">{t('predictionDetails.title')}</h1>
-      <h2>{t('predictionDetails.id')}: {prediction.id}</h2>
-      <p>
-        <strong>{t('predictionDetails.area')}:</strong> {prediction.Area.name}, {prediction.Area.address}
-      </p>
-      <p>
-        <strong>{t('predictionDetails.areaType')}:</strong> {prediction.Area.area_type}
-      </p>
-      <p>
-        <strong>{t('predictionDetails.predictionText')}:</strong> {getPredictionText(prediction)}
-      </p>
-      <p>
-        <strong>{t('predictionDetails.expertId')}:</strong> {prediction.user_id}
-      </p>
-      <h3>{t('predictionDetails.naturalElements')}</h3>
-      <table className="elements-table">
-        <thead>
-          <tr>
-            <th>{t('predictionDetails.element')}</th>
-            <th>{t('predictionDetails.value')}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {prediction.NaturalElements.map((element) => (
-            <tr key={element.id}>
-              <td>{element.name}</td>
-              <td>{element.PredictionNatureElement.value}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div style={{ width: '100%' }}>
+      <Title level={3} style={{ marginBottom: 16 }}>
+        {t('predictionDetails.title')}
+      </Title>
+      <Descriptions
+        bordered
+        column={1}
+        size="middle"
+        style={{ marginBottom: 24 }}
+      >
+        <Descriptions.Item label={t('predictionDetails.id')}>
+          {prediction.id}
+        </Descriptions.Item>
+        <Descriptions.Item label={t('predictionDetails.area')}>
+          {prediction.Area.name}, {prediction.Area.address}
+        </Descriptions.Item>
+        <Descriptions.Item label={t('predictionDetails.areaType')}>
+          {prediction.Area.area_type}
+        </Descriptions.Item>
+        <Descriptions.Item label={t('predictionDetails.predictionText')}>
+          {getPredictionText(prediction)}
+        </Descriptions.Item>
+        <Descriptions.Item label={t('predictionDetails.expertId')}>
+          {prediction.user_id}
+        </Descriptions.Item>
+      </Descriptions>
+      <Title level={4} style={{ marginBottom: 12 }}>
+        {t('predictionDetails.naturalElements')}
+      </Title>
+      <Table
+        columns={columns}
+        dataSource={prediction.NaturalElements}
+        rowKey="id"
+        pagination={false}
+        size="middle"
+        bordered
+      />
     </div>
   );
 };

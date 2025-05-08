@@ -5,6 +5,23 @@ import { useTranslation } from 'react-i18next';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
+import {
+  Input,
+  Select,
+  Button,
+  Space,
+  Table,
+  Pagination,
+  Modal,
+  Form,
+  Typography,
+  Card,
+  Row,
+  Col,
+} from 'antd';
+
+const { Option } = Select;
+const { Title } = Typography;
 
 // delete L.Icon.Default.prototype._getIconUrl;
 // L.Icon.Default.mergeOptions({
@@ -14,10 +31,11 @@ import L from 'leaflet';
 // });
 
 const AreaList = () => {
+  const [form] = Form.useForm();
   const { t } = useTranslation();
   const [currentPage, setCurrentPage] = useState(0);
   const [totalAreas, setTotalAreas] = useState(0);
-  const areasPerPage = 10;  // Number of areas per page
+  const areasPerPage = 10; // Number of areas per page
   const [areas, setAreas] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [areaType, setAreaType] = useState('');
@@ -28,10 +46,11 @@ const AreaList = () => {
   const [selectedArea, setSelectedArea] = useState(null);
   const [regionList, setRegionList] = useState([]);
   const [newArea, setNewArea] = useState({
-    areaName: '',
-    lat: '',
-    long: '',
-    area: '', //default
+    id: '',
+    name: '',
+    latitude: '',
+    longitude: '',
+    area: '',
     region: '',
     area_type: 'oyster',
   });
@@ -54,7 +73,7 @@ const AreaList = () => {
       setAreas(response.data.areas);
       setTotalAreas(response.data.total); // Set total areas for pagination
       console.log(response.data.areas);
-      console.log(response.data.total);
+      console.log('total', response.data.areas.length);
       const regionResponse = await axios.get('/api/express/areas/regions');
       setRegionList(regionResponse.data); // Set regions for the dropdown
       console.log(regionResponse.data);
@@ -68,19 +87,21 @@ const AreaList = () => {
     fetchAreas();
   }, [searchTerm, areaType, latRange, longRange, currentPage]);
 
-  const handleAddArea = async (e) => {
-    e.preventDefault();
+  const handleAddArea = async (values) => {
+    console.log('id', form.getFieldValue('id'));
+
     try {
-      if (newArea.id) {
-        // Update existing area
-        await axios.put(`/api/express/areas/${newArea.id}`, newArea);
+      if (form.getFieldValue('id')) {
+        await axios.put(
+          `/api/express/areas/${form.getFieldValue('id')}`,
+          values
+        );
       } else {
-        // Create new area
-        await axios.post('/api/express/areas', newArea);
+        await axios.post('/api/express/areas', values);
       }
-      setIsPopupOpen(false); // Close the popup after successful creation
-      fetchAreas(); // Refresh the area list
-      setNewArea({ areaName: '', lat: '', long: '', region: '', area_type: 'oyster' });
+      setIsPopupOpen(false);
+      fetchAreas();
+      form.resetFields();
     } catch (error) {
       console.error('Error saving area:', error);
     }
@@ -89,7 +110,7 @@ const AreaList = () => {
   const handleDelete = async (id) => {
     try {
       console.log('trying to delete');
-      
+
       await axios.delete(`/api/express/areas/${id}`);
       setIsDeleteConfirmOpen(false); // Close delete confirmation
       fetchAreas(); // Refresh the area list after deletion
@@ -101,23 +122,27 @@ const AreaList = () => {
   const handleUpdate = (id) => {
     const areaToUpdate = areas.find((area) => area.id === id);
     console.log(areaToUpdate);
-    
-    setNewArea(areaToUpdate); // Pre-fill the form with the existing area data
-    setIsPopupOpen(true); // Open the popup to edit
+
+    form.setFieldsValue({
+      id: areaToUpdate.id || '',
+      name: areaToUpdate.name || '',
+      latitude: areaToUpdate.latitude || '',
+      longitude: areaToUpdate.longitude || '',
+      area: areaToUpdate.area || '',
+      region: areaToUpdate.region || '',
+      area_type: areaToUpdate.area_type || 'oyster',
+    });
+    console.log('id', form.getFieldValue('id'));
+
+    setIsPopupOpen(true);
   };
 
   const handleInputChange = (e) => {
-    const { name, value } = e.target;  
-    console.log(name,',',value);
-      
-    setNewArea((prevState) => {
-        const updatedState = {
+    const { name, value } = e.target;
+    setNewArea((prevState) => ({
       ...prevState,
-      [name]: value
-    }; 
-    return updatedState;
-    });
-    console.log(newArea);
+      [name]: value,
+    }));
   };
 
   const handleSearch = (e) => {
@@ -137,8 +162,7 @@ const AreaList = () => {
     }
   };
 
-
-   function LocationMarker({ setCoordinates }) {
+  function LocationMarker({ setCoordinates }) {
     const [position, setPosition] = useState(null);
 
     useMapEvents({
@@ -151,207 +175,267 @@ const AreaList = () => {
     return position === null ? null : <Marker position={position} />;
   }
 
-
+  // Table columns for Ant Design Table
+  const columns = [
+    { title: t('area_list.table.name'), dataIndex: 'name', key: 'name' },
+    {
+      title: t('area_list.table.type'),
+      dataIndex: 'area_type',
+      key: 'area_type',
+    },
+    { title: t('area_list.table.lat'), dataIndex: 'latitude', key: 'latitude' },
+    {
+      title: t('area_list.table.long'),
+      dataIndex: 'longitude',
+      key: 'longitude',
+    },
+    {
+      title: t('area_list.table.address'),
+      key: 'address',
+      render: (_, area) => `${area.Region?.province},${area.Region?.name}`,
+    },
+    {
+      title: t('area_list.table.actions'),
+      key: 'actions',
+      render: (_, area) => (
+        <Space>
+          <Button size="small" onClick={() => handleUpdate(area.id)}>
+            {t('area_list.popup.update')}
+          </Button>
+          <Button
+            size="small"
+            danger
+            onClick={() => {
+              setIsDeleteConfirmOpen(true);
+              console.log(area);
+              setSelectedArea(area);
+            }}
+          >
+            {t('area_list.popup.delete')}
+          </Button>
+        </Space>
+      ),
+    },
+  ];
 
   return (
-    <div className="app">
-      <div className="header">
-        <input
-          type="text"
-          placeholder={t('area_list.search_placeholder')}
-          value={searchTerm}
-          onChange={handleSearch}
-          className="search-input"
+    <div style={{ width: '100%', padding: 0, margin: 0 }}>
+      <Card
+        style={{
+          width: '100%',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+          borderRadius: 12,
+        }}
+        bodyStyle={{ padding: 24 }}
+      >
+        <Title level={3} style={{ marginBottom: 24 }}>
+          {t('area_list.title') || 'Danh sách khu vực'}
+        </Title>
+        <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+          <Col xs={24} sm={12} md={6}>
+            <Input
+              placeholder={
+                t('area_list.search_placeholder') || 'Tìm kiếm theo tên khu vực'
+              }
+              value={searchTerm}
+              onChange={handleSearch}
+              allowClear
+            />
+          </Col>
+          <Col xs={24} sm={12} md={4}>
+            <Select
+              value={areaType}
+              onChange={setAreaType}
+              style={{ width: '100%' }}
+              allowClear
+              placeholder={t('area_list.type_placeholder') || 'Tất cả'}
+            >
+              <Option value="">{t('area_list.type_all') || 'Tất cả'}</Option>
+              <Option value="oyster">Oyster</Option>
+              <Option value="cobia">Cobia</Option>
+            </Select>
+          </Col>
+          <Col xs={24} sm={12} md={3}>
+            <Input
+              placeholder={t('area_list.lat_min') || 'Vĩ độ tối thiểu'}
+              value={latRange.min}
+              onChange={(e) =>
+                setLatRange({ ...latRange, min: e.target.value })
+              }
+              type="number"
+            />
+          </Col>
+          <Col xs={24} sm={12} md={3}>
+            <Input
+              placeholder={t('area_list.lat_max') || 'Vĩ độ tối đa'}
+              value={latRange.max}
+              onChange={(e) =>
+                setLatRange({ ...latRange, max: e.target.value })
+              }
+              type="number"
+            />
+          </Col>
+          <Col xs={24} sm={12} md={3}>
+            <Input
+              placeholder={t('area_list.long_min') || 'Kinh độ tối thiểu'}
+              value={longRange.min}
+              onChange={(e) =>
+                setLongRange({ ...longRange, min: e.target.value })
+              }
+              type="number"
+            />
+          </Col>
+          <Col xs={24} sm={12} md={3}>
+            <Input
+              placeholder={t('area_list.long_max') || 'Kinh độ tối đa'}
+              value={longRange.max}
+              onChange={(e) =>
+                setLongRange({ ...longRange, max: e.target.value })
+              }
+              type="number"
+            />
+          </Col>
+          <Col xs={24} sm={12} md={2}>
+            <Button type="primary" block onClick={() => setIsPopupOpen(true)}>
+              {t('area_list.add_button') || 'Thêm khu vực mới'}
+            </Button>
+          </Col>
+        </Row>
+        <Table
+          columns={columns}
+          dataSource={areas}
+          rowKey="id"
+          pagination={false}
+          style={{ width: '100%' }}
+          scroll={{ x: 'max-content' }}
         />
-        <select
-          onChange={(e) => setAreaType(e.target.value)}
-          value={areaType}
-          className="filter-select"
-          
-        >
-          <option value="" disabled>{t('area_list.filter.select_type')}</option>
-          <option value="">{t('area_list.filter.all')}</option>
-          <option value="oyster">{t('area_list.filter.oyster')}</option>
-          <option value="cobia">{t('area_list.filter.cobia')}</option>
-        </select>
-        <div className="latlong-filter">
-          <input
-            type="number"
-            placeholder={t('area_list.filter.min_lat')}
-            value={latRange.min}
-            onChange={(e) => setLatRange({ ...latRange, min: e.target.value })}
-            className="filter-input"
-          />
-          <input
-            type="number"
-            placeholder={t('area_list.filter.max_lat')}
-            value={latRange.max}
-            onChange={(e) => setLatRange({ ...latRange, max: e.target.value })}
-            className="filter-input"
-          />
-          <input
-            type="number"
-            placeholder={t('area_list.filter.min_long')}
-            value={longRange.min}
-            onChange={(e) => setLongRange({ ...longRange, min: e.target.value })}
-            className="filter-input"
-          />
-          <input
-            type="number"
-            placeholder={t('area_list.filter.max_long')}
-            value={longRange.max}
-            onChange={(e) => setLongRange({ ...longRange, max: e.target.value })}
-            className="filter-input"
+        <div style={{ margin: '16px 0', textAlign: 'center' }}>
+          <Pagination
+            current={currentPage + 1}
+            total={totalAreas}
+            pageSize={areasPerPage}
+            onChange={(page) => setCurrentPage(page - 1)}
+            showSizeChanger={false}
           />
         </div>
-        <button className="add-btn" onClick={() => setIsPopupOpen(true)}>
-          {t('area_list.add_button')}
-        </button>
-      </div>
 
-      <table className="area-table">
-        <thead>
-          <tr>
-            <th>{t('area_list.table.name')}</th>
-            <th>{t('area_list.table.type')}</th>
-            <th>{t('area_list.table.lat')}</th>
-            <th>{t('area_list.table.long')}</th>
-            <th>{t('area_list.table.address')}</th>
-            <th>{t('area_list.table.actions')}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {areas.length > 0 ? (
-            areas.map((area) => (
-              <tr key={area.id}>
-                <td>{area.name}</td>
-                <td>{area.area_type}</td>
-                <td>{area.latitude}</td>
-                <td>{area.longitude}</td>
-                <td>{area.Region?.province},{area.Region?.name}</td>
-                <td>
-                  <button onClick={() => handleUpdate(area.id)}>{t('area_list.popup.update')}</button>
-                  <button onClick={() => {
-                    setIsDeleteConfirmOpen(true)
-                    setSelectedArea(area)
-                    console.log(area);
-                    
-                    }}>
-                      {t('area_list.popup.delete')}
-                  </button>
-                </td>
-              </tr>
-            ))
-          ) : (
-            <tr>
-              <td colSpan="6">{t('area_list.table.no_data')}</td>
-            </tr>
-          )}
-        </tbody>
-      </table>
-          <div className="pagination">
-        <button onClick={handlePrevPage} disabled={currentPage === 0}>
-          {t('area_list.pagination.previous')}
-        </button>
-        <span>{t('area_list.pagination.page_info', { current: currentPage + 1, total: totalPages })}</span>
-        <button onClick={handleNextPage} disabled={currentPage === totalPages - 1}>
-          {t('area_list.pagination.next')}
-        </button>
-      </div>
-      {/* Add/Update Area Popup */}
-      {isPopupOpen && (
-        <div className="popup">
-          <div className="popup-content">
-            <h3>{newArea.id ? t('area_list.popup.update') : t('area_list.popup.add')}</h3>
-            <div className='horizontal-flex'>
-            <form onSubmit={handleAddArea}>
-              <input
-                type="text"
+        {/* Add/Update Area Modal */}
+        <Modal
+          open={isPopupOpen}
+          title={
+            form.getFieldValue('id')
+              ? t('area_list.popup.update')
+              : t('area_list.popup.add')
+          }
+          onCancel={() => {
+            setIsPopupOpen(false);
+            form.resetFields();
+          }}
+          footer={null}
+          width={700}
+        >
+          <div style={{ display: 'flex', gap: 24 }}>
+            <Form
+              form={form}
+              layout="vertical"
+              style={{ flex: 1 }}
+              onFinish={handleAddArea}
+            >
+              <Form.Item
+                label="Area Name"
                 name="name"
-                placeholder="Area Name"
-                value={newArea.name}
-                onChange={(e) =>handleInputChange(e)}
-              />
-              <input
-                type="number"
-                name="latitude"
-                placeholder="Latitude"
-                value={newArea.latitude}
-                onChange={(e)=> handleInputChange(e)}
-              />
-              <input
-                type="number"
-                name="longitude"
-                placeholder="Longitude"
-                value={newArea.longitude}
-                onChange={(e)=> handleInputChange(e)}
-              />
-              <input
-                type="text"
-                name="name"
-                placeholder="Area's area"
-                value={newArea.area}
-                onChange={(e) =>handleInputChange(e)}
-              />
-              <select
-        name="region"
-        value={regionList.find((region) => region.id === newArea.region)?.id || ''}
-        onChange={(e) =>handleInputChange(e)}
-        id="region"
-      >
-        <option value="" disabled>{t('area_list.popup.select_region')}</option>
-        {regionList.map((region) => (
-          <option key={region.id} value={region.id}>
-            {region.province},{region.name} 
-          </option>
-        ))}
-      </select>
-              <select
-                name="area_type"
-                value={newArea.area_type}
-                onChange={(e)=>handleInputChange(e)}
-                disabled={newArea.id? true: false }
+                rules={[{ required: true }]}
               >
-                <option value="oyster">{t('area_list.filter.oyster')}</option>
-                <option value="cobia">{t('area_list.filter.cobia')}</option>
-              </select>
-              
-              <button type="submit">{t('area_list.popup.save')}</button>
-              <button type="button" onClick={() =>{ 
-                setIsPopupOpen(false)
-                setNewArea({ areaName: '', lat: '', long: '', region: '', area_type: 'oyster' });
-                }}>
-                Cancel
-              </button>
-            </form>
-            
-              
-              <MapContainer center={[16.047079, 108.206230]} zoom={6} style={{ height: '300px', width: '300px', marginTop: '10px' }}>
-                <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution="&copy; OpenStreetMap contributors" />
-                <LocationMarker setCoordinates={(latlng) => {
-                  setNewArea((prev) => ({
-                    ...prev,
-                    latitude: latlng.lat,
-                    longitude: latlng.lng,
-                  }));
-                }} />
-              </MapContainer> 
-              
+                <Input />
+              </Form.Item>
+              <Form.Item
+                label="Latitude"
+                name="latitude"
+                rules={[{ required: true }]}
+              >
+                <Input type="number" />
+              </Form.Item>
+              <Form.Item
+                label="Longitude"
+                name="longitude"
+                rules={[{ required: true }]}
+              >
+                <Input type="number" />
+              </Form.Item>
+              <Form.Item label="Area's area" name="area">
+                <Input type="number" />
+              </Form.Item>
+              <Form.Item
+                label={t('area_list.popup.select_region')}
+                name="region"
+              >
+                <Select>
+                  {regionList.map((region) => (
+                    <Option key={region.id} value={region.id}>
+                      {region.province},{region.name}
+                    </Option>
+                  ))}
+                </Select>
+              </Form.Item>
+              <Form.Item label={t('area_list.filter.type')} name="area_type">
+                <Select disabled={!!form.getFieldValue('id')}>
+                  <Option value="oyster">{t('area_list.filter.oyster')}</Option>
+                  <Option value="cobia">{t('area_list.filter.cobia')}</Option>
+                </Select>
+              </Form.Item>
+              <Form.Item>
+                <Space>
+                  <Button type="primary" htmlType="submit">
+                    {t('area_list.popup.save')}
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      setIsPopupOpen(false);
+                      form.resetFields();
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </Space>
+              </Form.Item>
+            </Form>
+            <div>
+              <MapContainer
+                center={[16.047079, 108.20623]}
+                zoom={6}
+                style={{ height: '300px', width: '300px', marginTop: '10px' }}
+              >
+                <TileLayer
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                  attribution="&copy; OpenStreetMap contributors"
+                />
+                <LocationMarker
+                  setCoordinates={(latlng) => {
+                    form.setFieldsValue({
+                      latitude: latlng.lat,
+                      longitude: latlng.lng,
+                    });
+                  }}
+                />
+              </MapContainer>
             </div>
           </div>
-        </div>
-      )}
+        </Modal>
 
-      {/* Delete Confirmation Popup */}
-      {isDeleteConfirmOpen && (
-        <div className="popup">
-          <div className="popup-content">
-            <h3>{t('area_list.confirm_delete.title')} {selectedArea?.name}?</h3>
-            <button className='delete-confirm-button' onClick={() => handleDelete(selectedArea.id)}>{t('area_list.confirm_delete.yes')}</button>
-            <button className='delete-deny-button' onClick={() => setIsDeleteConfirmOpen(false)}>{t('area_list.confirm_delete.no')}</button>
-          </div>
-        </div>
-      )}
+        {/* Delete Confirmation Modal */}
+        <Modal
+          open={isDeleteConfirmOpen}
+          title={t('area_list.confirm_delete.title')}
+          onCancel={() => setIsDeleteConfirmOpen(false)}
+          onOk={() => handleDelete(selectedArea.id)}
+          okText={t('area_list.confirm_delete.yes')}
+          cancelText={t('area_list.confirm_delete.no')}
+        >
+          <p>
+            {t('area_list.confirm_delete.title')} {selectedArea?.name}?
+          </p>
+        </Modal>
+      </Card>
     </div>
   );
 };

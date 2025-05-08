@@ -6,19 +6,31 @@ import axios from '../axios';
 import './Dashboard.css';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'react-toastify';
+import {
+  Card,
+  Table,
+  Typography,
+  Row,
+  Col,
+  Button,
+  Space,
+  Pagination,
+  Modal,
+} from 'antd';
 
+const { Title } = Typography;
 
 const Dashboard = () => {
   const { t } = useTranslation();
   const { token } = useSelector((state) => state.auth);
-  console.log('The token',token);
+  console.log('The token', token);
   const [currentPage, setCurrentPage] = useState(0);
   const [totalPredictions, setTotalPredictions] = useState(0);
   const predictionsPerPage = 10;
   const [showModal, setShowModal] = useState(false);
   const [selectedPredictionId, setSelectedPredictionId] = useState(null);
   const [userId, setUserId] = useState(null);
-  const [userRole,setUserRole] = useState(null)
+  const [userRole, setUserRole] = useState(null);
   const [predictionList, setPredictionList] = useState([]);
 
   useEffect(() => {
@@ -27,44 +39,43 @@ const Dashboard = () => {
         const decodedToken = jwtDecode(token); // Decode the JWT token
         console.log(decodedToken);
         setUserId(decodedToken.id); // Assuming `id` is the field for userId in the token
-        setUserRole(decodedToken.role)
+        setUserRole(decodedToken.role);
         setTimeout(100);
         console.log(userId);
-        if(decodedToken.role === 'admin') {
+        if (decodedToken.role === 'admin') {
           console.log('start ftching');
-          
-          axios
-          .get(`/api/express/predictions/admin`,{
-            params: {
-              limit: 10, // Limit number of results per page
-              offset: currentPage * 10,
-            }
-          }
-          ).then((response) => {
-            setPredictionList(response.data.rows);
-            console.log(response.data);
-            setTotalPredictions(response.data.count); // Set total areas for pagination
-          })
-          .catch((error) => {
-            console.error('Error fetching prediction details:', error);
-          });
-        }else{
-        axios
-          .get(`/api/express/predictions/user/${decodedToken.id}`,{
-            params: {
-              limit: 10, // Limit number of results per page
-              offset: currentPage * 10,
-            }
-          })
-          .then((response) => {
-            setPredictionList(response.data);
-             setTotalPredictions(response.data.length);
-             console.log(response.data);
 
-          })
-          .catch((error) => {
-            console.error('Error fetching prediction details:', error);
-          });
+          axios
+            .get(`/api/express/predictions/admin`, {
+              params: {
+                limit: 10, // Limit number of results per page
+                offset: currentPage * 10,
+              },
+            })
+            .then((response) => {
+              setPredictionList(response.data.rows);
+              console.log(response.data);
+              setTotalPredictions(response.data.count); // Set total areas for pagination
+            })
+            .catch((error) => {
+              console.error('Error fetching prediction details:', error);
+            });
+        } else {
+          axios
+            .get(`/api/express/predictions/user/${decodedToken.id}`, {
+              params: {
+                limit: 10, // Limit number of results per page
+                offset: currentPage * 10,
+              },
+            })
+            .then((response) => {
+              setPredictionList(response.data);
+              setTotalPredictions(response.data.length);
+              console.log(response.data);
+            })
+            .catch((error) => {
+              console.error('Error fetching prediction details:', error);
+            });
         }
       } catch (error) {
         console.error('Error decoding token:', error);
@@ -85,7 +96,7 @@ const Dashboard = () => {
     setSelectedPredictionId(null);
   };
 
-    const totalPages = Math.ceil(totalPredictions / predictionsPerPage);
+  const totalPages = Math.ceil(totalPredictions / predictionsPerPage);
   const handleNextPage = () => {
     if (currentPage < totalPages - 1) {
       setCurrentPage(currentPage + 1);
@@ -99,64 +110,74 @@ const Dashboard = () => {
   };
 
   return (
-    <div className={`dashboard-container ${showModal ? 'blurred' : ''}`}>
-      <div className="dashboard-card">
-        <h1>{t('dashboard.title')}</h1>
-        <h2>{t('dashboard.subtitle')}</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>{t('dashboard.id')}</th>
-              {userRole === 'admin' ?<th>{t('dashboard.creator')}</th> : <></>}
-              <th>{t('dashboard.creator')}</th>
-              <th>{t('dashboard.actions')}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {predictionList.length > 0 ? (
-              predictionList.map((item) => (
-                <tr>
-                  <td className='predict-id'>{t('dashboard.prediction')}#{item.id}</td>
-                  {userRole === 'admin' ?<td>{item.User.username}</td> : <></>}
-                  <td>{item.Area.name}</td>
-                  <td className='action'>
-                    <button
-                      className="view-details-btn"
-                      onClick={() => handleViewDetails(item.id)}
-                    >
-                      {t('dashboard.viewDetails')}
-                    </button>
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan={userRole === 'admin' ? 4 : 3}>{t('dashboard.noData')}</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-        <div className="pagination">
-        <button onClick={handlePrevPage} disabled={currentPage === 0}>
-            {t('dashboard.previous')}
-        </button>
-        <span>{t('dashboard.page')} {currentPage + 1} {t('dashboard.of')}{' '}{totalPages}</span>
-        <button onClick={handleNextPage} disabled={currentPage === totalPages - 1}>
-          {t('dashboard.next')}
-        </button>
-      </div>
-      </div>
-
-      {showModal && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <button className="close-btn" onClick={closeModal}>
-              &times;
-            </button>
-            <PredictionDetails predictionId={selectedPredictionId} />
-          </div>
+    <div style={{ width: '100%', padding: 0, margin: 0 }}>
+      <Card
+        style={{
+          width: '100%',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+          borderRadius: 12,
+        }}
+        bodyStyle={{ padding: 24 }}
+      >
+        <Title level={3} style={{ marginBottom: 24 }}>
+          {t('dashboard.title')}
+        </Title>
+        <Table
+          columns={[
+            {
+              title: t('dashboard.id'),
+              dataIndex: 'id',
+              key: 'id',
+              render: (id) => `${t('dashboard.prediction')}#${id}`,
+            },
+            ...(userRole === 'admin'
+              ? [
+                  {
+                    title: t('dashboard.creator'),
+                    dataIndex: ['User', 'username'],
+                    key: 'creator',
+                  },
+                ]
+              : []),
+            {
+              title: t('dashboard.area'),
+              dataIndex: ['Area', 'name'],
+              key: 'area',
+            },
+            {
+              title: t('dashboard.actions'),
+              key: 'actions',
+              render: (_, item) => (
+                <Space>
+                  <Button
+                    type="link"
+                    onClick={() => handleViewDetails(item.id)}
+                  >
+                    {t('dashboard.viewDetails')}
+                  </Button>
+                </Space>
+              ),
+            },
+          ]}
+          dataSource={predictionList}
+          rowKey="id"
+          pagination={false}
+          style={{ width: '100%' }}
+          locale={{ emptyText: t('dashboard.noData') }}
+        />
+        <div style={{ margin: '16px 0', textAlign: 'center' }}>
+          <Pagination
+            current={currentPage + 1}
+            total={totalPredictions}
+            pageSize={predictionsPerPage}
+            onChange={(page) => setCurrentPage(page - 1)}
+            showSizeChanger={false}
+          />
         </div>
-      )}
+        <Modal open={showModal} onCancel={closeModal} footer={null} width={800}>
+          <PredictionDetails predictionId={selectedPredictionId} />
+        </Modal>
+      </Card>
     </div>
   );
 };

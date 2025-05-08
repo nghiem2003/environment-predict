@@ -66,3 +66,25 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 }
+
+/* Fix vertical alignment of Ant Design Pagination arrows */
+.ant-pagination-prev,
+.ant-pagination-next {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  height: 32px !important;
+}
+
+.ant-pagination-prev .ant-pagination-item-link,
+.ant-pagination-next .ant-pagination-item-link {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  height: 32px !important;
+  min-width: 32px !important;
+  line-height: 32px !important;
+  font-size: 16px !important;
+  vertical-align: middle !important;
+  box-sizing: border-box;
+}

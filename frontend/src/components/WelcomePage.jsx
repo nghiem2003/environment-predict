@@ -3,7 +3,7 @@ import './WelcomePage.css';
 import { useNavigate } from 'react-router-dom';
 import axios from '../axios';
 import { useTranslation } from 'react-i18next';
-
+import { Button } from 'antd'
 const WelcomePage = () => {
   const { t } = useTranslation()
   const [areas, setAreas] = useState([]);
