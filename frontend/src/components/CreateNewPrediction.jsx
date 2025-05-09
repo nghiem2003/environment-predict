@@ -110,7 +110,7 @@ const CreateNewPrediction = () => {
 
   const handleSubmitBatch = async (values) => {
     try {
-      const { userId, areaId, modelName } = values;
+      const { userIdForm, areaId, modelName } = values;
       if (!areaId || !modelName)
         throw new Error('You need to select area and model');
       const headers = csvElements[0].split(',');
