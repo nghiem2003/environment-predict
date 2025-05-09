@@ -145,7 +145,7 @@ const CreateNewPrediction = () => {
         modelName,
         inputs: inputValues,
       });
-      toast.success('Created single prediction successful!');
+      message.success('Created single prediction successful!');
       singleForm.resetFields();
     } catch (e) {
       message.error(`${e}`);

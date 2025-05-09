@@ -15,6 +15,7 @@ import {
   Input,
   Form,
   Select,
+  message,
 } from 'antd';
 
 const { Title } = Typography;
@@ -49,7 +50,6 @@ const UserList = () => {
         params: { search: searchTerm },
       });
       console.log(response.data.data);
-
       setUsers(response.data.data || []);
       const regionResponse = await axios.get('/api/express/areas/regions');
       setRegionList(regionResponse.data);
@@ -81,19 +81,39 @@ const UserList = () => {
   };
 
   // Submit handler for creating/updating a user
-  const handleUserPopupSubmit = async (e) => {
-    e.preventDefault();
+  const handleUserPopupSubmit = async (values) => {
+    console.log(values);
+    console.log(userPopupData);
+
     try {
       if (userPopupData.id) {
         // Update existing user
-        await axios.post(
+        const result = await axios.post(
           `/api/express/auth/update/${userPopupData.id}`,
-          userPopupData
+          {
+            id: userPopupData.id,
+            ...values,
+          }
         );
+        if (result.status === 200) {
+          message.success('User updated successfully');
+        } else {
+          message.error('User update failed');
+        }
       } else {
         // Create new user
-        await axios.post('/api/express/auth/create-user', userPopupData);
+        const result = await axios.post(
+          '/api/express/auth/create-user',
+          values
+        );
+        console.log(result);
+        if (result.status === 200) {
+          message.success('User created successfully');
+        } else {
+          message.error('User creation failed');
+        }
       }
+
       setIsUserPopupOpen(false);
       fetchUsers();
       setUserPopupData({

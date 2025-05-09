@@ -2,7 +2,13 @@ import React, { useState, useEffect } from 'react';
 import axios from '../axios';
 import './AreaList.css';
 import { useTranslation } from 'react-i18next';
-import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
+import {
+  MapContainer,
+  TileLayer,
+  Marker,
+  useMapEvents,
+  useMap,
+} from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import {
@@ -33,6 +39,8 @@ const { Title } = Typography;
 const AreaList = () => {
   const [form] = Form.useForm();
   const { t } = useTranslation();
+  const [map, setMap] = useState(null);
+  const [position, setPosition] = useState(null);
   const [currentPage, setCurrentPage] = useState(0);
   const [totalAreas, setTotalAreas] = useState(0);
   const areasPerPage = 10; // Number of areas per page
@@ -44,6 +52,7 @@ const AreaList = () => {
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [selectedArea, setSelectedArea] = useState(null);
+  const [mapCenter, setMapCenter] = useState([10.762622, 106.660172]); // Default center (Vietnam)
   const [regionList, setRegionList] = useState([]);
   const [newArea, setNewArea] = useState({
     id: '',
@@ -132,7 +141,16 @@ const AreaList = () => {
       region: areaToUpdate.region || '',
       area_type: areaToUpdate.area_type || 'oyster',
     });
-    console.log('id', form.getFieldValue('id'));
+
+    // Update map center and position when editing an area
+    if (areaToUpdate.latitude && areaToUpdate.longitude) {
+      const newPos = [
+        Number(areaToUpdate.latitude),
+        Number(areaToUpdate.longitude),
+      ];
+      setMapCenter(newPos);
+      setPosition(newPos);
+    }
 
     setIsPopupOpen(true);
   };
@@ -162,17 +180,35 @@ const AreaList = () => {
     }
   };
 
-  function LocationMarker({ setCoordinates }) {
-    const [position, setPosition] = useState(null);
+  useEffect(() => {
+    if (map) {
+      const interval = setInterval(() => {
+        map.invalidateSize(true);
+      }, 400);
 
+      return () => clearInterval(interval);
+    }
+  }, [map]);
+
+  function MapUpdater({ center }) {
+    const map = useMap();
+
+    useEffect(() => {
+      map.setView(center);
+    }, [center, map]);
+
+    return null;
+  }
+
+  function LocationMarker({ setCoordinates }) {
     useMapEvents({
       click(e) {
-        setPosition(e.latlng);
+        setPosition([e.latlng.lat, e.latlng.lng]);
         setCoordinates(e.latlng);
       },
     });
 
-    return position === null ? null : <Marker position={position} />;
+    return position ? <Marker position={position} /> : null;
   }
 
   // Table columns for Ant Design Table
@@ -336,11 +372,11 @@ const AreaList = () => {
           footer={null}
           width={700}
         >
-          <div style={{ display: 'flex', gap: 24 }}>
+          <div style={{ display: 'flex', gap: 24, height: '500px' }}>
             <Form
               form={form}
               layout="vertical"
-              style={{ flex: 1 }}
+              style={{ flex: 1, overflowY: 'auto' }}
               onFinish={handleAddArea}
             >
               <Form.Item
@@ -401,22 +437,26 @@ const AreaList = () => {
                 </Space>
               </Form.Item>
             </Form>
-            <div>
+            <div style={{ flex: 1, minWidth: '300px' }}>
               <MapContainer
-                center={[16.047079, 108.20623]}
-                zoom={6}
-                style={{ height: '300px', width: '300px', marginTop: '10px' }}
+                center={mapCenter}
+                zoom={30}
+                style={{ height: '100%', width: '100%' }}
+                ref={setMap}
               >
                 <TileLayer
                   url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                   attribution="&copy; OpenStreetMap contributors"
                 />
+                <Marker position={mapCenter} />
                 <LocationMarker
                   setCoordinates={(latlng) => {
                     form.setFieldsValue({
                       latitude: latlng.lat,
                       longitude: latlng.lng,
                     });
+                    setMapCenter([latlng.lat, latlng.lng]);
+                    setPosition(latlng);
                   }}
                 />
               </MapContainer>
