@@ -1,6 +1,7 @@
 const { Op } = require('sequelize');
 const { Area } = require('../models');
 const { Region } = require('../models');
+
 exports.getAllAreas = async (req, res) => {
   try {
     const {
@@ -45,43 +46,52 @@ exports.getAllAreas = async (req, res) => {
       where: query,
       include: {
         model: Region,
-        as: 'Region', // This should match the alias used in your association
-        required: false, // If you want to include Areas even if they don't have an associated Region
-        attributes: ['id', 'name', 'province'], // Specify the attributes you want to include from the Region model
+        as: 'Region',
+        required: false,
+        attributes: ['id', 'name', 'province'],
       },
     };
 
     if (limit) {
-      options.limit = parseInt(limit, 10); // Convert limit to an integer
+      options.limit = parseInt(limit, 10);
     }
     if (offset) {
-      options.offset = parseInt(offset, 10); // Convert offset to an integer
+      options.offset = parseInt(offset, 10);
     }
     options.order = [['region', 'DESC']];
-    // Query the database with the built query object
+
     const areas = await Area.findAll(options);
-    const total = await Area.count(options); // Count total records matching the query
-    // Return the areas as a response
-    res.status(200).json({ areas: areas, total: total }); // Return areas and total count
+    const total = await Area.count(options);
+    res.status(200).json({ areas: areas, total: total });
   } catch (error) {
+    console.error('Get All Areas Error:', {
+      message: error.message,
+      stack: error.stack,
+      query: req.query,
+    });
     res.status(500).json({ error: error.message });
   }
 };
 
 exports.getAreaById = async (req, res) => {
   try {
-    const { id } = req.params; // Extract ID from request parameters
+    const { id } = req.params;
     const area = await Area.findOne({
       where: { id: id },
       include: {
         model: Region,
-        as: 'Region', // This should match the alias used in your association
-        required: false, // If you want to include Areas even if they don't have an associated Region
+        as: 'Region',
+        required: false,
       },
-    }); // Query database by ID
+    });
     res.status(200).json(area);
-  } catch (e) {
-    res.status(500).json({ error: e.message });
+  } catch (error) {
+    console.error('Get Area By ID Error:', {
+      message: error.message,
+      stack: error.stack,
+      areaId: req.params.id,
+    });
+    res.status(500).json({ error: error.message });
   }
 };
 
@@ -89,14 +99,12 @@ exports.createArea = async (req, res) => {
   try {
     const { name, latitude, longitude, region, area_type } = req.body;
 
-    // Validate area_type (must be either 'oyster' or 'cobia')
     if (area_type !== 'oyster' && area_type !== 'cobia') {
       return res.status(400).json({
         error: 'Invalid area_type. It must be either "oyster" or "cobia".',
       });
     }
 
-    // Create the new area in the database
     const newArea = await Area.create({
       name,
       latitude,
@@ -106,56 +114,57 @@ exports.createArea = async (req, res) => {
       area_type,
     });
 
-    // Return the newly created area
     res.status(201).json(newArea);
   } catch (error) {
+    console.error('Create Area Error:', {
+      message: error.message,
+      stack: error.stack,
+      areaData: req.body,
+    });
     res.status(500).json({ error: error.message });
   }
 };
 
-// Function to delete an Area by ID
 exports.deleteArea = async (req, res) => {
   try {
     const { id } = req.params;
-
-    // Find the area by ID
     const area = await Area.findOne({ where: { id } });
-    console.log(area.name);
 
     if (!area) {
       return res.status(404).json({ error: 'Area not found.' });
     }
 
-    // Delete the area
+    console.log('Deleting area:', area.name);
     await area.destroy();
 
     res.status(200).json({ message: 'Area deleted successfully.' });
   } catch (error) {
+    console.error('Delete Area Error:', {
+      message: error.message,
+      stack: error.stack,
+      areaId: req.params.id,
+    });
     res.status(500).json({ error: error.message });
   }
 };
 
-// Function to update an Area by ID
 exports.updateArea = async (req, res) => {
   try {
     const { id } = req.params;
     const { name, latitude, longitude, region, area, area_type } = req.body;
 
-    // Validate area_type (must be either 'oyster' or 'cobia')
     if (area_type !== 'oyster' && area_type !== 'cobia') {
       return res.status(400).json({
         error: 'Invalid area_type. It must be either "oyster" or "cobia".',
       });
     }
 
-    // Find the area by ID
     const selectedArea = await Area.findOne({ where: { id } });
 
     if (!selectedArea) {
       return res.status(404).json({ error: 'Area not found.' });
     }
 
-    // Update the area
     selectedArea.name = name || area.name;
     selectedArea.latitude = latitude || area.latitude;
     selectedArea.longitude = longitude || area.longitude;
@@ -163,12 +172,17 @@ exports.updateArea = async (req, res) => {
     selectedArea.region = region || area.region;
     selectedArea.area_type = area_type;
 
-    // Save the updated area
+    console.log('Updating area:', selectedArea.name);
     await selectedArea.save();
-    console.log(selectedArea);
 
     res.status(200).json(selectedArea);
   } catch (error) {
+    console.error('Update Area Error:', {
+      message: error.message,
+      stack: error.stack,
+      areaId: req.params.id,
+      updateData: req.body,
+    });
     res.status(500).json({ error: error.message });
   }
 };

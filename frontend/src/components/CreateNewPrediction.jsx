@@ -176,7 +176,7 @@ const CreateNewPrediction = () => {
                 initialValues={{ userId }}
               >
                 <Form.Item label="User ID" name="userId">
-                  <Input value={userId} readOnly disabled />
+                  <Input type="number" value={userId} readOnly disabled />
                 </Form.Item>
                 <Form.Item
                   label={t('prediction_form.select_area')}
@@ -257,7 +257,7 @@ const CreateNewPrediction = () => {
                 initialValues={{ userId }}
               >
                 <Form.Item label="User ID" name="userId">
-                  <Input value={userId} readOnly disabled />
+                  <Input type="number"  value={userId} readOnly disabled />
                 </Form.Item>
                 <Form.Item
                   label={t('prediction_form.select_area')}

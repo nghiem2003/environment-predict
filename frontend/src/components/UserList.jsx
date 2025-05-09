@@ -13,12 +13,15 @@ import {
   Pagination,
   Modal,
   Input,
+  Form,
+  Select,
 } from 'antd';
 
 const { Title } = Typography;
 
 const UserList = () => {
   const { t } = useTranslation();
+  const [form] = Form.useForm();
   const [users, setUsers] = useState([]);
   const [isRegionPopup, setIsRegionPopup] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -37,6 +40,7 @@ const UserList = () => {
     password: '',
     region: '',
   });
+  const [selectedRegionName, setSelectedRegionName] = useState('');
 
   // Fetch users from the API
   const fetchUsers = async () => {
@@ -107,6 +111,8 @@ const UserList = () => {
 
   // Modify user popup
   const handleModifyUser = (user) => {
+    const regionName = getRegionNameFromId(user.region);
+    setSelectedRegionName(regionName);
     setUserPopupData({
       id: user.id,
       name: user.username,
@@ -114,6 +120,13 @@ const UserList = () => {
       address: user.address,
       phone: user.phone,
       password: '', // leave password empty when updating
+      region: user.region,
+    });
+    form.setFieldsValue({
+      name: user.username,
+      email: user.email,
+      address: user.address,
+      phone: user.phone,
       region: user.region,
     });
     setIsUserPopupOpen(true);
@@ -153,6 +166,32 @@ const UserList = () => {
     setRevealedPassword('dummy_password');
   };
 
+  // Update the modal open handler to reset region name
+  const handleAddUser = () => {
+    setSelectedRegionName('');
+    setUserPopupData({
+      id: null,
+      name: '',
+      email: '',
+      address: '',
+      phone: '',
+      password: '',
+      region: '',
+    });
+    form.resetFields();
+    setIsUserPopupOpen(true);
+  };
+
+  // Add this function to handle form values change
+  const handleFormValuesChange = (changedValues) => {
+    if (changedValues.region) {
+      const region = regionList.find((r) => r.id === changedValues.region);
+      if (region) {
+        setSelectedRegionName(`${region.province}, ${region.name}`);
+      }
+    }
+  };
+
   return (
     <div style={{ width: '100%', padding: 0, margin: 0 }}>
       <Card
@@ -176,94 +215,105 @@ const UserList = () => {
             />
           </Col>
           <Col xs={24} sm={8} md={4}>
-            <Button
-              type="primary"
-              block
-              onClick={() => {
-                setUserPopupData({
-                  id: null,
-                  name: '',
-                  email: '',
-                  address: '',
-                  phone: '',
-                  password: '',
-                });
-                setIsUserPopupOpen(true);
-              }}
-            >
+            <Button type="primary" block onClick={handleAddUser}>
               {t('userList.addUser')}
             </Button>
           </Col>
         </Row>
-        <Table
-          columns={[
-            {
-              title: t('userList.fullName'),
-              dataIndex: 'username',
-              key: 'username',
-            },
-            { title: t('userList.email'), dataIndex: 'email', key: 'email' },
-            {
-              title: t('userList.address'),
-              dataIndex: 'address',
-              key: 'address',
-            },
-            { title: t('userList.phone'), dataIndex: 'phone', key: 'phone' },
-            {
-              title: t('userList.role'),
-              dataIndex: 'role',
-              key: 'role',
-              render: (role) =>
-                role === 'admin' ? t('userList.admin') : t('userList.expert'),
-            },
-            {
-              title: t('userList.status'),
-              dataIndex: 'status',
-              key: 'status',
-              render: (status) =>
-                status === 'active'
-                  ? t('userList.activeAccount')
-                  : t('userList.inactiveAccount'),
-            },
-            {
-              title: t('userList.actions'),
-              key: 'actions',
-              render: (_, user) => (
-                <Space>
-                  <Button type="link" onClick={() => handleModifyUser(user)}>
-                    {t('userList.editUser')}
-                  </Button>
-                  {user.role !== 'admin' ? (
-                    user.status === 'active' ? (
-                      <Button
-                        danger
-                        type="link"
-                        onClick={() => {
-                          setSelectedUser(user);
-                          setIsConfirmPopupOpen(true);
-                        }}
-                      >
-                        {t('userList.deactivateUser')}
-                      </Button>
-                    ) : (
-                      <Button
-                        type="link"
-                        onClick={() => handleActivateUser(user.id)}
-                      >
-                        {t('userList.activateUser')}
-                      </Button>
-                    )
-                  ) : null}
-                </Space>
-              ),
-            },
-          ]}
-          dataSource={users}
-          rowKey="id"
-          pagination={false}
-          style={{ width: '100%' }}
-          locale={{ emptyText: t('userList.noData') }}
-        />
+        <div style={{ overflowX: 'auto', width: '100%' }}>
+          <Table
+            columns={[
+              {
+                title: t('userList.fullName'),
+                dataIndex: 'username',
+                key: 'username',
+                width: 200,
+              },
+              {
+                title: t('userList.email'),
+                dataIndex: 'email',
+                key: 'email',
+                width: 200,
+              },
+              {
+                title: t('userList.address'),
+                dataIndex: 'address',
+                key: 'address',
+                width: 200,
+              },
+              {
+                title: t('userList.phone'),
+                dataIndex: 'phone',
+                key: 'phone',
+                width: 150,
+              },
+              {
+                title: t('userList.role'),
+                dataIndex: 'role',
+                key: 'role',
+                width: 120,
+                render: (role) =>
+                  role === 'admin' ? t('userList.admin') : t('userList.expert'),
+              },
+              {
+                title: t('userList.status'),
+                dataIndex: 'status',
+                key: 'status',
+                width: 120,
+                render: (status) =>
+                  status === 'active'
+                    ? t('userList.activeAccount')
+                    : t('userList.inactiveAccount'),
+              },
+              {
+                title: t('userList.actions'),
+                key: 'actions',
+                width: 200,
+                fixed: 'right',
+                render: (_, user) => (
+                  <Space size="middle">
+                    <Button
+                      type="primary"
+                      size="small"
+                      onClick={() => handleModifyUser(user)}
+                    >
+                      {t('userList.editUser')}
+                    </Button>
+                    {user.role !== 'admin' ? (
+                      user.status === 'active' ? (
+                        <Button
+                          danger
+                          type="primary"
+                          size="small"
+                          onClick={() => {
+                            setSelectedUser(user);
+                            setIsConfirmPopupOpen(true);
+                          }}
+                        >
+                          {t('userList.deactivateUser')}
+                        </Button>
+                      ) : (
+                        <Button
+                          type="primary"
+                          size="small"
+                          onClick={() => handleActivateUser(user.id)}
+                        >
+                          {t('userList.activateUser')}
+                        </Button>
+                      )
+                    ) : null}
+                  </Space>
+                ),
+              },
+            ]}
+            dataSource={users}
+            rowKey="id"
+            pagination={false}
+            scroll={{ x: 1200 }}
+            style={{ width: '100%' }}
+            locale={{ emptyText: t('userList.noData') }}
+          />
+        </div>
         <div style={{ margin: '16px 0', textAlign: 'center' }}>
           <Pagination
             current={1}
@@ -275,6 +325,127 @@ const UserList = () => {
         </div>
         {/* Modals for add/edit, confirm, etc. can be refactored similarly if needed */}
       </Card>
+
+      {/* Add/Modify User Modal */}
+      <Modal
+        title={
+          userPopupData.id ? t('userList.editUser') : t('userList.addUser')
+        }
+        open={isUserPopupOpen}
+        onCancel={() => {
+          setIsUserPopupOpen(false);
+          form.resetFields();
+          setSelectedRegionName('');
+        }}
+        footer={null}
+      >
+        <Form
+          form={form}
+          layout="vertical"
+          initialValues={userPopupData}
+          onFinish={handleUserPopupSubmit}
+          onValuesChange={handleFormValuesChange}
+        >
+          <Form.Item
+            name="name"
+            label={t('userList.fullName')}
+            rules={[{ required: true, message: t('userList.required') }]}
+          >
+            <Input />
+          </Form.Item>
+
+          <Form.Item
+            name="email"
+            label={t('userList.email')}
+            rules={[
+              { required: true, message: t('userList.required') },
+              { type: 'email', message: t('userList.invalidEmail') },
+            ]}
+          >
+            <Input />
+          </Form.Item>
+
+          <Form.Item
+            name="address"
+            label={t('userList.address')}
+            rules={[{ required: true, message: t('userList.required') }]}
+          >
+            <Input />
+          </Form.Item>
+
+          <Form.Item
+            name="phone"
+            label={t('userList.phone')}
+            rules={[{ required: true, message: t('userList.required') }]}
+          >
+            <Input />
+          </Form.Item>
+
+          <Form.Item
+            name="region"
+            label={t('userList.region')}
+            rules={[{ required: true, message: t('userList.required') }]}
+          >
+            <Select
+              showSearch
+              placeholder={t('userList.selectRegion')}
+              optionFilterProp="children"
+              filterOption={(input, option) =>
+                (option?.label ?? '')
+                  .toLowerCase()
+                  .includes(input.toLowerCase())
+              }
+              options={regionList.map((region) => ({
+                value: region.id,
+                label: `${region.province}, ${region.name}`,
+              }))}
+              onChange={(value, option) => {
+                console.log('Selected Region ID:', value);
+                console.log('Selected Region Option:', option);
+                console.log('All Form Values:', form.getFieldsValue());
+              }}
+            />
+          </Form.Item>
+
+          {!userPopupData.id && (
+            <Form.Item
+              name="password"
+              label={t('userList.password')}
+              rules={[{ required: true, message: t('userList.required') }]}
+            >
+              <Input.Password />
+            </Form.Item>
+          )}
+
+          <Form.Item>
+            <Space style={{ width: '100%', justifyContent: 'flex-end' }}>
+              <Button
+                onClick={() => {
+                  setIsUserPopupOpen(false);
+                  form.resetFields();
+                }}
+              >
+                {t('userList.cancel')}
+              </Button>
+              <Button type="primary" htmlType="submit">
+                {t('userList.save')}
+              </Button>
+            </Space>
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* Deactivate Confirmation Modal */}
+      <Modal
+        title={t('userList.deactivateConfirm')}
+        open={isConfirmPopupOpen}
+        onOk={() => handleDeactivateUser(selectedUser?.id)}
+        onCancel={() => setIsConfirmPopupOpen(false)}
+        okText={t('userList.yes')}
+        cancelText={t('userList.no')}
+      >
+        <p>{t('userList.deactivateConfirmMessage')}</p>
+      </Modal>
     </div>
   );
 };

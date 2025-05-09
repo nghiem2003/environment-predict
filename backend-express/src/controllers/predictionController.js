@@ -12,7 +12,7 @@ const axios = require('axios');
 exports.createPrediction = async (req, res) => {
   try {
     const { userId, areaId, inputs, modelName } = req.body;
-    console.log(req.body);
+    console.log('Creating prediction with data:', req.body);
 
     const endpoint = modelName.includes('oyster')
       ? '/predict/oyster'
@@ -32,7 +32,10 @@ exports.createPrediction = async (req, res) => {
       user_id: userId,
       area_id: areaId,
       prediction_text: prediction,
-      ...(req.body.createdAt && { createdAt: req.body.createdAt, updatedAt: req.body.createdAt }),
+      ...(req.body.createdAt && {
+        createdAt: req.body.createdAt,
+        updatedAt: req.body.createdAt,
+      }),
     });
 
     for (const [elementName, value] of Object.entries(inputs)) {
@@ -46,7 +49,7 @@ exports.createPrediction = async (req, res) => {
         value,
       });
     }
-    console.log('done added');
+    console.log('Prediction created successfully:', predictionRecord.id);
 
     res.json({
       prediction_id: predictionRecord.id,
@@ -54,6 +57,12 @@ exports.createPrediction = async (req, res) => {
       model_used: modelName,
     });
   } catch (error) {
+    console.error('Create Prediction Error:', {
+      message: error.message,
+      stack: error.stack,
+      requestData: req.body,
+      flaskUrl: process.env.FLASK_API_URL,
+    });
     res.status(500).json({ error: error.message });
   }
 };
@@ -61,9 +70,8 @@ exports.createPrediction = async (req, res) => {
 exports.getLatestPrediction = async (req, res) => {
   try {
     const { areaId } = req.params;
-    console.log('areaId:', areaId); 
-    
-    // Find the latest prediction for the area
+    console.log('Fetching latest prediction for area:', areaId);
+
     const prediction = await Prediction.findOne({
       where: { area_id: areaId },
       order: [['id', 'DESC']],
@@ -71,21 +79,22 @@ exports.getLatestPrediction = async (req, res) => {
         {
           model: NatureElement,
           through: {
-            attributes: ['value'], // Include the value of each nature element
+            attributes: ['value'],
           },
         },
       ],
     });
-
-
 
     if (!prediction)
       return res.status(404).json({ error: 'No predictions found' });
 
     res.json(prediction);
   } catch (error) {
-    console.log(error.message);
-    
+    console.error('Get Latest Prediction Error:', {
+      message: error.message,
+      stack: error.stack,
+      areaId: req.params.areaId,
+    });
     res.status(500).json({ error: error.message });
   }
 };
@@ -93,9 +102,8 @@ exports.getLatestPrediction = async (req, res) => {
 exports.getPredictionDetails = async (req, res) => {
   try {
     const { predictionId } = req.params;
-    console.log(predictionId);
-    
-    // Fetch prediction by ID with associated area and natural elements
+    console.log('Fetching prediction details for ID:', predictionId);
+
     const prediction = await Prediction.findOne({
       where: { id: predictionId },
       include: [
@@ -110,40 +118,41 @@ exports.getPredictionDetails = async (req, res) => {
             'area',
             'region',
             'area_type',
-          ], // Area details
+          ],
         },
         {
           model: NatureElement,
           through: {
-            attributes: ['value'], // Include value from the join table
+            attributes: ['value'],
           },
-          attributes: ['id', 'name'], // Natural element details
+          attributes: ['id', 'name'],
         },
       ],
     });
-    console.log(prediction);
-    
+
     if (!prediction) {
       return res.status(404).json({ error: 'Prediction not found' });
     }
 
     res.json(prediction);
   } catch (error) {
-    //console.error('Error fetching prediction details:', error.message);
+    console.error('Get Prediction Details Error:', {
+      message: error.message,
+      stack: error.stack,
+      predictionId: req.params.predictionId,
+    });
     res.status(500).json({ error: 'Internal server error' });
   }
 };
 
 exports.getAllPredictionsWithFilters = async (req, res) => {
   try {
-    // Ensure the user is an admin
-    console.log('Doing fetch');
-    
+    console.log('Fetching all predictions with filters:', req.query);
+
     if (req.user.role !== 'admin') {
       return res.status(403).json({ error: 'Access denied. Admins only.' });
     }
 
-    // Safely destructure query parameters with defaults
     const {
       userId = undefined,
       areaId = undefined,
@@ -152,11 +161,10 @@ exports.getAllPredictionsWithFilters = async (req, res) => {
     } = req.query;
 
     const options = {
-      //where,
       include: [
-          {
+        {
           model: User,
-          attributes: ['id','username', 'email', 'role'], // Include user details
+          attributes: ['id', 'username', 'email', 'role'],
         },
         {
           model: Area,
@@ -167,38 +175,39 @@ exports.getAllPredictionsWithFilters = async (req, res) => {
             'longitude',
             'area',
             'area_type',
-          ], // Include area details
+          ],
         },
       ],
-      order: [['id', 'DESC']], // Sort by most recent predictions
-    }
+      order: [['id', 'DESC']],
+    };
 
     if (limit) {
-      options.limit = parseInt(limit, 10); // Convert limit to an integer
+      options.limit = parseInt(limit, 10);
     }
     if (offset) {
-      options.offset = parseInt(offset, 10); // Convert offset to an integer
+      options.offset = parseInt(offset, 10);
     }
 
-    // Build the where clause dynamically
     const where = {};
     if (userId) where.user_id = userId;
     if (areaId) where.area_id = areaId;
 
-    // Fetch predictions with filters, pagination, and includes
     const predictions = await Prediction.findAndCountAll(options);
 
-     if (predictions.length === 0) {
-      console.log('no record found');
+    if (predictions.length === 0) {
+      console.log('No predictions found with filters:', req.query);
       return res
         .status(404)
         .json({ error: 'No predictions found for this user' });
     }
     res.json(predictions);
   } catch (error) {
-    console.error('Error fetching predictions with filters:', error.message);
-    console.log('eror:',error);
-    
+    console.error('Get All Predictions With Filters Error:', {
+      message: error.message,
+      stack: error.stack,
+      query: req.query,
+      userRole: req.user?.role,
+    });
     res.status(500).json({ error: 'Internal server error' });
   }
 };
@@ -206,16 +215,19 @@ exports.getAllPredictionsWithFilters = async (req, res) => {
 exports.getPredictionsByUser = async (req, res) => {
   try {
     const { userId } = req.params;
+    const { limit = 10, offset = 0 } = req.query;
 
-    const {limit = 10, offset = 0} = req.query
+    console.log('Fetching predictions for user:', userId, 'with pagination:', {
+      limit,
+      offset,
+    });
 
     const options = {
-      //where,
       where: { user_id: userId },
       include: [
-          {
+        {
           model: User,
-          attributes: ['id','username', 'email', 'role'], // Include user details
+          attributes: ['id', 'username', 'email', 'role'],
         },
         {
           model: Area,
@@ -226,38 +238,42 @@ exports.getPredictionsByUser = async (req, res) => {
             'longitude',
             'area',
             'area_type',
-          ], // Include area details
+          ],
         },
       ],
-      order: [['id', 'DESC']], // Sort by most recent predictions
-    }
+      order: [['id', 'DESC']],
+    };
 
     if (limit) {
-      options.limit = parseInt(limit, 10); // Convert limit to an integer
+      options.limit = parseInt(limit, 10);
     }
     if (offset) {
-      options.offset = parseInt(offset, 10); // Convert offset to an integer
+      options.offset = parseInt(offset, 10);
     }
 
-    // Fetch predictions made by the user
     const predictions = await Prediction.findAll(options);
 
     if (predictions.length === 0) {
-      console.log('no record found');
+      console.log('No predictions found for user:', userId);
       return res
         .status(404)
         .json({ error: 'No predictions found for this user' });
     }
     res.json(predictions);
   } catch (error) {
-    console.error('Error fetching predictions by user:', error.message);
+    console.error('Get Predictions By User Error:', {
+      message: error.message,
+      stack: error.stack,
+      userId: req.params.userId,
+      pagination: req.query,
+    });
     res.status(500).json({ error: 'Internal server error' });
   }
 };
 
 exports.createBatchPrediction = async (req, res) => {
   console.log('Batch Processing');
-  
+
   const { userId, areaId, modelName, data } = req.body;
   try {
     const endpoint = modelName.includes('oyster')
@@ -268,7 +284,7 @@ exports.createBatchPrediction = async (req, res) => {
     const predictionsResult = [];
 
     for (const inputs of data) {
-      const {createdAt, ...natureElements} = inputs
+      const { createdAt, ...natureElements } = inputs;
       const flaskResponse = await axios.post(flaskUrl, natureElements, {
         params: { model: modelName },
       });
@@ -279,26 +295,24 @@ exports.createBatchPrediction = async (req, res) => {
         area_id: areaId,
         prediction_text: prediction,
         ...(createdAt && { createdAt: createdAt, updatedAt: createdAt }),
-
       });
       for (const [elementName, value] of Object.entries(inputs)) {
-      if(elementName === 'createdAt') continue;
-      console.log(elementName);
-      console.log(value);
-      
-      
-      const entry = await NatureElement.findOne({
-        where: { name: elementName },
-      });
-      console.log(JSON.stringify(entry));
-      
-      await PredictionNatureElement.create({
-        prediction_id: predictionRecord.id,
-        nature_element_id: entry.id,
-        value: value,
-      });
-    }
-    console.log('done added');
+        if (elementName === 'createdAt') continue;
+        console.log(elementName);
+        console.log(value);
+
+        const entry = await NatureElement.findOne({
+          where: { name: elementName },
+        });
+        console.log(JSON.stringify(entry));
+
+        await PredictionNatureElement.create({
+          prediction_id: predictionRecord.id,
+          nature_element_id: entry.id,
+          value: value,
+        });
+      }
+      console.log('done added');
 
       predictionsResult.push({
         prediction_id: predictionRecord.id,
@@ -310,7 +324,7 @@ exports.createBatchPrediction = async (req, res) => {
     res.json({ predictions: predictionsResult, model_used: modelName });
   } catch (error) {
     console.log(error);
-    
+
     res.status(500).json({ error: error.message });
   }
 };

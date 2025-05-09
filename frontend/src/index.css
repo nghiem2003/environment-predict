@@ -88,3 +88,41 @@ button:focus-visible {
   vertical-align: middle !important;
   box-sizing: border-box;
 }
+
+/* Remove box shadow from all input elements */
+.ant-input,
+.ant-input-affix-wrapper,
+.ant-select-selector,
+.ant-picker {
+  box-shadow: none !important;
+}
+
+/* Remove box shadow on focus */
+.ant-input:focus,
+.ant-input-affix-wrapper:focus,
+.ant-select-focused .ant-select-selector,
+.ant-picker-focused {
+  box-shadow: none !important;
+}
+
+/* Remove box shadow on hover */
+.ant-input:hover,
+.ant-input-affix-wrapper:hover,
+.ant-select:hover .ant-select-selector,
+.ant-picker:hover {
+  box-shadow: none !important;
+}
+
+/* Remove box shadow from other Ant Design components that might have it */
+.ant-input-number,
+.ant-input-number:hover,
+.ant-input-number-focused {
+  box-shadow: none !important;
+}
+
+/* Remove box shadow from form items */
+.ant-form-item-control-input-content .ant-input,
+.ant-form-item-control-input-content .ant-input-affix-wrapper,
+.ant-form-item-control-input-content .ant-select-selector {
+  box-shadow: none !important;
+}

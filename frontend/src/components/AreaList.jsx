@@ -242,7 +242,7 @@ const AreaList = () => {
               allowClear
             />
           </Col>
-          <Col xs={24} sm={12} md={4}>
+          <Col xs={24} sm={12} md={3}>
             <Select
               value={areaType}
               onChange={setAreaType}
@@ -257,7 +257,7 @@ const AreaList = () => {
           </Col>
           <Col xs={24} sm={12} md={3}>
             <Input
-              placeholder={t('area_list.lat_min') || 'Vĩ độ tối thiểu'}
+              placeholder={t('area_list.filter.min_lat') || 'Vĩ độ tối thiểu'}
               value={latRange.min}
               onChange={(e) =>
                 setLatRange({ ...latRange, min: e.target.value })
@@ -267,7 +267,7 @@ const AreaList = () => {
           </Col>
           <Col xs={24} sm={12} md={3}>
             <Input
-              placeholder={t('area_list.lat_max') || 'Vĩ độ tối đa'}
+              placeholder={t('area_list.filter.max_lat') || 'Vĩ độ tối đa'}
               value={latRange.max}
               onChange={(e) =>
                 setLatRange({ ...latRange, max: e.target.value })
@@ -277,7 +277,9 @@ const AreaList = () => {
           </Col>
           <Col xs={24} sm={12} md={3}>
             <Input
-              placeholder={t('area_list.long_min') || 'Kinh độ tối thiểu'}
+              placeholder={
+                t('area_list.filter.min_long') || 'Kinh độ tối thiểu'
+              }
               value={longRange.min}
               onChange={(e) =>
                 setLongRange({ ...longRange, min: e.target.value })
@@ -287,7 +289,7 @@ const AreaList = () => {
           </Col>
           <Col xs={24} sm={12} md={3}>
             <Input
-              placeholder={t('area_list.long_max') || 'Kinh độ tối đa'}
+              placeholder={t('area_list.filter.max_long') || 'Kinh độ tối đa'}
               value={longRange.max}
               onChange={(e) =>
                 setLongRange({ ...longRange, max: e.target.value })
@@ -295,7 +297,7 @@ const AreaList = () => {
               type="number"
             />
           </Col>
-          <Col xs={24} sm={12} md={2}>
+          <Col xs={24} sm={12} md={3}>
             <Button type="primary" block onClick={() => setIsPopupOpen(true)}>
               {t('area_list.add_button') || 'Thêm khu vực mới'}
             </Button>
