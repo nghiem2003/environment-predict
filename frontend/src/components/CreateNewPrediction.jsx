@@ -138,7 +138,7 @@ const CreateNewPrediction = () => {
 
   const handleSubmitSingle = async (values) => {
     try {
-      const { userId, areaId, modelName, ...inputValues } = values;
+      const { userIdForm, areaId, modelName, ...inputValues } = values;
       await axios.post('api/express/predictions', {
         userId,
         areaId,
@@ -175,7 +175,7 @@ const CreateNewPrediction = () => {
                 onFinish={handleSubmitSingle}
                 initialValues={{ userId }}
               >
-                <Form.Item label="User ID" name="userId">
+                <Form.Item label="User ID" name="userIdForm">
                   <Input type="number" value={userId} readOnly disabled />
                 </Form.Item>
                 <Form.Item
@@ -256,7 +256,7 @@ const CreateNewPrediction = () => {
                 onFinish={handleSubmitBatch}
                 initialValues={{ userId }}
               >
-                <Form.Item label="User ID" name="userId">
+                <Form.Item label="User ID" name="userIdForm">
                   <Input type="number" value={userId} readOnly disabled />
                 </Form.Item>
                 <Form.Item
