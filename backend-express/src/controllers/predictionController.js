@@ -14,11 +14,13 @@ exports.createPrediction = async (req, res) => {
     const { userId, areaId, inputs, modelName } = req.body;
     console.log('Creating prediction with data:', req.body);
 
+    const parsedInputs = inputs.map((input) => Number.parseFloat(input));
+    console.log('parsedInputs:', parsedInputs);
     const endpoint = modelName.includes('oyster')
       ? '/predict/oyster'
       : '/predict/cobia';
     const flaskUrl = `${process.env.FLASK_API_URL}${endpoint}`;
-    const flaskResponse = await axios.post(flaskUrl, inputs, {
+    const flaskResponse = await axios.post(flaskUrl, parsedInputs, {
       params: { model: modelName },
     });
 

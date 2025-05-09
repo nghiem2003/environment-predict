@@ -98,7 +98,7 @@ const CreateNewPrediction = () => {
   }, [token]);
 
   const handleCSVUpload = (e) => {
-    const file = e.target.files[0]
+    const file = e.target.files[0];
     const reader = new FileReader();
     reader.onload = (event) => {
       const text = event.target.result;
@@ -110,7 +110,7 @@ const CreateNewPrediction = () => {
 
   const handleSubmitBatch = async (values) => {
     try {
-      const { areaId, modelName } = values;
+      const { userId, areaId, modelName } = values;
       if (!areaId || !modelName)
         throw new Error('You need to select area and model');
       const headers = csvElements[0].split(',');
@@ -138,7 +138,7 @@ const CreateNewPrediction = () => {
 
   const handleSubmitSingle = async (values) => {
     try {
-      const { areaId, modelName, ...inputValues } = values;
+      const { userId, areaId, modelName, ...inputValues } = values;
       await axios.post('api/express/predictions', {
         userId,
         areaId,
@@ -257,7 +257,7 @@ const CreateNewPrediction = () => {
                 initialValues={{ userId }}
               >
                 <Form.Item label="User ID" name="userId">
-                  <Input type="number"  value={userId} readOnly disabled />
+                  <Input type="number" value={userId} readOnly disabled />
                 </Form.Item>
                 <Form.Item
                   label={t('prediction_form.select_area')}
