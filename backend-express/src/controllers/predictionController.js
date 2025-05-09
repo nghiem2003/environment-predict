@@ -289,6 +289,10 @@ exports.createBatchPrediction = async (req, res) => {
     const predictionsResult = [];
 
     for (const inputs of data) {
+      const parsedInputs = {};
+      for (const [key, value] of Object.entries(inputs)) {
+        parsedInputs.key = Number.parseFloat(value);
+      }
       const { createdAt, ...natureElements } = inputs;
       const flaskResponse = await axios.post(flaskUrl, natureElements, {
         params: { model: modelName },
