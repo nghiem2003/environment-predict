@@ -14,7 +14,10 @@ exports.createPrediction = async (req, res) => {
     const { userId, areaId, inputs, modelName } = req.body;
     console.log('Creating prediction with data:', req.body);
 
-    const parsedInputs = inputs.map((input) => Number.parseFloat(input));
+    const parsedInputs = {};
+    for (const [key, value] of Object.entries(inputs)) {
+      parsedInputs.key = Number.parseFloat(value);
+    }
     console.log('parsedInputs:', parsedInputs);
     const endpoint = modelName.includes('oyster')
       ? '/predict/oyster'
