@@ -16,12 +16,13 @@ import {
   message,
 } from 'antd';
 import { UploadOutlined } from '@ant-design/icons';
-
+import { useNavigate } from 'react-router-dom';
 const { Option } = Select;
 const { Title } = Typography;
 
 const CreateNewPrediction = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { token } = useSelector((state) => state.auth);
   const [userId, setUserId] = useState(null);
   const [areas, setAreas] = useState([]);
@@ -139,6 +140,7 @@ const CreateNewPrediction = () => {
       message.success('Created predictions from file successful!');
       batchForm.resetFields();
       setCsvElements([]);
+      navigate('/dashboard');
     } catch (error) {
       message.error(`${error}`);
     }
@@ -155,6 +157,7 @@ const CreateNewPrediction = () => {
       });
       message.success('Created single prediction successful!');
       singleForm.resetFields();
+      navigate('/dashboard');
     } catch (e) {
       message.error(`${e}`);
     }
