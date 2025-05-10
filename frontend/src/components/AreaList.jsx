@@ -192,11 +192,9 @@ const AreaList = () => {
 
   function MapUpdater({ center }) {
     const map = useMap();
-
     useEffect(() => {
       map.setView(center);
     }, [center, map]);
-
     return null;
   }
 
@@ -448,6 +446,7 @@ const AreaList = () => {
                   url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                   attribution="&copy; OpenStreetMap contributors"
                 />
+                <MapUpdater center={mapCenter} />
                 <Marker position={mapCenter} />
                 <LocationMarker
                   setCoordinates={(latlng) => {

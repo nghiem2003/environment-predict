@@ -307,6 +307,8 @@ exports.createBatchPrediction = async (req, res) => {
         prediction_text: prediction,
         ...(createdAt && { createdAt: createdAt, updatedAt: createdAt }),
       });
+      console.log('new prediction created', predictionRecord.id);
+
       for (const [elementName, value] of Object.entries(inputs)) {
         if (elementName === 'createdAt') continue;
         console.log(elementName);

@@ -56,6 +56,7 @@
     "suitable": "Môi trường phù hợp để phát triển",
     "excellent": "Môi trường rất tốt cho sự phát triển của hàu",
     "noPrediction": "Chưa có dự đoán nào được thực hiện.",
+    "unidentified": "Môi trường chưa được xác định",
     "goBack": "Nhấn vào đây để quay lại trang chào mừng",
     "return": "Trở lại"
   },
@@ -150,5 +151,8 @@
     "user_list": "Xem danh sách người dùng",
     "create_prediction": "Tạo dự đoán",
     "logout": "Đăng xuất"
+  },
+  "logout": {
+    "success": "Đăng xuất thành công"
   }
 }

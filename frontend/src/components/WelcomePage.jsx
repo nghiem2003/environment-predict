@@ -3,60 +3,53 @@ import './WelcomePage.css';
 import { useNavigate } from 'react-router-dom';
 import axios from '../axios';
 import { useTranslation } from 'react-i18next';
-import { Button } from 'antd'
+import { Select, Typography, Card, Space } from 'antd';
+
+const { Title } = Typography;
+const { Option } = Select;
+
 const WelcomePage = () => {
-  const { t } = useTranslation()
+  const { t } = useTranslation();
   const [areas, setAreas] = useState([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filteredAreas, setFilteredAreas] = useState([]);
   const navigate = useNavigate();
 
   useEffect(() => {
     axios
-      .get('/api/express/areas') // Replace with your backend API
+      .get('/api/express/areas')
       .then((response) => {
-        console.log(response);
-
         setAreas(response.data.areas);
-
-        setFilteredAreas(response.data.areas);
       })
       .catch((error) => console.error('Error fetching areas:', error));
   }, []);
-
-  useEffect(() => {
-    setFilteredAreas(
-      areas.filter((area) =>
-        area.name.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    );
-  }, [searchTerm, areas]);
 
   const handleAreaSelect = (areaId) => {
     navigate(`/predictions/${areaId}`);
   };
 
+  const filterOption = (input, option) =>
+    (option?.label ?? '').toLowerCase().includes(input.toLowerCase());
+
   return (
-    <div>
-      <h1>{t('welcomePage.title')}</h1>
-      <input
-        type="text"
-        placeholder={t('welcomePage.searchPlaceholder')}
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
-      />
-      {filteredAreas ? (
-        <ul>
-          {filteredAreas.map((area) => (
-            <li key={area.id} onClick={() => handleAreaSelect(area.id)}>
-              {area.Region?.province},{area.Region?.name},{area.name}
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <></>
-      )}
-    </div>
+    <Card style={{ maxWidth: 800, margin: '32px auto', padding: '24px' }}>
+      <Space direction="vertical" style={{ width: '100%' }} size="large">
+        <Title level={2} style={{ textAlign: 'center', marginBottom: 32 }}>
+          {t('welcomePage.title')}
+        </Title>
+
+        <Select
+          showSearch
+          placeholder={t('welcomePage.searchPlaceholder')}
+          optionFilterProp="label"
+          filterOption={filterOption}
+          style={{ width: '100%' }}
+          onChange={handleAreaSelect}
+          options={areas.map((area) => ({
+            value: area.id,
+            label: `${area.Region?.province}, ${area.Region?.name}, ${area.name}`,
+          }))}
+        />
+      </Space>
+    </Card>
   );
 };
 

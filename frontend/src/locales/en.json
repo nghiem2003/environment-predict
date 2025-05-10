@@ -56,6 +56,7 @@
     "suitable": "The environment is suitable for growth",
     "excellent": "The environment is excellent for oyster growth",
     "noPrediction": "No prediction has been made.",
+    "unidentified": "The environment is unidentified",
     "goBack": "Click here to come back to the welcome page",
     "return": "Back"
   },
@@ -144,11 +145,14 @@
     }
   },
   "sidebar": {
-    "title": "Prediction System",
+    "title": "Aquaculture Prediction System",
     "area_list": "View Area List",
     "prediction_list": "View Prediction List",
     "user_list": "View Users List",
     "create_prediction": "Create Prediction",
     "logout": "Logout"
+  },
+  "logout": {
+    "success": "Logout successfully"
   }
 }
