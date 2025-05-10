@@ -16,7 +16,7 @@ exports.createPrediction = async (req, res) => {
 
     const parsedInputs = {};
     for (const [key, value] of Object.entries(inputs)) {
-      parsedInputs.key = Number.parseFloat(value);
+      parsedInputs[key] = Number.parseFloat(value);
     }
     console.log('parsedInputs:', parsedInputs);
     const endpoint = modelName.includes('oyster')
@@ -291,9 +291,11 @@ exports.createBatchPrediction = async (req, res) => {
     for (const inputs of data) {
       const parsedInputs = {};
       for (const [key, value] of Object.entries(inputs)) {
-        parsedInputs.key = Number.parseFloat(value);
+        parsedInputs[key] = Number.parseFloat(value);
       }
-      const { createdAt, ...natureElements } = inputs;
+      const { createdAt, ...natureElements } = parsedInputs;
+      console.log(parsedInputs);
+
       const flaskResponse = await axios.post(flaskUrl, natureElements, {
         params: { model: modelName },
       });

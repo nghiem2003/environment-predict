@@ -97,13 +97,18 @@ const CreateNewPrediction = () => {
     fetchAreas();
   }, [token]);
 
-  const handleCSVUpload = (e) => {
-    const file = e.target.files[0];
+  const handleCSVUpload = ({ file }) => {
+    if (file.status === 'removed') {
+      setCsvElements([]);
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = (event) => {
       const text = event.target.result;
       const csvElements = text.split(/\r?\n/).filter(Boolean);
       setCsvElements(csvElements);
+      console.log(csvElements);
     };
     reader.readAsText(file);
   };
@@ -120,8 +125,11 @@ const CreateNewPrediction = () => {
         for (let i = 0; i < headers.length; i++) {
           obj[headers[i]] = parseFloat(parts[i]);
         }
+        console.log('data', obj);
+
         return obj;
       });
+      console.log('data', data);
       await axios.post('api/express/predictions/batch', {
         userId,
         areaId,
@@ -321,6 +329,11 @@ const CreateNewPrediction = () => {
                     beforeUpload={() => false}
                     onChange={handleCSVUpload}
                     maxCount={1}
+                    fileList={
+                      csvElements.length > 0
+                        ? [{ name: 'data.csv', status: 'done' }]
+                        : []
+                    }
                   >
                     <Button icon={<UploadOutlined />}>
                       {t('prediction_form.upload_csv') || 'Upload CSV'}
