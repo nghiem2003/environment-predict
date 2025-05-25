@@ -163,7 +163,7 @@ const App = () => {
             Prediction System
           </Title>
         </Col>
-        <Col xs={12} sm={8} md={6}>
+        <Col xs={6} sm={8} md={6}>
           <Space
             size={screens.xs ? 'small' : 'middle'}
             style={{ justifyContent: 'flex-end' }}

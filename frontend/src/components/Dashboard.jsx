@@ -162,7 +162,8 @@ const Dashboard = () => {
           dataSource={predictionList}
           rowKey="id"
           pagination={false}
-          style={{ width: '100%' }}
+          style={{ width: '100%', overflowX: 'scroll' }}
+          scroll={{ x: 'max-content' }}
           locale={{ emptyText: t('dashboard.noData') }}
         />
         <div style={{ margin: '16px 0', textAlign: 'center' }}>
@@ -174,8 +175,17 @@ const Dashboard = () => {
             showSizeChanger={false}
           />
         </div>
-        <Modal open={showModal} onCancel={closeModal} footer={null} width={800}>
-          <PredictionDetails predictionId={selectedPredictionId} />
+        <Modal
+          open={showModal}
+          onCancel={closeModal}
+          footer={null}
+          width={800}
+          style={{ maxWidth: '100vw' }}
+          bodyStyle={{ overflowX: 'auto' }}
+        >
+          <div style={{ minWidth: '750px' }}>
+            <PredictionDetails predictionId={selectedPredictionId} />
+          </div>
         </Modal>
       </Card>
     </div>

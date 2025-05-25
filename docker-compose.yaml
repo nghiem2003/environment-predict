@@ -29,6 +29,13 @@ services:
     networks:
       - proxy_network
     restart: always
+    environment:
+      - DB_HOST=postgres_db
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=admin
+      - DB_NAME=ocean
+      - FLASK_API_URL=http://flask_backend:5001
     depends_on:
       postgres_db:
         condition: service_healthy

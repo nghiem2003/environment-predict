@@ -127,6 +127,7 @@ exports.updateUserById = async (req, res) => {
       address = null,
       phone = null,
       region = null,
+      email = null,
     } = req.body;
     const user = await User.findOne({ where: { id: id } });
     if (!user) res.status(404).json({ message: 'User not found' });
@@ -135,6 +136,7 @@ exports.updateUserById = async (req, res) => {
     user.address = address ? address : user.address;
     user.phone = phone ? phone : user.phone;
     user.region = region ? region : user.region;
+    user.email = email ? email : user.email;
 
     await user.save();
     return res.status(200).json({ message: 'Update successful' });

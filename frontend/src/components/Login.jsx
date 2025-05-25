@@ -41,6 +41,8 @@ const Login = () => {
 
   const handleLogin = async () => {
     try {
+      console.log(password, email);
+      
       const response = await axios.post('/api/express/auth/login', {
         email,
         password,

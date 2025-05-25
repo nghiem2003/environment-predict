@@ -370,97 +370,103 @@ const AreaList = () => {
           footer={null}
           width={700}
         >
-          <div style={{ display: 'flex', gap: 24, height: '500px' }}>
-            <Form
-              form={form}
-              layout="vertical"
-              style={{ flex: 1, overflowY: 'auto' }}
-              onFinish={handleAddArea}
-            >
-              <Form.Item
-                label="Area Name"
-                name="name"
-                rules={[{ required: true }]}
+          <Row gutter={[24, 24]}>
+            <Col xs={24} md={12}>
+              <Form
+                form={form}
+                layout="vertical"
+                style={{ overflowY: 'auto' }}
+                onFinish={handleAddArea}
               >
-                <Input />
-              </Form.Item>
-              <Form.Item
-                label="Latitude"
-                name="latitude"
-                rules={[{ required: true }]}
-              >
-                <Input type="number" />
-              </Form.Item>
-              <Form.Item
-                label="Longitude"
-                name="longitude"
-                rules={[{ required: true }]}
-              >
-                <Input type="number" />
-              </Form.Item>
-              <Form.Item label="Area's area" name="area">
-                <Input type="number" />
-              </Form.Item>
-              <Form.Item
-                label={t('area_list.popup.select_region')}
-                name="region"
-              >
-                <Select>
-                  {regionList.map((region) => (
-                    <Option key={region.id} value={region.id}>
-                      {region.province},{region.name}
+                <Form.Item
+                  label="Area Name"
+                  name="name"
+                  rules={[{ required: true }]}
+                >
+                  <Input />
+                </Form.Item>
+                <Form.Item
+                  label="Latitude"
+                  name="latitude"
+                  rules={[{ required: true }]}
+                >
+                  <Input type="number" />
+                </Form.Item>
+                <Form.Item
+                  label="Longitude"
+                  name="longitude"
+                  rules={[{ required: true }]}
+                >
+                  <Input type="number" />
+                </Form.Item>
+                <Form.Item label="Area's area" name="area">
+                  <Input type="number" />
+                </Form.Item>
+                <Form.Item
+                  label={t('area_list.popup.select_region')}
+                  name="region"
+                >
+                  <Select>
+                    {regionList.map((region) => (
+                      <Option key={region.id} value={region.id}>
+                        {region.province},{region.name}
+                      </Option>
+                    ))}
+                  </Select>
+                </Form.Item>
+                <Form.Item label={t('area_list.filter.type')} name="area_type">
+                  <Select disabled={!!form.getFieldValue('id')}>
+                    <Option value="oyster">
+                      {t('area_list.filter.oyster')}
                     </Option>
-                  ))}
-                </Select>
-              </Form.Item>
-              <Form.Item label={t('area_list.filter.type')} name="area_type">
-                <Select disabled={!!form.getFieldValue('id')}>
-                  <Option value="oyster">{t('area_list.filter.oyster')}</Option>
-                  <Option value="cobia">{t('area_list.filter.cobia')}</Option>
-                </Select>
-              </Form.Item>
-              <Form.Item>
-                <Space>
-                  <Button type="primary" htmlType="submit">
-                    {t('area_list.popup.save')}
-                  </Button>
-                  <Button
-                    onClick={() => {
-                      setIsPopupOpen(false);
-                      form.resetFields();
+                    <Option value="cobia">{t('area_list.filter.cobia')}</Option>
+                  </Select>
+                </Form.Item>
+                <Form.Item>
+                  <Space>
+                    <Button type="primary" htmlType="submit">
+                      {t('area_list.popup.save')}
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        setIsPopupOpen(false);
+                        form.resetFields();
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  </Space>
+                </Form.Item>
+              </Form>
+            </Col>
+            <Col xs={24} md={12}>
+              <div style={{ height: '400px' }}>
+                <MapContainer
+                  center={mapCenter}
+                  zoom={30}
+                  style={{ height: '100%', width: '100%' }}
+                  ref={setMap}
+                >
+                  <TileLayer
+                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    attribution="&copy; OpenStreetMap contributors"
+                  />
+                  <MapUpdater center={mapCenter} />
+                  <Marker position={mapCenter} />
+                  <LocationMarker
+                    setCoordinates={(latlng) => {
+                      form.setFieldsValue({
+                        latitude: latlng.lat,
+                        longitude: latlng.lng,
+                      });
+                      setMapCenter([latlng.lat, latlng.lng]);
+                      setPosition(latlng);
                     }}
-                  >
-                    Cancel
-                  </Button>
-                </Space>
-              </Form.Item>
-            </Form>
-            <div style={{ flex: 1, minWidth: '300px' }}>
-              <MapContainer
-                center={mapCenter}
-                zoom={30}
-                style={{ height: '100%', width: '100%' }}
-                ref={setMap}
-              >
-                <TileLayer
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                  attribution="&copy; OpenStreetMap contributors"
-                />
-                <MapUpdater center={mapCenter} />
-                <Marker position={mapCenter} />
-                <LocationMarker
-                  setCoordinates={(latlng) => {
-                    form.setFieldsValue({
-                      latitude: latlng.lat,
-                      longitude: latlng.lng,
-                    });
-                    setMapCenter([latlng.lat, latlng.lng]);
-                    setPosition(latlng);
-                  }}
-                />
-              </MapContainer>
-            </div>
-          </div>
+                  />
+                </MapContainer>
+              </div>
+            </Col>
+          </Row>
         </Modal>
 
         {/* Delete Confirmation Modal */}
