@@ -25,6 +25,7 @@ const UserList = () => {
   const [form] = Form.useForm();
   const [users, setUsers] = useState([]);
   const [isRegionPopup, setIsRegionPopup] = useState(false);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [regionList, setRegionList] = useState([]);
   const [isUserPopupOpen, setIsUserPopupOpen] = useState(false);
@@ -151,6 +152,20 @@ const UserList = () => {
     });
     setIsUserPopupOpen(true);
   };
+
+  const handleDeleteUser = async (id) => {
+    try {
+      // Giả sử endpoint để xoá user là DELETE /api/express/auth/delete/:id
+      await axios.delete(`/api/express/auth/delete/${id}`);
+      message.success(t('userList.deleteSuccess') || 'User deleted successfully');
+      setIsDeleteConfirmOpen(false);
+      fetchUsers();
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      message.error(t('userList.deleteFailed') || 'Failed to delete user');
+    }
+  };
+
 
   // Deactivate user confirmation popup
   const handleDeactivateUser = async (id) => {
@@ -322,6 +337,19 @@ const UserList = () => {
                         </Button>
                       )
                     ) : null}
+                    {user.role !== 'admin' && (
+                      <Button
+                        danger
+                        type="default"
+                        size="small"
+                        onClick={() => {
+                          setSelectedUser(user);
+                          setIsDeleteConfirmOpen(true);
+                        }}
+                      >
+                        {t('userList.deleteUser') || 'Xoá'}
+                      </Button>
+                    )}
                   </Space>
                 ),
               },
@@ -465,6 +493,16 @@ const UserList = () => {
         cancelText={t('userList.no')}
       >
         <p>{t('userList.deactivateConfirmMessage')}</p>
+      </Modal>
+      <Modal
+        title={t('userList.deleteConfirm') || 'Xác nhận xoá'}
+        open={isDeleteConfirmOpen}
+        onOk={() => handleDeleteUser(selectedUser?.id)}
+        onCancel={() => setIsDeleteConfirmOpen(false)}
+        okText={t('userList.yes') || 'Có'}
+        cancelText={t('userList.no') || 'Không'}
+      >
+        <p>{t('userList.deleteConfirmMessage') || 'Bạn có chắc chắn muốn xóa người dùng này? Hành động này không thể hoàn tác.'}</p>
       </Modal>
     </div>
   );

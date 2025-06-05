@@ -104,8 +104,15 @@ const Prediction = () => {
         icon={<LoadingOutlined />}
         title={t('prediction.loadingArea')}
         extra={
-          <Button type="primary" icon={<HomeOutlined />} onClick={handleBack}>
-            {t('prediction.return')}
+          <Button
+          style={{
+            whiteSpace: 'normal',      
+            wordBreak: 'break-word',   
+            maxWidth: '100%',   
+            height: 'auto',        
+          }}
+           type="primary" icon={<HomeOutlined />} onClick={handleBack}>
+          <p>  {t('prediction.return')} </p>
           </Button>
         }
       />
@@ -118,7 +125,14 @@ const Prediction = () => {
         status="404"
         title={t('prediction.areaNotFound')}
         extra={
-          <Button type="primary" icon={<HomeOutlined />} onClick={handleBack}>
+          <Button
+          style={{
+            whiteSpace: 'normal',      
+            wordBreak: 'break-word',   
+            maxWidth: '100%',  
+            height: 'auto',           
+          }}
+           type="primary" icon={<HomeOutlined />} onClick={handleBack}>
             {t('prediction.return')}
           </Button>
         }
@@ -166,6 +180,12 @@ const Prediction = () => {
             title={t('prediction.noPrediction')}
             extra={
               <Button
+              style={{
+                whiteSpace: 'normal',      
+                wordBreak: 'break-word', 
+                maxWidth: '100%',
+                height: 'auto',       
+              }}
                 type="primary"
                 icon={<HomeOutlined />}
                 onClick={handleBack}

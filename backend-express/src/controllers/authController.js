@@ -150,3 +150,28 @@ exports.updateUserById = async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 };
+
+exports.deleteUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    console.log('Deleting user with ID:', id);
+
+    // Tìm xem user có tồn tại không
+    const user = await User.findOne({ where: { id } });
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Xóa hẳn user. Nếu bạn chỉ muốn "soft-delete", có thể dùng user.update({ status: 'deleted' }, ...) thay thế
+    await user.destroy();
+
+    return res.status(200).json({ message: `User ${user.username} has been deleted` });
+  } catch (error) {
+    console.error('Delete User Error:', {
+      message: error.message,
+      stack: error.stack,
+      userId: req.params.id,
+    });
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+};

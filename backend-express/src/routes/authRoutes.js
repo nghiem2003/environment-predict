@@ -5,7 +5,8 @@ const {
   getAllUser,
   deactiveUser,
   createManagerUser,
-  activateUser
+  activateUser,
+  deleteUser
   //createAdminUser,
 } = require('../controllers/authController');
 const { authenticate, authorize } = require('../middlewares/authMiddleware');
@@ -30,3 +31,10 @@ router.post(
 
 //router.post('/create-admin', createAdminUser);
 module.exports = router;
+
+router.delete(
+  '/delete/:id',
+  authenticate,
+  authorize(['admin']),  // chỉ admin mới được phép
+  deleteUser
+);
