@@ -9,7 +9,8 @@ const Area = sequelize.define(
     latitude: { type: DataTypes.DOUBLE, allowNull: false },
     longitude: { type: DataTypes.DOUBLE, allowNull: false },
     area: { type: DataTypes.DOUBLE, allowNull: false },
-    region: { type: DataTypes.UUID, allowNull: true },
+    province: { type: DataTypes.UUID, allowNull: true },
+    district: { type: DataTypes.UUID, allowNull: true },
     area_type: { type: DataTypes.ENUM('oyster', 'cobia'), allowNull: false },
   },
   { timestamps: false, tableName: 'diagnose_areas' }
@@ -18,8 +19,12 @@ const Area = sequelize.define(
 Area.associate = (models) => {
   console.log(models);
   
-  Area.belongsTo(models.Region, {
-    foreignKey: 'region',
+  Area.belongsTo(models.Province, {
+    foreignKey: 'province',
+    targetKey: 'id',
+  });
+  Area.belongsTo(models.District, {
+    foreignKey: 'district',
     targetKey: 'id',
   });
 }

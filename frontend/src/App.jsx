@@ -10,7 +10,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { logout } from './redux/authSlice';
 import Login from './components/Login';
 import 'react-toastify/dist/ReactToastify.css';
-import { ToastContainer } from 'react-toastify';
+import { jwtDecode } from 'jwt-decode';
 import Dashboard from './components/Dashboard';
 import WelcomePage from './components/WelcomePage';
 import Prediction from './components/Prediction';
@@ -74,7 +74,7 @@ const App = () => {
     navigate('/');
   };
 
-  const isSidebarVisible = role === 'admin' || role === 'expert';
+  const isSidebarVisible = role === 'admin' || role === 'expert' || role === 'manager';
 
   const getMenuItems = () => {
     if (role === 'admin') {
@@ -107,6 +107,19 @@ const App = () => {
           icon: <PlusCircleOutlined />,
           label: t('sidebar.create_prediction'),
         },
+      ];
+    }else if (role === 'manager') {
+      return [
+        {
+          key: '/areas',
+          icon: <AreaChartOutlined />,
+          label: t('sidebar.area_list'),
+        },
+        ...(!jwtDecode(token).district ? [{
+          key: '/user-list',
+          icon: <UserOutlined />,
+          label: t('sidebar.user_list'),
+        }] : [])
       ];
     }
     return [];
@@ -327,7 +340,7 @@ const App = () => {
             <Route
               path="/"
               element={
-                token ? <Navigate to="/dashboard" replace /> : <WelcomePage />
+                token ? jwtDecode(token).role === 'manager' ? <Navigate to="/areas" replace /> : <Navigate to="/dashboard" replace /> : <WelcomePage />
               }
             />
             <Route path="/Login" element={<Login />} />
@@ -342,7 +355,7 @@ const App = () => {
             <Route
               path="/areas"
               element={
-                <ProtectedRoute roles={['admin']}>
+                <ProtectedRoute roles={['admin','manager']}>
                   <AreaList />
                 </ProtectedRoute>
               }
@@ -350,8 +363,12 @@ const App = () => {
             <Route
               path="/user-list"
               element={
-                <ProtectedRoute roles={['admin']}>
-                  <UserList />
+                <ProtectedRoute roles={['admin','manager']}>
+                 {
+                   token && jwtDecode(token).role === 'manager' && jwtDecode(token).district
+                    ? <Navigate to="/" replace />
+                    : <UserList />
+                }
                 </ProtectedRoute>
               }
             />

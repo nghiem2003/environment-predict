@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import axios from '../axios';
+import { useSelector } from 'react-redux';
 import './UserList.css';
+import { jwtDecode } from 'jwt-decode';
 import { useTranslation } from 'react-i18next';
 import {
   Card,
@@ -23,11 +25,15 @@ const { Title } = Typography;
 const UserList = () => {
   const { t } = useTranslation();
   const [form] = Form.useForm();
+  const { token } = useSelector((state) => state.auth);
+  const [authData, setAuthData]= useState(null)
   const [users, setUsers] = useState([]);
   const [isRegionPopup, setIsRegionPopup] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [regionList, setRegionList] = useState([]);
+  const [districtList, setDistrictList] = useState([]);
+  const [filteredDistrictList, setFilteredDistrictList] = useState([]);
   const [isUserPopupOpen, setIsUserPopupOpen] = useState(false);
   const [isConfirmPopupOpen, setIsConfirmPopupOpen] = useState(false);
   const [isShowPasswordPopupOpen, setIsShowPasswordPopupOpen] = useState(false);
@@ -47,22 +53,43 @@ const UserList = () => {
   // Fetch users from the API
   const fetchUsers = async () => {
     try {
+      const {role, province} = authData || {};
+
+      
       const response = await axios.get('/api/express/auth/', {
-        params: { search: searchTerm },
+        params: { search: searchTerm, role, province },
       });
       console.log(response.data.data);
       setUsers(response.data.data || []);
-      const regionResponse = await axios.get('/api/express/areas/regions');
+      const regionResponse = await axios.get('/api/express/areas/provinces');
       setRegionList(regionResponse.data);
+      const districtResponse = await axios.get('/api/express/areas/districts');
+      setDistrictList(districtResponse.data);
+      setFilteredDistrictList(districtResponse.data);
     } catch (error) {
       console.error('Error fetching users:', error);
     }
   };
 
   useEffect(() => {
-    fetchUsers();
-  }, [searchTerm]);
+     if (token) {
+              try {
+                console.log('token1',token);
+                const decodedToken = jwtDecode(token); // Decode the JWT token
+                setAuthData(decodedToken);
+                console.log('haha',authData);
+              } catch (error) {
+              console.error('Error decoding token:', error);
+                }
+              }
+  }, [token]);
 
+  useEffect(() => {
+    if (authData) {
+      fetchUsers();
+    }
+  }, [authData, searchTerm]);
+  
   const getRegionNameFromId = (id) => {
     const region = regionList.find((r) => r.id === id);
     return region ? region.name : '';
@@ -141,7 +168,8 @@ const UserList = () => {
       address: user.address,
       phone: user.phone,
       password: '', // leave password empty when updating
-      region: user.region,
+      province: user.province,
+      district: user.district,
     });
     form.setFieldsValue({
       name: user.username,
@@ -211,7 +239,8 @@ const UserList = () => {
       address: '',
       phone: '',
       password: '',
-      region: '',
+      province: '',
+      district: '',
     });
     form.resetFields();
     setIsUserPopupOpen(true);
@@ -322,6 +351,7 @@ const UserList = () => {
                           size="small"
                           onClick={() => {
                             setSelectedUser(user);
+                            
                             setIsConfirmPopupOpen(true);
                           }}
                         >
@@ -430,13 +460,13 @@ const UserList = () => {
           </Form.Item>
 
           <Form.Item
-            name="region"
+            name="province"
             label={t('userList.region')}
             rules={[{ required: true, message: t('userList.required') }]}
           >
             <Select
               showSearch
-              placeholder={t('userList.selectRegion')}
+              placeholder={t('userList.selectProvince')}
               optionFilterProp="children"
               filterOption={(input, option) =>
                 (option?.label ?? '')
@@ -445,7 +475,38 @@ const UserList = () => {
               }
               options={regionList.map((region) => ({
                 value: region.id,
-                label: `${region.province}, ${region.name}`,
+                label: `${region.name}`,
+              }))}
+              onChange={(value, option) => {
+                console.log(districtList);
+                
+                setFilteredDistrictList(districtList.filter(
+                  (district) => district.province_id === value));
+                console.log('Selected Region ID:', value);
+                console.log('vale',districtList);
+                form.setFieldsValue({ district: '' });
+                console.log('Selected Region Option:', option);
+                console.log('All Form Values:', form.getFieldsValue());
+              }}
+            />
+          </Form.Item>  
+          <Form.Item
+            name="district"
+            label={t('userList.region')}
+            rules={[{ required: true, message: t('userList.required') }]}
+          >
+            <Select
+              showSearch
+              placeholder={t('userList.selectDistrict')}
+              optionFilterProp="children"
+              filterOption={(input, option) =>
+                (option?.label ?? '')
+                  .toLowerCase()
+                  .includes(input.toLowerCase())
+              }
+              options={filteredDistrictList.map((region) => ({
+                value: region.id,
+                label: `${region.name}`,
               }))}
               onChange={(value, option) => {
                 console.log('Selected Region ID:', value);
@@ -453,7 +514,8 @@ const UserList = () => {
                 console.log('All Form Values:', form.getFieldsValue());
               }}
             />
-          </Form.Item>
+          </Form.Item>  
+          
 
           {!userPopupData.id && (
             <Form.Item

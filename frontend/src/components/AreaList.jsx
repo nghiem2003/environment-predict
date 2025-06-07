@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from '../axios';
+import { useSelector } from 'react-redux';
+import { jwtDecode } from 'jwt-decode';
 import './AreaList.css';
 import { useTranslation } from 'react-i18next';
 import {
@@ -39,6 +41,7 @@ const { Title } = Typography;
 const AreaList = () => {
   const [form] = Form.useForm();
   const { t } = useTranslation();
+  const { token } = useSelector((state) => state.auth);
   const [map, setMap] = useState(null);
   const [position, setPosition] = useState(null);
   const [currentPage, setCurrentPage] = useState(0);
@@ -54,6 +57,8 @@ const AreaList = () => {
   const [selectedArea, setSelectedArea] = useState(null);
   const [mapCenter, setMapCenter] = useState([10.762622, 106.660172]); // Default center (Vietnam)
   const [regionList, setRegionList] = useState([]);
+  const [districtList, setDistrictList] = useState([]);
+  const [filteredDistrictList, setFilteredDistrictList] = useState([]);
   const [newArea, setNewArea] = useState({
     id: '',
     name: '',
@@ -65,7 +70,7 @@ const AreaList = () => {
   });
 
   // Fetch areas from the API
-  const fetchAreas = async () => {
+  const fetchAreas = async (province, district, role) => {
     try {
       const response = await axios.get('/api/express/areas', {
         params: {
@@ -77,23 +82,42 @@ const AreaList = () => {
           long_max: longRange.max,
           limit: 10, // Limit number of results per page
           offset: currentPage * 10,
+          role,
+          province,
+          district // Pass userId for filtering if needed
         },
       });
       setAreas(response.data.areas);
       setTotalAreas(response.data.total); // Set total areas for pagination
       console.log(response.data.areas);
       console.log('total', response.data.areas.length);
-      const regionResponse = await axios.get('/api/express/areas/regions');
+      const regionResponse = await axios.get('/api/express/areas/provinces');
       setRegionList(regionResponse.data); // Set regions for the dropdown
+      const districtResponse = await axios.get(
+        '/api/express/areas/districts')
+      setDistrictList(districtResponse.data); // Set districts for the dropdown
+      setFilteredDistrictList(districtResponse.data); // Initialize filtered districts
       console.log(regionResponse.data);
     } catch (error) {
       console.error('Error fetching areas:', error);
     }
   };
 
+
   // Fetch areas when dependencies change
   useEffect(() => {
-    fetchAreas();
+    
+     if (token) {
+          try {
+            console.log('token1',token);
+            const decodedToken = jwtDecode(token); // Decode the JWT token
+            console.log('haha',decodedToken);
+            fetchAreas(decodedToken.province, decodedToken.district, decodedToken.role);
+          } catch (error) {
+          console.error('Error decoding token:', error);
+            }
+          }
+          
   }, [searchTerm, areaType, latRange, longRange, currentPage]);
 
   const handleAddArea = async (values) => {
@@ -138,7 +162,8 @@ const AreaList = () => {
       latitude: areaToUpdate.latitude || '',
       longitude: areaToUpdate.longitude || '',
       area: areaToUpdate.area || '',
-      region: areaToUpdate.region || '',
+      province: areaToUpdate.province || '',
+      district: areaToUpdate.district || '',
       area_type: areaToUpdate.area_type || 'oyster',
     });
 
@@ -153,14 +178,6 @@ const AreaList = () => {
     }
 
     setIsPopupOpen(true);
-  };
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setNewArea((prevState) => ({
-      ...prevState,
-      [name]: value,
-    }));
   };
 
   const handleSearch = (e) => {
@@ -226,7 +243,7 @@ const AreaList = () => {
     {
       title: t('area_list.table.address'),
       key: 'address',
-      render: (_, area) => `${area.Region?.province},${area.Region?.name}`,
+      render: (_, area) => `${area.Province?.name},${area.District?.name}`,
     },
     {
       title: t('area_list.table.actions'),
@@ -403,13 +420,33 @@ const AreaList = () => {
                   <Input type="number" />
                 </Form.Item>
                 <Form.Item
-                  label={t('area_list.popup.select_region')}
-                  name="region"
+                  label={t('area_list.popup.select_district')}
+                  name="province"
                 >
-                  <Select>
+                  <Select
+                  onChange={(value) => {
+                    setFilteredDistrictList(
+                      districtList.filter((district) => district.province_id === value)
+                    );
+                    form.setFieldsValue({ district: '' }); // Reset region when province changes
+                  }
+                }
+                  >
                     {regionList.map((region) => (
                       <Option key={region.id} value={region.id}>
-                        {region.province},{region.name}
+                        {region.name}
+                      </Option>
+                    ))}
+                  </Select>
+                </Form.Item>
+                <Form.Item
+                  label={t('area_list.popup.select_province')}
+                  name="district"
+                >
+                  <Select>
+                    {filteredDistrictList.map((region) => (
+                      <Option key={region.id} value={region.id}>
+                        {region.name}
                       </Option>
                     ))}
                   </Select>

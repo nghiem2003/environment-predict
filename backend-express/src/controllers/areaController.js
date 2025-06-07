@@ -1,6 +1,5 @@
 const { Op } = require('sequelize');
-const { Area } = require('../models');
-const { Region } = require('../models');
+const { Area, Province, District } = require('../models');
 
 exports.getAllAreas = async (req, res) => {
   try {
@@ -13,7 +12,11 @@ exports.getAllAreas = async (req, res) => {
       long_max,
       limit,
       offset,
+      role,
+      district,
+      province,
     } = req.query;
+  console.log(req.query);
 
     // Start with an empty query object
     let query = {};
@@ -41,15 +44,30 @@ exports.getAllAreas = async (req, res) => {
       if (long_min) query.longitude[Op.gte] = long_min; // Greater than or equal to long_min
       if (long_max) query.longitude[Op.lte] = long_max; // Less than or equal to long_max
     }
-
+    if (role === 'manager') {
+      console.log('Manager role detected, applying district filter');
+      if (district) {
+        query.district = district; // lọc theo district
+      } else if (province) {
+        query.province = province; // lọc theo province nếu không có district
+      }
+    }
+    console.log('Query for Areas:', query);
     const options = {
       where: query,
-      include: {
-        model: Region,
-        as: 'Region',
+      include:[
+      {
+        model: Province,
+        as: 'Province',
         required: false,
-        attributes: ['id', 'name', 'province'],
+        attributes: ['id', 'name'],
       },
+      {model: District,
+        as: 'District',
+        required: false,
+        attributes: ['id', 'name'],
+      }
+    ],
     };
 
     if (limit) {
@@ -58,7 +76,7 @@ exports.getAllAreas = async (req, res) => {
     if (offset) {
       options.offset = parseInt(offset, 10);
     }
-    options.order = [['region', 'DESC']];
+    options.order = [['name', 'DESC']];
 
     const areas = await Area.findAll(options);
     const total = await Area.count(options);
@@ -79,8 +97,9 @@ exports.getAreaById = async (req, res) => {
     const area = await Area.findOne({
       where: { id: id },
       include: {
-        model: Region,
-        as: 'Region',
+        model: Province,
+        
+        as: 'Province',
         required: false,
       },
     });
@@ -97,7 +116,7 @@ exports.getAreaById = async (req, res) => {
 
 exports.createArea = async (req, res) => {
   try {
-    const { name, latitude, longitude, region, area_type } = req.body;
+    const { name, latitude, longitude, province, district, area_type } = req.body;
 
     if (area_type !== 'oyster' && area_type !== 'cobia') {
       return res.status(400).json({
@@ -109,7 +128,8 @@ exports.createArea = async (req, res) => {
       name,
       latitude,
       longitude,
-      region,
+      province,
+      district,
       area: 1000,
       area_type,
     });
@@ -150,8 +170,10 @@ exports.deleteArea = async (req, res) => {
 
 exports.updateArea = async (req, res) => {
   try {
+    console.log(req.body);
+    
     const { id } = req.params;
-    const { name, latitude, longitude, region, area, area_type } = req.body;
+    const { name, latitude, longitude, province, district, area, area_type } = req.body;
 
     if (area_type !== 'oyster' && area_type !== 'cobia') {
       return res.status(400).json({
@@ -169,7 +191,8 @@ exports.updateArea = async (req, res) => {
     selectedArea.latitude = latitude || area.latitude;
     selectedArea.longitude = longitude || area.longitude;
     selectedArea.area = area || area.area;
-    selectedArea.region = region || area.region;
+    selectedArea.province = province || area.province;
+    selectedArea.district = district || area.district;
     selectedArea.area_type = area_type;
 
     console.log('Updating area:', selectedArea.name);

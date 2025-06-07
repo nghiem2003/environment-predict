@@ -1,6 +1,7 @@
-const { User, Region } = require('../models');
+const { User } = require('../models');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const { Op } = require('sequelize');
 
 exports.login = async (req, res) => {
   try {
@@ -15,7 +16,7 @@ exports.login = async (req, res) => {
     if (user.status === 'inactivate')
       return res.status(403).json({ error: 'Your account is deactivated' });
     const token = jwt.sign(
-      { id: user.id, role: user.role, region: user.region },
+      { id: user.id, role: user.role, province: user.province, district: user.district },
       'SECRET_KEY',
       { expiresIn: '10d' }
     );
@@ -33,7 +34,7 @@ exports.login = async (req, res) => {
 
 exports.createManagerUser = async (req, res) => {
   try {
-    const { email, password, address = null, phone = null, region } = req.body;
+    const { email, password, address = null, phone = null, province, district } = req.body;
     const isExist = await User.findOne({ where: { email } });
     if (isExist) return res.status(403).json({ error: 'User existed' });
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -43,7 +44,8 @@ exports.createManagerUser = async (req, res) => {
       password: hashedPassword,
       address,
       phone,
-      region,
+      province,
+      district,
       status: 'active',
       role: 'expert',
     });
@@ -52,8 +54,6 @@ exports.createManagerUser = async (req, res) => {
     console.error('Create Manager User Error:', {
       message: error.message,
       stack: error.stack,
-      email: req.body.email,
-      region: req.body.region,
     });
     return res.status(500).json({ error: 'Internal server error' });
   }
@@ -61,7 +61,26 @@ exports.createManagerUser = async (req, res) => {
 
 exports.getAllUser = async (req, res) => {
   try {
+    const { role, province, search = null } = req.query;
+    console.log(req.query);
+    
+    let whereCondition = {};
+    if(role === 'manager') {
+      whereCondition = { 
+        role: role,
+        province: province,
+        district: {
+          [Op.ne]: null, // Ensure district is not null
+        }
+      }
+    }
+    if (search) {
+      whereCondition.username = {
+        [Op.iLike]: `%${search}%`
+      };
+    }
     const userList = await User.findAll({
+      where: whereCondition,
       order: [['id', 'ASC']],
     });
     return res.status(200).json({ data: userList });
@@ -126,7 +145,8 @@ exports.updateUserById = async (req, res) => {
       name = null,
       address = null,
       phone = null,
-      region = null,
+      province = null,
+      district = null,
       email = null,
     } = req.body;
     const user = await User.findOne({ where: { id: id } });
@@ -135,7 +155,8 @@ exports.updateUserById = async (req, res) => {
     user.username = name ? name : user.username;
     user.address = address ? address : user.address;
     user.phone = phone ? phone : user.phone;
-    user.region = region ? region : user.region;
+    user.province = province ? province : user.province;
+    user.district = district ? district : user.district;
     user.email = email ? email : user.email;
 
     await user.save();

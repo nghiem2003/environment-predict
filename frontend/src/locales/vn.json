@@ -33,7 +33,8 @@
     "no": "Không",
     "deactivateConfirm": "Vô hiệu hóa người dùng",
     "deactivateConfirmMessage": "Bạn có chắc chắn muốn vô hiệu hóa người dùng này?",
-    "selectRegion": "Chọn khu vực",
+    "selectProvince": "Chọn tỉnh",
+    "selectDistrict": "Chọn quận",
     "required": "Vui lòng nhập thông tin này",
     "invalidEmail": "Vui lòng nhập email hợp lệ"
   },
@@ -61,7 +62,8 @@
     "noPrediction": "Chưa có dự đoán nào được thực hiện.",
     "unidentified": "Môi trường chưa được xác định",
     "goBack": "Nhấn vào đây để quay lại trang chào mừng",
-    "return": "Trở lại"
+    "return": "Trở lại",
+    "areaNotFound": "Khu vực không được tìm thấy. Vui lòng chọn khu vực hợp lệ."
   },
   "login": {
     "title": "Đăng nhập",
@@ -101,10 +103,11 @@
     "loading_areas": "Đang tải khu vực..."
   },
   "area_list": {
+    "title": "Danh sách khu vực",
     "search_placeholder": "Tìm kiếm theo tên khu vực",
     "type_all": "Tất cả",
     "filter": {
-      "select_type": "Chọn loại khu vực",
+      "type": "Chọn loại khu vực",
       "all": "Tất cả",
       "oyster": "Hàu",
       "cobia": "Cá bớp",
@@ -136,7 +139,8 @@
       "name": "Tên khu vực",
       "latitude": "Vĩ độ",
       "longitude": "Kinh độ",
-      "select_region": "Chọn vùng",
+      "select_district": "Chọn quận",
+      "select_province": "Chọn tỉnh",
       "type": "Loại khu vực",
       "save": "Lưu",
       "cancel": "Hủy"

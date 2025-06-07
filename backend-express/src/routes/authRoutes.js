@@ -14,7 +14,7 @@ const router = express.Router();
 
 router.post('/login', login);
 router.post('/update/:id', authenticate, updateUserById);
-router.get('/', authenticate, authorize(['admin']), getAllUser);
+router.get('/', authenticate, authorize(['admin','manager']), getAllUser);
 router.patch(
   '/deactivate/:id',
   authenticate,

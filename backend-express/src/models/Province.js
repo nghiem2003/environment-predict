@@ -1,14 +1,13 @@
 const { Sequelize, DataTypes } = require('sequelize');
 const sequelize = require('../config/db');
 
-const Region = sequelize.define(
-  'Region',
+const Province = sequelize.define(
+  'Province',
   {
     id: { type: DataTypes.UUID, defaultValue:DataTypes.UUIDV4, primaryKey: true },
     name: { type: DataTypes.STRING, allowNull: false },
-    province: { type: DataTypes.STRING, allowNull: false },
   },
-  { timestamps: false, tableName: 'regions' }
+  { timestamps: false, tableName: 'provinces' }
 );
 
-module.exports = Region;
+module.exports = Province;

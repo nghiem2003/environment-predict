@@ -45,7 +45,7 @@ const WelcomePage = () => {
           onChange={handleAreaSelect}
           options={areas.map((area) => ({
             value: area.id,
-            label: `${area.Region?.province}, ${area.Region?.name}, ${area.name}`,
+            label: `${area.Province?.name}, ${area.District?.name}, ${area.name}`,
           }))}
         />
       </Space>

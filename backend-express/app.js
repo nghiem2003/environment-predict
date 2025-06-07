@@ -7,7 +7,6 @@ const sequelize = require('./src/config/db.js');
 const cors = require('cors');
 const morgan = require('morgan')
 const helmet = require('helmet')
-const Region = require('./src/models/Region.js')
 
 const app = express();
 
@@ -22,7 +21,7 @@ app.use('/api/express/auth', authRoutes);
 app.use('/api/express/predictions', predictionRoutes);
 app.use('/api/express/areas', areaRoutes);
 
-sequelize.sync({ alter: true }).then(() => {
+sequelize.sync().then(() => {
   app.listen(5000, () =>
     console.log('Server running on http://localhost:5000')
   );

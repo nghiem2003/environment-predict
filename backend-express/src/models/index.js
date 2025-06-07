@@ -7,7 +7,8 @@ const Area = require('./Area');
 const Prediction = require('./Prediction');
 const NatureElement = require('./NatureElement');
 const PredictionNatureElement = require('./PredictionNatureElement');
-const Region = require('./Region');
+const Province = require('./Province');
+const District = require('./District');
 
 // Initialize models
 const models = {
@@ -16,7 +17,8 @@ const models = {
   Prediction,
   NatureElement,
   PredictionNatureElement,
-  Region
+  Province,
+  District
 };
 
 // Dynamically associate models after all are initialized
