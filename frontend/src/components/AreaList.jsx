@@ -423,7 +423,7 @@ const AreaList = () => {
                   label={t('area_list.popup.select_district')}
                   name="province"
                 >
-                  <Select
+                  <Select disabled={jwtDecode(token).role === 'manager'}
                   onChange={(value) => {
                     setFilteredDistrictList(
                       districtList.filter((district) => district.province_id === value)
@@ -443,7 +443,7 @@ const AreaList = () => {
                   label={t('area_list.popup.select_province')}
                   name="district"
                 >
-                  <Select>
+                  <Select disabled={jwtDecode(token).role === 'manager'} >
                     {filteredDistrictList.map((region) => (
                       <Option key={region.id} value={region.id}>
                         {region.name}

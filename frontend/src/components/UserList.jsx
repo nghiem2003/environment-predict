@@ -89,7 +89,7 @@ const UserList = () => {
       fetchUsers();
     }
   }, [authData, searchTerm]);
-  
+
   const getRegionNameFromId = (id) => {
     const region = regionList.find((r) => r.id === id);
     return region ? region.name : '';
@@ -291,7 +291,7 @@ const UserList = () => {
                 title: t('userList.fullName'),
                 dataIndex: 'username',
                 key: 'username',
-                width: 200,
+                width: 50,
               },
               {
                 title: t('userList.email'),
@@ -311,14 +311,24 @@ const UserList = () => {
                 key: 'phone',
                 width: 150,
               },
-              {
-                title: t('userList.role'),
-                dataIndex: 'role',
-                key: 'role',
-                width: 120,
-                render: (role) =>
-                  role === 'admin' ? t('userList.admin') : t('userList.expert'),
-              },
+                {
+                  title: t('userList.role'),
+                  dataIndex: 'role',
+                  key: 'role',
+                  width: 120,
+                  render: (role, record) =>
+                    {
+                      if (role === 'manager') {
+                      if (record.district) {
+                        return t(`userList.${role}`) + ' ' + t('userList.district_level') || 'Cấp huyện';
+                      }
+                      if (record.province) {
+                        return t(`userList.${role}`) + ' ' + t('userList.province_level') || 'Cấp tỉnh';
+                      }
+                    }
+                    return t(`userList.${role}`); // vẫn dịch các vai trò khác nếu có
+                  }
+                },
               {
                 title: t('userList.status'),
                 dataIndex: 'status',
@@ -367,7 +377,7 @@ const UserList = () => {
                         </Button>
                       )
                     ) : null}
-                    {user.role !== 'admin' && (
+                    {jwtDecode(token).role === 'admin' && user.role !== 'admin' && (
                       <Button
                         danger
                         type="default"
@@ -464,7 +474,7 @@ const UserList = () => {
             label={t('userList.region')}
             rules={[{ required: true, message: t('userList.required') }]}
           >
-            <Select
+            <Select disabled={jwtDecode(token).role === 'manager'}
               showSearch
               placeholder={t('userList.selectProvince')}
               optionFilterProp="children"
@@ -495,7 +505,7 @@ const UserList = () => {
             label={t('userList.region')}
             rules={[{ required: true, message: t('userList.required') }]}
           >
-            <Select
+            <Select disabled={jwtDecode(token).role === 'manager'}
               showSearch
               placeholder={t('userList.selectDistrict')}
               optionFilterProp="children"
