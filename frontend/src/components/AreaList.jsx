@@ -28,6 +28,8 @@ import {
   Col,
 } from 'antd';
 
+import { EditOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons';
+
 const { Option } = Select;
 const { Title } = Typography;
 
@@ -155,7 +157,9 @@ const AreaList = () => {
   const handleUpdate = (id) => {
     const areaToUpdate = areas.find((area) => area.id === id);
     console.log(areaToUpdate);
-
+    setFilteredDistrictList(districtList.filter(
+      (district) => district.province_id === jwtDecode(token).province
+    ));
     form.setFieldsValue({
       id: areaToUpdate.id || '',
       name: areaToUpdate.name || '',
@@ -250,12 +254,13 @@ const AreaList = () => {
       key: 'actions',
       render: (_, area) => (
         <Space>
-          <Button size="small" onClick={() => handleUpdate(area.id)}>
+          <Button size="small" icon={<EditOutlined />} onClick={() => handleUpdate(area.id)}>
             {t('area_list.popup.update')}
           </Button>
           <Button
             size="small"
             danger
+            icon={<DeleteOutlined />}
             onClick={() => {
               setIsDeleteConfirmOpen(true);
               console.log(area);
@@ -349,7 +354,14 @@ const AreaList = () => {
             />
           </Col>
           <Col xs={24} sm={12} md={3}>
-            <Button type="primary" block onClick={() => setIsPopupOpen(true)}>
+            <Button type="primary" block icon={<PlusOutlined />} onClick={() => {
+              form.setFieldValue('province', jwtDecode(token).province);
+              console.log(form.getFieldsValue());
+              
+              setFilteredDistrictList(districtList.filter(
+                (district) => district.province_id === jwtDecode(token).province));
+              setIsPopupOpen(true)
+            }}>
               {t('area_list.add_button') || 'Thêm khu vực mới'}
             </Button>
           </Col>
@@ -420,17 +432,13 @@ const AreaList = () => {
                   <Input type="number" />
                 </Form.Item>
                 <Form.Item
-                  label={t('area_list.popup.select_district')}
+                  label={t('area_list.popup.select_province')}
                   name="province"
                 >
                   <Select disabled={jwtDecode(token).role === 'manager'}
-                  onChange={(value) => {
-                    setFilteredDistrictList(
-                      districtList.filter((district) => district.province_id === value)
-                    );
-                    form.setFieldsValue({ district: '' }); // Reset region when province changes
-                  }
-                }
+                  onChange={() => {
+                    form.setFieldsValue({ district: '' });
+                  }}
                   >
                     {regionList.map((region) => (
                       <Option key={region.id} value={region.id}>
@@ -440,10 +448,12 @@ const AreaList = () => {
                   </Select>
                 </Form.Item>
                 <Form.Item
-                  label={t('area_list.popup.select_province')}
+                  label={t('area_list.popup.select_district')}
                   name="district"
                 >
-                  <Select disabled={jwtDecode(token).role === 'manager'} >
+                  <Select 
+                  disabled={jwtDecode(token).role === 'manager' && jwtDecode(token).district}
+                  >
                     {filteredDistrictList.map((region) => (
                       <Option key={region.id} value={region.id}>
                         {region.name}
@@ -451,6 +461,7 @@ const AreaList = () => {
                     ))}
                   </Select>
                 </Form.Item>
+                
                 <Form.Item label={t('area_list.filter.type')} name="area_type">
                   <Select disabled={!!form.getFieldValue('id')}>
                     <Option value="oyster">

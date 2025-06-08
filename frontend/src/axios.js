@@ -4,10 +4,12 @@ import axios from 'axios';
 const getToken = () => {
   return localStorage.getItem('token'); // Adjust the key name based on your token storage
 };
+  console.log(process.env.REACT_APP_API_URL); // Debugging line to check the API URL
+  
 
 // Create an Axios instance with default headers
 const axiosInstance = axios.create({
-  baseURL: process.env.REACT_APP_API_URL, // Replace with your API base URL
+  baseURL: 'http://localhost:5000/', // Replace with your API base URL
 });
 
 // Add a request interceptor to add the token to headers before each request

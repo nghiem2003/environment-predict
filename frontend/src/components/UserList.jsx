@@ -19,7 +19,13 @@ import {
   Select,
   message,
 } from 'antd';
-
+import {
+  EditOutlined,
+  DeleteOutlined,
+  StopOutlined,
+  CheckOutlined,
+  UserAddOutlined
+} from '@ant-design/icons';
 const { Title } = Typography;
 
 const UserList = () => {
@@ -124,9 +130,9 @@ const UserList = () => {
           }
         );
         if (result.status === 200) {
-          message.success('User updated successfully');
+          message.success(t('userList.updateSuccess') || 'User updated successfully');
         } else {
-          message.error('User update failed');
+          message.error(t('userList.updateFailed') || 'User update failed');
         }
       } else {
         // Create new user
@@ -136,9 +142,9 @@ const UserList = () => {
         );
         console.log(result);
         if (result.status === 200) {
-          message.success('User created successfully');
+          message.success(t('userList.createSuccess') || 'User created successfully');
         } else {
-          message.error('User creation failed');
+          message.error(t('userList.createFailed') || 'User creation failed');
         }
       }
 
@@ -160,6 +166,10 @@ const UserList = () => {
   // Modify user popup
   const handleModifyUser = (user) => {
     const regionName = getRegionNameFromId(user.region);
+    console.log(user);
+    
+    setFilteredDistrictList(districtList.filter(
+      (district) => district.province_id === user.province));
     setSelectedRegionName(regionName);
     setUserPopupData({
       id: user.id,
@@ -279,7 +289,7 @@ const UserList = () => {
             />
           </Col>
           <Col xs={24} sm={8} md={4}>
-            <Button type="primary" block onClick={handleAddUser}>
+            <Button type="primary" icon={<UserAddOutlined />} block onClick={handleAddUser}>
               {t('userList.addUser')}
             </Button>
           </Col>
@@ -349,6 +359,7 @@ const UserList = () => {
                     <Button
                       type="primary"
                       size="small"
+                      icon={<EditOutlined />}
                       onClick={() => handleModifyUser(user)}
                     >
                       {t('userList.editUser')}
@@ -359,6 +370,7 @@ const UserList = () => {
                           danger
                           type="primary"
                           size="small"
+                          icon={<StopOutlined />}
                           onClick={() => {
                             setSelectedUser(user);
                             
@@ -371,6 +383,7 @@ const UserList = () => {
                         <Button
                           type="primary"
                           size="small"
+                          icon={<CheckOutlined />}
                           onClick={() => handleActivateUser(user.id)}
                         >
                           {t('userList.activateUser')}
@@ -381,7 +394,8 @@ const UserList = () => {
                       <Button
                         danger
                         type="default"
-                        size="small"
+                        size='middle'
+                        icon={<DeleteOutlined />}
                         onClick={() => {
                           setSelectedUser(user);
                           setIsDeleteConfirmOpen(true);
@@ -505,7 +519,7 @@ const UserList = () => {
             label={t('userList.region')}
             rules={[{ required: true, message: t('userList.required') }]}
           >
-            <Select disabled={jwtDecode(token).role === 'manager'}
+            <Select 
               showSearch
               placeholder={t('userList.selectDistrict')}
               optionFilterProp="children"
