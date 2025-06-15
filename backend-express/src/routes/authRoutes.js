@@ -6,7 +6,9 @@ const {
   deactiveUser,
   createManagerUser,
   activateUser,
-  deleteUser
+  deleteUser,
+  getUserById,
+  changePassword,
   //createAdminUser,
 } = require('../controllers/authController');
 const { authenticate, authorize } = require('../middlewares/authMiddleware');
@@ -14,7 +16,7 @@ const router = express.Router();
 
 router.post('/login', login);
 router.post('/update/:id', authenticate, updateUserById);
-router.get('/', authenticate, authorize(['admin','manager']), getAllUser);
+router.get('/', authenticate, authorize(['admin', 'manager']), getAllUser);
 router.patch(
   '/deactivate/:id',
   authenticate,
@@ -29,12 +31,14 @@ router.post(
   createManagerUser
 );
 
-//router.post('/create-admin', createAdminUser);
-module.exports = router;
+router.get('/user/:id', authenticate, getUserById);
 
 router.delete(
   '/delete/:id',
   authenticate,
-  authorize(['admin']),  // chỉ admin mới được phép
+  authorize(['admin']), // chỉ admin mới được phép
   deleteUser
 );
+//router.post('/create-admin', createAdminUser);
+router.post('/change-password/:id', authenticate, changePassword);
+module.exports = router;

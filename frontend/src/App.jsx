@@ -21,6 +21,7 @@ import 'leaflet/dist/leaflet.css';
 import './App.css'; // Import CSS for header and footer
 import AreaList from './components/AreaList';
 import UserList from './components/UserList';
+import UserProfile from './components/UserProfile';
 import { useTranslation } from 'react-i18next';
 import LanguageSwitch from './components/LanguageSwitch';
 import {
@@ -34,6 +35,7 @@ import {
   Row,
   Col,
   Grid,
+  Dropdown,
 } from 'antd';
 import {
   ArrowLeftOutlined,
@@ -46,6 +48,7 @@ import {
   PlusCircleOutlined,
   LogoutOutlined,
   GlobalOutlined,
+  ProfileOutlined,
 } from '@ant-design/icons';
 
 const { Header, Sider, Content } = Layout;
@@ -74,7 +77,8 @@ const App = () => {
     navigate('/');
   };
 
-  const isSidebarVisible = role === 'admin' || role === 'expert' || role === 'manager';
+  const isSidebarVisible =
+    role === 'admin' || role === 'expert' || role === 'manager';
 
   const getMenuItems = () => {
     if (role === 'admin') {
@@ -108,22 +112,41 @@ const App = () => {
           label: t('sidebar.create_prediction'),
         },
       ];
-    }else if (role === 'manager') {
+    } else if (role === 'manager') {
       return [
         {
           key: '/areas',
           icon: <AreaChartOutlined />,
           label: t('sidebar.area_list'),
         },
-        ...(!jwtDecode(token).district ? [{
-          key: '/user-list',
-          icon: <UserOutlined />,
-          label: t('sidebar.user_list'),
-        }] : [])
+        ...(!jwtDecode(token).district
+          ? [
+              {
+                key: '/user-list',
+                icon: <UserOutlined />,
+                label: t('sidebar.user_list'),
+              },
+            ]
+          : []),
       ];
     }
     return [];
   };
+
+  const userMenuItems = [
+    {
+      key: 'profile',
+      icon: <ProfileOutlined />,
+      label: t('profile.title'),
+      onClick: () => navigate('/profile'),
+    },
+    {
+      key: 'logout',
+      icon: <LogoutOutlined />,
+      label: t('sidebar.logout'),
+      onClick: handleLogout,
+    },
+  ];
 
   const renderHeader = () => (
     <Header
@@ -206,20 +229,25 @@ const App = () => {
               </Button>
             </Button.Group>
             {token ? (
-              <Button
-                type="default"
-                size={screens.xs ? 'small' : 'middle'}
-                icon={<LogoutOutlined />}
-                onClick={handleLogout}
-                style={{
-                  background: '#007bff',
-                  borderColor: '#007bff',
-                  color: '#fff',
-                  fontWeight: 'bold',
-                }}
+              <Dropdown
+                menu={{ items: userMenuItems }}
+                placement="bottomRight"
+                arrow
               >
-                {screens.xs || screens.sm ? '' : t('logout.button')}
-              </Button>
+                <Button
+                  type="default"
+                  size={screens.xs ? 'small' : 'middle'}
+                  icon={<UserOutlined />}
+                  style={{
+                    background: '#007bff',
+                    borderColor: '#007bff',
+                    color: '#fff',
+                    fontWeight: 'bold',
+                  }}
+                >
+                  {screens.xs || screens.sm ? '' : t('profile.title')}
+                </Button>
+              </Dropdown>
             ) : (
               <Button
                 type="primary"
@@ -247,6 +275,23 @@ const App = () => {
       setCollapsed(true);
     }
   }, [screens.xs]);
+
+  // Inject custom CSS for Ant Design dropdown menu width
+  useEffect(() => {
+    const style = document.createElement('style');
+    style.innerHTML = `
+      .ant-dropdown-menu {
+        min-width: 180px !important;
+        width: max-content !important;
+        max-width: 260px;
+        white-space: nowrap;
+      }
+    `;
+    document.head.appendChild(style);
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, []);
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
@@ -340,7 +385,15 @@ const App = () => {
             <Route
               path="/"
               element={
-                token ? jwtDecode(token).role === 'manager' ? <Navigate to="/areas" replace /> : <Navigate to="/dashboard" replace /> : <WelcomePage />
+                token ? (
+                  jwtDecode(token).role === 'manager' ? (
+                    <Navigate to="/areas" replace />
+                  ) : (
+                    <Navigate to="/dashboard" replace />
+                  )
+                ) : (
+                  <WelcomePage />
+                )
               }
             />
             <Route path="/Login" element={<Login />} />
@@ -355,7 +408,7 @@ const App = () => {
             <Route
               path="/areas"
               element={
-                <ProtectedRoute roles={['admin','manager']}>
+                <ProtectedRoute roles={['admin', 'manager']}>
                   <AreaList />
                 </ProtectedRoute>
               }
@@ -363,12 +416,14 @@ const App = () => {
             <Route
               path="/user-list"
               element={
-                <ProtectedRoute roles={['admin','manager']}>
-                 {
-                   token && jwtDecode(token).role === 'manager' && jwtDecode(token).district
-                    ? <Navigate to="/" replace />
-                    : <UserList />
-                }
+                <ProtectedRoute roles={['admin', 'manager']}>
+                  {token &&
+                  jwtDecode(token).role === 'manager' &&
+                  jwtDecode(token).district ? (
+                    <Navigate to="/" replace />
+                  ) : (
+                    <UserList />
+                  )}
                 </ProtectedRoute>
               }
             />
@@ -386,6 +441,14 @@ const App = () => {
               element={
                 <ProtectedRoute roles={['expert', 'admin']}>
                   <CreatePrediction />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute roles={['admin', 'expert', 'manager']}>
+                  <UserProfile />
                 </ProtectedRoute>
               }
             />

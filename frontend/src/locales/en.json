@@ -170,9 +170,35 @@
     "prediction_list": "View Prediction List",
     "user_list": "View Users List",
     "create_prediction": "Create Prediction",
-    "logout": "Logout"
+    "logout": "Log Out"
   },
   "logout": {
     "success": "Logout successfully"
+  },
+  "profile": {
+    "password-change": "Change Password",
+    "password-change-success": "Password changed successfully",
+    "password-change-failed": "Password change failed",
+    "incorrect-confirm-password": "Incorrect confirm password",
+    "old-password": "Old Password",
+    "new-password": "New Password",
+    "confirm-password": "Confirm Password",
+    "title": "Profile",
+    "edit": "Edit Profile",
+    "update": "Update Profile",
+    "update-success": "Update profile successfully",
+    "update-failed": "Update profile failed",
+    "cancel": "Cancel",
+    "username": "Username",
+    "phone": "Phone",
+    "email": "Email",
+    "address": "Address",
+    "role": "Role",
+    "status": "Status",
+    "province": "Province",
+    "district": "District",
+    "region": "Region",
+    "save-changes": "Save Changes",
+    "please-fill-all-information": "Please fill all information"
   }
 }

@@ -24,7 +24,7 @@ import {
   DeleteOutlined,
   StopOutlined,
   CheckOutlined,
-  UserAddOutlined
+  UserAddOutlined,
 } from '@ant-design/icons';
 const { Title } = Typography;
 
@@ -32,7 +32,7 @@ const UserList = () => {
   const { t } = useTranslation();
   const [form] = Form.useForm();
   const { token } = useSelector((state) => state.auth);
-  const [authData, setAuthData]= useState(null)
+  const [authData, setAuthData] = useState(null);
   const [users, setUsers] = useState([]);
   const [isRegionPopup, setIsRegionPopup] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
@@ -59,9 +59,8 @@ const UserList = () => {
   // Fetch users from the API
   const fetchUsers = async () => {
     try {
-      const {role, province} = authData || {};
+      const { role, province } = authData || {};
 
-      
       const response = await axios.get('/api/express/auth/', {
         params: { search: searchTerm, role, province },
       });
@@ -78,16 +77,16 @@ const UserList = () => {
   };
 
   useEffect(() => {
-     if (token) {
-              try {
-                console.log('token1',token);
-                const decodedToken = jwtDecode(token); // Decode the JWT token
-                setAuthData(decodedToken);
-                console.log('haha',authData);
-              } catch (error) {
-              console.error('Error decoding token:', error);
-                }
-              }
+    if (token) {
+      try {
+        console.log('token1', token);
+        const decodedToken = jwtDecode(token); // Decode the JWT token
+        setAuthData(decodedToken);
+        console.log('haha', authData);
+      } catch (error) {
+        console.error('Error decoding token:', error);
+      }
+    }
   }, [token]);
 
   useEffect(() => {
@@ -130,7 +129,9 @@ const UserList = () => {
           }
         );
         if (result.status === 200) {
-          message.success(t('userList.updateSuccess') || 'User updated successfully');
+          message.success(
+            t('userList.updateSuccess') || 'User updated successfully'
+          );
         } else {
           message.error(t('userList.updateFailed') || 'User update failed');
         }
@@ -142,7 +143,9 @@ const UserList = () => {
         );
         console.log(result);
         if (result.status === 200) {
-          message.success(t('userList.createSuccess') || 'User created successfully');
+          message.success(
+            t('userList.createSuccess') || 'User created successfully'
+          );
         } else {
           message.error(t('userList.createFailed') || 'User creation failed');
         }
@@ -167,9 +170,10 @@ const UserList = () => {
   const handleModifyUser = (user) => {
     const regionName = getRegionNameFromId(user.region);
     console.log(user);
-    
-    setFilteredDistrictList(districtList.filter(
-      (district) => district.province_id === user.province));
+
+    setFilteredDistrictList(
+      districtList.filter((district) => district.province_id === user.province)
+    );
     setSelectedRegionName(regionName);
     setUserPopupData({
       id: user.id,
@@ -195,7 +199,9 @@ const UserList = () => {
     try {
       // Giả sử endpoint để xoá user là DELETE /api/express/auth/delete/:id
       await axios.delete(`/api/express/auth/delete/${id}`);
-      message.success(t('userList.deleteSuccess') || 'User deleted successfully');
+      message.success(
+        t('userList.deleteSuccess') || 'User deleted successfully'
+      );
       setIsDeleteConfirmOpen(false);
       fetchUsers();
     } catch (error) {
@@ -203,7 +209,6 @@ const UserList = () => {
       message.error(t('userList.deleteFailed') || 'Failed to delete user');
     }
   };
-
 
   // Deactivate user confirmation popup
   const handleDeactivateUser = async (id) => {
@@ -289,7 +294,12 @@ const UserList = () => {
             />
           </Col>
           <Col xs={24} sm={8} md={4}>
-            <Button type="primary" icon={<UserAddOutlined />} block onClick={handleAddUser}>
+            <Button
+              type="primary"
+              icon={<UserAddOutlined />}
+              block
+              onClick={handleAddUser}
+            >
               {t('userList.addUser')}
             </Button>
           </Col>
@@ -321,24 +331,31 @@ const UserList = () => {
                 key: 'phone',
                 width: 150,
               },
-                {
-                  title: t('userList.role'),
-                  dataIndex: 'role',
-                  key: 'role',
-                  width: 120,
-                  render: (role, record) =>
-                    {
-                      if (role === 'manager') {
-                      if (record.district) {
-                        return t(`userList.${role}`) + ' ' + t('userList.district_level') || 'Cấp huyện';
-                      }
-                      if (record.province) {
-                        return t(`userList.${role}`) + ' ' + t('userList.province_level') || 'Cấp tỉnh';
-                      }
+              {
+                title: t('userList.role'),
+                dataIndex: 'role',
+                key: 'role',
+                width: 120,
+                render: (role, record) => {
+                  if (role === 'manager') {
+                    if (record.district) {
+                      return (
+                        t(`userList.${role}`) +
+                          ' ' +
+                          t('userList.district_level') || 'Cấp huyện'
+                      );
                     }
-                    return t(`userList.${role}`); // vẫn dịch các vai trò khác nếu có
+                    if (record.province) {
+                      return (
+                        t(`userList.${role}`) +
+                          ' ' +
+                          t('userList.province_level') || 'Cấp tỉnh'
+                      );
+                    }
                   }
+                  return t(`userList.${role}`); // vẫn dịch các vai trò khác nếu có
                 },
+              },
               {
                 title: t('userList.status'),
                 dataIndex: 'status',
@@ -373,7 +390,7 @@ const UserList = () => {
                           icon={<StopOutlined />}
                           onClick={() => {
                             setSelectedUser(user);
-                            
+
                             setIsConfirmPopupOpen(true);
                           }}
                         >
@@ -390,20 +407,21 @@ const UserList = () => {
                         </Button>
                       )
                     ) : null}
-                    {jwtDecode(token).role === 'admin' && user.role !== 'admin' && (
-                      <Button
-                        danger
-                        type="default"
-                        size='middle'
-                        icon={<DeleteOutlined />}
-                        onClick={() => {
-                          setSelectedUser(user);
-                          setIsDeleteConfirmOpen(true);
-                        }}
-                      >
-                        {t('userList.deleteUser') || 'Xoá'}
-                      </Button>
-                    )}
+                    {jwtDecode(token).role === 'admin' &&
+                      user.role !== 'admin' && (
+                        <Button
+                          danger
+                          type="default"
+                          size="middle"
+                          icon={<DeleteOutlined />}
+                          onClick={() => {
+                            setSelectedUser(user);
+                            setIsDeleteConfirmOpen(true);
+                          }}
+                        >
+                          {t('userList.deleteUser') || 'Xoá'}
+                        </Button>
+                      )}
                   </Space>
                 ),
               },
@@ -488,7 +506,8 @@ const UserList = () => {
             label={t('userList.region')}
             rules={[{ required: true, message: t('userList.required') }]}
           >
-            <Select disabled={jwtDecode(token).role === 'manager'}
+            <Select
+              disabled={jwtDecode(token).role === 'manager'}
               showSearch
               placeholder={t('userList.selectProvince')}
               optionFilterProp="children"
@@ -503,26 +522,35 @@ const UserList = () => {
               }))}
               onChange={(value, option) => {
                 console.log(districtList);
-                
-                setFilteredDistrictList(districtList.filter(
-                  (district) => district.province_id === value));
+
+                setFilteredDistrictList(
+                  districtList.filter(
+                    (district) => district.province_id === value
+                  )
+                );
                 console.log('Selected Region ID:', value);
-                console.log('vale',districtList);
+                console.log('vale', districtList);
                 form.setFieldsValue({ district: '' });
                 console.log('Selected Region Option:', option);
                 console.log('All Form Values:', form.getFieldsValue());
               }}
             />
-          </Form.Item>  
+          </Form.Item>
           <Form.Item
             name="district"
             label={t('userList.region')}
-            rules={[{ required: true, message: t('userList.required') }]}
+            rules={[
+              {
+                required: form.getFieldValue('role') === 'expert',
+                message: t('userList.required'),
+              },
+            ]}
           >
-            <Select 
+            <Select
               showSearch
               placeholder={t('userList.selectDistrict')}
               optionFilterProp="children"
+              disabled={!form.getFieldValue('province')}
               filterOption={(input, option) =>
                 (option?.label ?? '')
                   .toLowerCase()
@@ -538,17 +566,50 @@ const UserList = () => {
                 console.log('All Form Values:', form.getFieldsValue());
               }}
             />
-          </Form.Item>  
-          
+          </Form.Item>
 
           {!userPopupData.id && (
-            <Form.Item
-              name="password"
-              label={t('userList.password')}
-              rules={[{ required: true, message: t('userList.required') }]}
-            >
-              <Input.Password />
-            </Form.Item>
+            <>
+              <Form.Item
+                name="role"
+                label={t('userList.role')}
+                rules={[{ required: true, message: t('userList.required') }]}
+              >
+                <Select
+                  placeholder={t('userList.selectRole')}
+                  options={[
+                    {
+                      value: 'expert',
+                      label: t('userList.expert'),
+                      disabled:
+                        jwtDecode(token).role === 'manager' &&
+                        !jwtDecode(token).province,
+                    },
+                    {
+                      value: 'manager',
+                      label: t('userList.manager'),
+                      disabled:
+                        jwtDecode(token).role === 'manager' &&
+                        !jwtDecode(token).province,
+                    },
+                  ]}
+                  onChange={(value) => {
+                    // Reset district when role changes to manager
+                    if (value === 'manager') {
+                      form.setFieldsValue({ district: undefined });
+                    }
+                  }}
+                />
+              </Form.Item>
+
+              <Form.Item
+                name="password"
+                label={t('userList.password')}
+                rules={[{ required: true, message: t('userList.required') }]}
+              >
+                <Input.Password />
+              </Form.Item>
+            </>
           )}
 
           <Form.Item>
@@ -588,7 +649,10 @@ const UserList = () => {
         okText={t('userList.yes') || 'Có'}
         cancelText={t('userList.no') || 'Không'}
       >
-        <p>{t('userList.deleteConfirmMessage') || 'Bạn có chắc chắn muốn xóa người dùng này? Hành động này không thể hoàn tác.'}</p>
+        <p>
+          {t('userList.deleteConfirmMessage') ||
+            'Bạn có chắc chắn muốn xóa người dùng này? Hành động này không thể hoàn tác.'}
+        </p>
       </Modal>
     </div>
   );
