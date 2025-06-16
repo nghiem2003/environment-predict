@@ -115,9 +115,14 @@ const UserList = () => {
 
   // Submit handler for creating/updating a user
   const handleUserPopupSubmit = async (values) => {
-    console.log(values);
-    console.log(userPopupData);
-
+    // Convert role for backend if needed
+    let submitValues = { ...values };
+    if (
+      values.role === 'province_manager' ||
+      values.role === 'district_manager'
+    ) {
+      submitValues = { ...values, role: 'manager' };
+    }
     try {
       if (userPopupData.id) {
         // Update existing user
@@ -125,7 +130,7 @@ const UserList = () => {
           `/api/express/auth/update/${userPopupData.id}`,
           {
             id: userPopupData.id,
-            ...values,
+            ...submitValues,
           }
         );
         if (result.status === 200) {
@@ -139,7 +144,7 @@ const UserList = () => {
         // Create new user
         const result = await axios.post(
           '/api/express/auth/create-user',
-          values
+          submitValues
         );
         console.log(result);
         if (result.status === 200) {
@@ -337,23 +342,20 @@ const UserList = () => {
                 key: 'role',
                 width: 120,
                 render: (role, record) => {
-                  if (role === 'manager') {
+                  if (
+                    role === 'manager' ||
+                    role === 'province_manager' ||
+                    role === 'district_manager'
+                  ) {
+                    // Use district/province to determine label
                     if (record.district) {
-                      return (
-                        t(`userList.${role}`) +
-                          ' ' +
-                          t('userList.district_level') || 'Cấp huyện'
-                      );
+                      return t('userList.districtManager');
                     }
                     if (record.province) {
-                      return (
-                        t(`userList.${role}`) +
-                          ' ' +
-                          t('userList.province_level') || 'Cấp tỉnh'
-                      );
+                      return t('userList.provinceManager');
                     }
                   }
-                  return t(`userList.${role}`); // vẫn dịch các vai trò khác nếu có
+                  return t(`userList.${role}`);
                 },
               },
               {
@@ -501,6 +503,81 @@ const UserList = () => {
             <Input />
           </Form.Item>
 
+          {/* Show role select for admin when editing or always when creating */}
+          {(!userPopupData.id || jwtDecode(token).role === 'admin') && (
+            <Form.Item
+              name="role"
+              label={t('userList.role')}
+              rules={[{ required: true, message: t('userList.required') }]}
+            >
+              <Select
+                placeholder={t('userList.selectRole')}
+                options={[
+                  {
+                    value: 'expert',
+                    label: t('userList.expert'),
+                  },
+                  {
+                    value: 'province_manager',
+                    label: t('userList.provinceManager'),
+                  },
+                  {
+                    value: 'district_manager',
+                    label: t('userList.districtManager'),
+                  },
+                ]}
+                onChange={(value) => {
+                  // Province and district logic when changing role
+                  if (value === 'province_manager') {
+                    // Must have province, reset district
+                    if (!form.getFieldValue('province')) {
+                      form.setFieldsValue({ province: undefined });
+                    }
+                    form.setFieldsValue({
+                      district: undefined,
+                      role: 'province_manager',
+                    });
+                  } else if (value === 'district_manager') {
+                    // Must have province, district
+                    if (!form.getFieldValue('province')) {
+                      form.setFieldsValue({
+                        province: undefined,
+                        district: undefined,
+                      });
+                    } else if (!form.getFieldValue('district')) {
+                      form.setFieldsValue({ district: undefined });
+                    }
+                    form.setFieldsValue({
+                      role: 'district_manager',
+                    });
+                  } else {
+                    // expert: must have province, district
+                    if (!form.getFieldValue('province')) {
+                      form.setFieldsValue({
+                        province: undefined,
+                        district: undefined,
+                      });
+                    } else if (!form.getFieldValue('district')) {
+                      form.setFieldsValue({ district: undefined });
+                    }
+                    form.setFieldsValue({
+                      role: 'expert',
+                    });
+                  }
+                  form.validateFields(['province', 'district']);
+                  const currentProvince = form.getFieldValue('province');
+                  if (currentProvince) {
+                    setFilteredDistrictList(
+                      districtList.filter(
+                        (district) => district.province_id === currentProvince
+                      )
+                    );
+                  }
+                }}
+              />
+            </Form.Item>
+          )}
+
           <Form.Item
             name="province"
             label={t('userList.region')}
@@ -520,37 +597,38 @@ const UserList = () => {
                 value: region.id,
                 label: `${region.name}`,
               }))}
-              onChange={(value, option) => {
-                console.log(districtList);
-
+              onChange={(value) => {
                 setFilteredDistrictList(
                   districtList.filter(
                     (district) => district.province_id === value
                   )
                 );
-                console.log('Selected Region ID:', value);
-                console.log('vale', districtList);
                 form.setFieldsValue({ district: '' });
-                console.log('Selected Region Option:', option);
-                console.log('All Form Values:', form.getFieldsValue());
               }}
             />
           </Form.Item>
+
           <Form.Item
             name="district"
             label={t('userList.region')}
             rules={[
               {
-                required: form.getFieldValue('role') === 'expert',
+                required:
+                  form.getFieldValue('role') === 'expert' ||
+                  form.getFieldValue('role') === 'district_manager',
                 message: t('userList.required'),
               },
             ]}
+            dependencies={['role', 'province']}
           >
             <Select
               showSearch
               placeholder={t('userList.selectDistrict')}
               optionFilterProp="children"
-              disabled={!form.getFieldValue('province')}
+              disabled={
+                !form.getFieldValue('province') ||
+                form.getFieldValue('role') === 'province_manager'
+              }
               filterOption={(input, option) =>
                 (option?.label ?? '')
                   .toLowerCase()
@@ -560,56 +638,17 @@ const UserList = () => {
                 value: region.id,
                 label: `${region.name}`,
               }))}
-              onChange={(value, option) => {
-                console.log('Selected Region ID:', value);
-                console.log('Selected Region Option:', option);
-                console.log('All Form Values:', form.getFieldsValue());
-              }}
             />
           </Form.Item>
 
           {!userPopupData.id && (
-            <>
-              <Form.Item
-                name="role"
-                label={t('userList.role')}
-                rules={[{ required: true, message: t('userList.required') }]}
-              >
-                <Select
-                  placeholder={t('userList.selectRole')}
-                  options={[
-                    {
-                      value: 'expert',
-                      label: t('userList.expert'),
-                      disabled:
-                        jwtDecode(token).role === 'manager' &&
-                        !jwtDecode(token).province,
-                    },
-                    {
-                      value: 'manager',
-                      label: t('userList.manager'),
-                      disabled:
-                        jwtDecode(token).role === 'manager' &&
-                        !jwtDecode(token).province,
-                    },
-                  ]}
-                  onChange={(value) => {
-                    // Reset district when role changes to manager
-                    if (value === 'manager') {
-                      form.setFieldsValue({ district: undefined });
-                    }
-                  }}
-                />
-              </Form.Item>
-
-              <Form.Item
-                name="password"
-                label={t('userList.password')}
-                rules={[{ required: true, message: t('userList.required') }]}
-              >
-                <Input.Password />
-              </Form.Item>
-            </>
+            <Form.Item
+              name="password"
+              label={t('userList.password')}
+              rules={[{ required: true, message: t('userList.required') }]}
+            >
+              <Input.Password />
+            </Form.Item>
           )}
 
           <Form.Item>

@@ -5,6 +5,7 @@
     "searchPlaceholder": "Search for an area..."
   },
   "userList": {
+    "selectRole": "Select Role",
     "title": "User List",
     "updateSuccess": "User updated successfully",
     "deactivateSuccess": "User deactivated successfully",
@@ -33,10 +34,9 @@
     "region": "Region",
     "actions": "Actions",
     "admin": "Admin",
-    "manager": "Manager",
-    "district_level": "district Level",
-    "province_level": "province Level",
     "expert": "Expert",
+    "provinceManager": "Province Manager",
+    "districtManager": "District Manager",
     "activeAccount": "Active",
     "inactiveAccount": "Inactive",
     "noData": "No data",
@@ -49,7 +49,9 @@
     "selectProvince": "Select Province",
     "selectDistrict": "Select District",
     "required": "This field is required",
-    "invalidEmail": "Please enter a valid email address"
+    "invalidEmail": "Please enter a valid email address",
+    "districtDisabled": "Province managers cannot select districts",
+    "password": "Password"
   },
   "predictionDetails": {
     "loading": "Loading prediction details...",

@@ -70,6 +70,11 @@ const AreaList = () => {
     region: '',
     area_type: 'oyster',
   });
+  const [userFilter, setUserFilter] = useState({
+    province: '',
+    district: '',
+    role: '',
+  });
 
   // Fetch areas from the API
   const fetchAreas = async (province, district, role) => {
@@ -86,7 +91,7 @@ const AreaList = () => {
           offset: currentPage * 10,
           role,
           province,
-          district // Pass userId for filtering if needed
+          district, // Pass userId for filtering if needed
         },
       });
       setAreas(response.data.areas);
@@ -95,8 +100,7 @@ const AreaList = () => {
       console.log('total', response.data.areas.length);
       const regionResponse = await axios.get('/api/express/areas/provinces');
       setRegionList(regionResponse.data); // Set regions for the dropdown
-      const districtResponse = await axios.get(
-        '/api/express/areas/districts')
+      const districtResponse = await axios.get('/api/express/areas/districts');
       setDistrictList(districtResponse.data); // Set districts for the dropdown
       setFilteredDistrictList(districtResponse.data); // Initialize filtered districts
       console.log(regionResponse.data);
@@ -105,22 +109,26 @@ const AreaList = () => {
     }
   };
 
-
   // Fetch areas when dependencies change
   useEffect(() => {
-    
-     if (token) {
-          try {
-            console.log('token1',token);
-            const decodedToken = jwtDecode(token); // Decode the JWT token
-            console.log('haha',decodedToken);
-            fetchAreas(decodedToken.province, decodedToken.district, decodedToken.role);
-          } catch (error) {
-          console.error('Error decoding token:', error);
-            }
-          }
-          
-  }, [searchTerm, areaType, latRange, longRange, currentPage]);
+    if (token) {
+      try {
+        const decodedToken = jwtDecode(token); // Decode the JWT token
+        setUserFilter({
+          province: decodedToken.province,
+          district: decodedToken.district,
+          role: decodedToken.role,
+        });
+        fetchAreas(
+          decodedToken.province,
+          decodedToken.district,
+          decodedToken.role
+        );
+      } catch (error) {
+        console.error('Error decoding token:', error);
+      }
+    }
+  }, [searchTerm, areaType, latRange, longRange, currentPage, token]);
 
   const handleAddArea = async (values) => {
     console.log('id', form.getFieldValue('id'));
@@ -135,7 +143,7 @@ const AreaList = () => {
         await axios.post('/api/express/areas', values);
       }
       setIsPopupOpen(false);
-      fetchAreas();
+      fetchAreas(userFilter.province, userFilter.district, userFilter.role);
       form.resetFields();
     } catch (error) {
       console.error('Error saving area:', error);
@@ -148,7 +156,7 @@ const AreaList = () => {
 
       await axios.delete(`/api/express/areas/${id}`);
       setIsDeleteConfirmOpen(false); // Close delete confirmation
-      fetchAreas(); // Refresh the area list after deletion
+      fetchAreas(userFilter.province, userFilter.district, userFilter.role); // Refresh the area list after deletion
     } catch (error) {
       console.error('Error deleting area:', error);
     }
@@ -157,9 +165,11 @@ const AreaList = () => {
   const handleUpdate = (id) => {
     const areaToUpdate = areas.find((area) => area.id === id);
     console.log(areaToUpdate);
-    setFilteredDistrictList(districtList.filter(
-      (district) => district.province_id === jwtDecode(token).province
-    ));
+    setFilteredDistrictList(
+      districtList.filter(
+        (district) => district.province_id === jwtDecode(token).province
+      )
+    );
     form.setFieldsValue({
       id: areaToUpdate.id || '',
       name: areaToUpdate.name || '',
@@ -254,7 +264,11 @@ const AreaList = () => {
       key: 'actions',
       render: (_, area) => (
         <Space>
-          <Button size="small" icon={<EditOutlined />} onClick={() => handleUpdate(area.id)}>
+          <Button
+            size="small"
+            icon={<EditOutlined />}
+            onClick={() => handleUpdate(area.id)}
+          >
             {t('area_list.popup.update')}
           </Button>
           <Button
@@ -354,14 +368,23 @@ const AreaList = () => {
             />
           </Col>
           <Col xs={24} sm={12} md={3}>
-            <Button type="primary" block icon={<PlusOutlined />} onClick={() => {
-              form.setFieldValue('province', jwtDecode(token).province);
-              console.log(form.getFieldsValue());
-              
-              setFilteredDistrictList(districtList.filter(
-                (district) => district.province_id === jwtDecode(token).province));
-              setIsPopupOpen(true)
-            }}>
+            <Button
+              type="primary"
+              block
+              icon={<PlusOutlined />}
+              onClick={() => {
+                form.setFieldValue('province', jwtDecode(token).province);
+                console.log(form.getFieldsValue());
+
+                setFilteredDistrictList(
+                  districtList.filter(
+                    (district) =>
+                      district.province_id === jwtDecode(token).province
+                  )
+                );
+                setIsPopupOpen(true);
+              }}
+            >
               {t('area_list.add_button') || 'Thêm khu vực mới'}
             </Button>
           </Col>
@@ -435,10 +458,11 @@ const AreaList = () => {
                   label={t('area_list.popup.select_province')}
                   name="province"
                 >
-                  <Select disabled={jwtDecode(token).role === 'manager'}
-                  onChange={() => {
-                    form.setFieldsValue({ district: '' });
-                  }}
+                  <Select
+                    disabled={jwtDecode(token).role === 'manager'}
+                    onChange={() => {
+                      form.setFieldsValue({ district: '' });
+                    }}
                   >
                     {regionList.map((region) => (
                       <Option key={region.id} value={region.id}>
@@ -451,8 +475,11 @@ const AreaList = () => {
                   label={t('area_list.popup.select_district')}
                   name="district"
                 >
-                  <Select 
-                  disabled={jwtDecode(token).role === 'manager' && jwtDecode(token).district}
+                  <Select
+                    disabled={
+                      jwtDecode(token).role === 'manager' &&
+                      jwtDecode(token).district
+                    }
                   >
                     {filteredDistrictList.map((region) => (
                       <Option key={region.id} value={region.id}>
@@ -461,7 +488,7 @@ const AreaList = () => {
                     ))}
                   </Select>
                 </Form.Item>
-                
+
                 <Form.Item label={t('area_list.filter.type')} name="area_type">
                   <Select disabled={!!form.getFieldValue('id')}>
                     <Option value="oyster">

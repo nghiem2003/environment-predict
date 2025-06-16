@@ -208,7 +208,11 @@ const UserProfile = () => {
             <div style={{ flex: 1, color: '#888' }}>{t('profile.role')}</div>
             <div style={{ flex: 2 }}>
               {userData?.role
-                ? t(`userList.${userData.role}`)
+                ? userData.role === 'manager'
+                  ? userData.district
+                    ? t('userList.districtManager')
+                    : t('userList.provinceManager')
+                  : t(`userList.${userData.role}`)
                 : 'Chưa có thông tin'}
             </div>
           </div>
@@ -301,7 +305,15 @@ const UserProfile = () => {
             <Col span={12}>
               <Form.Item label={t('profile.role')}>
                 <Input
-                  value={userData?.role ? t(`userList.${userData.role}`) : ''}
+                  value={
+                    userData?.role
+                      ? userData.role === 'manager'
+                        ? userData.district
+                          ? t('userList.districtManager')
+                          : t('userList.provinceManager')
+                        : t(`userList.${userData.role}`)
+                      : ''
+                  }
                   disabled
                 />
               </Form.Item>

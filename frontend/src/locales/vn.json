@@ -5,6 +5,7 @@
     "searchPlaceholder": "Tìm kiếm khu vực..."
   },
   "userList": {
+    "selectRole": "Chọn vai trò",
     "title": "Danh sách người dùng",
     "updateSuccess": "Cập nhật người dùng thành công",
     "deactivateSuccess": "Vô hiệu hóa người dùng thành công",
@@ -33,10 +34,9 @@
     "region": "Khu vực",
     "actions": "Thao tác",
     "admin": "Quản trị viên",
-    "manager": "Quản lý",
-    "district_level": "cấp quận",
-    "province_level": "cấp tỉnh",
     "expert": "Chuyên gia",
+    "provinceManager": "Quản lý cấp tỉnh",
+    "districtManager": "Quản lý cấp quận",
     "activeAccount": "Đang hoạt động",
     "inactiveAccount": "Không hoạt động",
     "noData": "Không có dữ liệu",
@@ -49,7 +49,9 @@
     "selectProvince": "Chọn tỉnh",
     "selectDistrict": "Chọn quận",
     "required": "Vui lòng nhập thông tin này",
-    "invalidEmail": "Vui lòng nhập email hợp lệ"
+    "invalidEmail": "Vui lòng nhập email hợp lệ",
+    "districtDisabled": "Quản lý cấp tỉnh không thể chọn quận",
+    "password": "Mật khẩu"
   },
   "predictionDetails": {
     "loading": "Đang tải chi tiết dự đoán...",
