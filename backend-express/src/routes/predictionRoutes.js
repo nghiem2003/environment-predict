@@ -5,13 +5,18 @@ const {
   getPredictionDetails,
   getPredictionsByUser,
   getAllPredictionsWithFilters,
-  createBatchPrediction
+  createBatchPrediction,
 } = require('../controllers/predictionController');
 const { authenticate, authorize } = require('../middlewares/authMiddleware');
 
 const router = express.Router();
 
-router.post('/batch',authenticate,authorize(['expert']),createBatchPrediction);
+router.post(
+  '/batch',
+  authenticate,
+  authorize(['expert']),
+  createBatchPrediction
+);
 
 router.post(
   '/',
@@ -22,7 +27,7 @@ router.post(
 router.get(
   '/admin',
   authenticate,
-  authorize(['admin']),
+  authorize(['admin', 'manager']),
   getAllPredictionsWithFilters
 );
 router.get('/:areaId/latest', getLatestPrediction);
@@ -30,10 +35,9 @@ router.get('/:areaId/latest', getLatestPrediction);
 router.get(
   '/:predictionId',
   authenticate,
-  authorize(['expert', 'admin']),
+  authorize(['expert', 'admin', 'manager']),
   getPredictionDetails
 );
-
 
 router.get(
   '/user/:userId',

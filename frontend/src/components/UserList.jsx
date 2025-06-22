@@ -52,7 +52,7 @@ const UserList = () => {
     address: '',
     phone: '',
     password: '',
-    region: '',
+    role: '',
   });
   const [selectedRegionName, setSelectedRegionName] = useState('');
 
@@ -165,6 +165,7 @@ const UserList = () => {
         address: '',
         phone: '',
         password: '',
+        role: '',
       });
     } catch (error) {
       console.error('Error saving user:', error);
@@ -173,13 +174,19 @@ const UserList = () => {
 
   // Modify user popup
   const handleModifyUser = (user) => {
-    const regionName = getRegionNameFromId(user.region);
+    const regionName = getRegionNameFromId(user.province);
     console.log(user);
 
     setFilteredDistrictList(
       districtList.filter((district) => district.province_id === user.province)
     );
     setSelectedRegionName(regionName);
+
+    let displayRole = user.role;
+    if (user.role === 'manager') {
+      displayRole = user.district ? 'district_manager' : 'province_manager';
+    }
+
     setUserPopupData({
       id: user.id,
       name: user.username,
@@ -189,13 +196,16 @@ const UserList = () => {
       password: '', // leave password empty when updating
       province: user.province,
       district: user.district,
+      role: displayRole,
     });
     form.setFieldsValue({
       name: user.username,
       email: user.email,
       address: user.address,
       phone: user.phone,
-      region: user.region,
+      province: user.province,
+      district: user.district,
+      role: displayRole,
     });
     setIsUserPopupOpen(true);
   };
@@ -261,6 +271,7 @@ const UserList = () => {
       password: '',
       province: '',
       district: '',
+      role: '',
     });
     form.resetFields();
     setIsUserPopupOpen(true);

@@ -115,6 +115,11 @@ const App = () => {
     } else if (role === 'manager') {
       return [
         {
+          key: '/dashboard',
+          icon: <DashboardOutlined />,
+          label: t('sidebar.prediction_list'),
+        },
+        {
           key: '/areas',
           icon: <AreaChartOutlined />,
           label: t('sidebar.area_list'),
@@ -387,7 +392,7 @@ const App = () => {
               element={
                 token ? (
                   jwtDecode(token).role === 'manager' ? (
-                    <Navigate to="/areas" replace />
+                    <Navigate to="/dashboard" replace />
                   ) : (
                     <Navigate to="/dashboard" replace />
                   )
@@ -400,7 +405,7 @@ const App = () => {
             <Route
               path="/dashboard"
               element={
-                <ProtectedRoute roles={['expert', 'admin']}>
+                <ProtectedRoute roles={['expert', 'admin', 'manager']}>
                   <Dashboard />
                 </ProtectedRoute>
               }
@@ -431,7 +436,7 @@ const App = () => {
             <Route
               path="/predictions/details/:predictionId"
               element={
-                <ProtectedRoute roles={['expert', 'admin']}>
+                <ProtectedRoute roles={['expert', 'admin', 'manager']}>
                   <PredictionDetails />
                 </ProtectedRoute>
               }

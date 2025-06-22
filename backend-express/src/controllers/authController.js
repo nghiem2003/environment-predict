@@ -175,6 +175,7 @@ exports.updateUserById = async (req, res) => {
       province = null,
       district = null,
       email = null,
+      role = null,
     } = req.body;
     const user = await User.findOne({ where: { id: id } });
     if (!user) res.status(404).json({ message: 'User not found' });
@@ -185,6 +186,7 @@ exports.updateUserById = async (req, res) => {
     user.province = province ? province : user.province;
     user.district = district ? district : user.district;
     user.email = email ? email : user.email;
+    user.role = role ? role : user.role;
 
     await user.save();
     return res.status(200).json({ message: 'Update successful' });

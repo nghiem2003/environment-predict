@@ -42,8 +42,8 @@ const Dashboard = () => {
         setUserRole(decodedToken.role);
         setTimeout(100);
         console.log(userId);
-        if (decodedToken.role === 'admin') {
-          console.log('start ftching');
+        if (decodedToken.role === 'admin' || decodedToken.role === 'manager') {
+          console.log('start fetching');
 
           axios
             .get(`/api/express/predictions/admin`, {
@@ -130,7 +130,7 @@ const Dashboard = () => {
               key: 'id',
               render: (id) => `${t('dashboard.prediction')}#${id}`,
             },
-            ...(userRole === 'admin'
+            ...(userRole === 'admin' || userRole === 'manager'
               ? [
                   {
                     title: t('dashboard.creator'),
@@ -144,6 +144,22 @@ const Dashboard = () => {
               dataIndex: ['Area', 'name'],
               key: 'area',
             },
+            ...(userRole === 'admin' || userRole === 'manager'
+              ? [
+                  {
+                    title: t('dashboard.province'),
+                    dataIndex: ['Area', 'Province', 'name'],
+                    key: 'province',
+                    render: (text) => text || '-',
+                  },
+                  {
+                    title: t('dashboard.district'),
+                    dataIndex: ['Area', 'District', 'name'],
+                    key: 'district',
+                    render: (text) => text || '-',
+                  },
+                ]
+              : []),
             {
               title: t('dashboard.actions'),
               key: 'actions',

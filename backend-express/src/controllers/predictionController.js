@@ -4,6 +4,8 @@ const {
   NatureElement,
   Area,
   User,
+  Province,
+  District,
 } = require('../models');
 const { Op } = require('sequelize');
 require('dotenv').config();
@@ -125,6 +127,16 @@ exports.getPredictionDetails = async (req, res) => {
             'district',
             'area_type',
           ],
+          include: [
+            {
+              model: Province,
+              attributes: ['id', 'name'],
+            },
+            {
+              model: District,
+              attributes: ['id', 'name'],
+            },
+          ],
         },
         {
           model: NatureElement,
@@ -138,6 +150,34 @@ exports.getPredictionDetails = async (req, res) => {
 
     if (!prediction) {
       return res.status(404).json({ error: 'Prediction not found' });
+    }
+
+    // Kiểm tra quyền của manager
+    if (req.user.role === 'manager') {
+      const userProvince = req.user.province;
+      const userDistrict = req.user.district;
+
+      if (userDistrict) {
+        // Manager cấp quận - chỉ xem dự đoán của quận đó
+        if (prediction.Area.district !== userDistrict) {
+          return res.status(403).json({
+            error:
+              'Access denied. You can only view predictions in your district.',
+          });
+        }
+      } else if (userProvince) {
+        // Manager cấp tỉnh - xem dự đoán của tỉnh đó
+        if (prediction.Area.province !== userProvince) {
+          return res.status(403).json({
+            error:
+              'Access denied. You can only view predictions in your province.',
+          });
+        }
+      } else {
+        return res.status(403).json({
+          error: 'Manager must be assigned to a province or district.',
+        });
+      }
     }
 
     res.json(prediction);
@@ -155,8 +195,10 @@ exports.getAllPredictionsWithFilters = async (req, res) => {
   try {
     console.log('Fetching all predictions with filters:', req.query);
 
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Access denied. Admins only.' });
+    if (req.user.role !== 'admin' && req.user.role !== 'manager') {
+      return res
+        .status(403)
+        .json({ error: 'Access denied. Admins and managers only.' });
     }
 
     const {
@@ -181,6 +223,18 @@ exports.getAllPredictionsWithFilters = async (req, res) => {
             'longitude',
             'area',
             'area_type',
+            'province',
+            'district',
+          ],
+          include: [
+            {
+              model: Province,
+              attributes: ['id', 'name'],
+            },
+            {
+              model: District,
+              attributes: ['id', 'name'],
+            },
           ],
         },
       ],
@@ -198,9 +252,29 @@ exports.getAllPredictionsWithFilters = async (req, res) => {
     if (userId) where.user_id = userId;
     if (areaId) where.area_id = areaId;
 
+    // Nếu là manager, chỉ cho phép xem dự đoán trong phạm vi quản lý
+    if (req.user.role === 'manager') {
+      const userProvince = req.user.province;
+      const userDistrict = req.user.district;
+
+      if (userDistrict) {
+        // Manager cấp quận - chỉ xem dự đoán của quận đó
+        where['$Area.district$'] = userDistrict;
+      } else if (userProvince) {
+        // Manager cấp tỉnh - xem dự đoán của tỉnh đó
+        where['$Area.province$'] = userProvince;
+      } else {
+        return res.status(403).json({
+          error: 'Manager must be assigned to a province or district.',
+        });
+      }
+    }
+
+    options.where = where;
+
     const predictions = await Prediction.findAndCountAll(options);
 
-    if (predictions.length === 0) {
+    if (predictions.rows.length === 0) {
       console.log('No predictions found with filters:', req.query);
       return res
         .status(404)
