@@ -89,6 +89,9 @@
     "invalidToken": "Invalid token. Please log in again."
   },
   "dashboard": {
+    "province": "Province",
+    "district": "District",
+    "manager": "Manager",
     "title": "Dashboard",
     "subtitle": "All Predictions",
     "id": "ID",

@@ -89,6 +89,9 @@
     "invalidToken": "Token không hợp lệ. Vui lòng đăng nhập lại."
   },
   "dashboard": {
+    "province": "Tỉnh/Thành",
+    "district": "Quận/Huyện",
+    "manager": "Quản lý",
     "title": "Bảng điều khiển",
     "subtitle": "Tất cả dự đoán",
     "id": "ID",
