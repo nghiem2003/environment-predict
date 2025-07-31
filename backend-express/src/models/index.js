@@ -9,6 +9,7 @@ const NatureElement = require('./NatureElement');
 const PredictionNatureElement = require('./PredictionNatureElement');
 const Province = require('./Province');
 const District = require('./District');
+const Email = require('./Email');
 
 // Initialize models
 const models = {
@@ -18,7 +19,8 @@ const models = {
   NatureElement,
   PredictionNatureElement,
   Province,
-  District
+  District,
+  Email,
 };
 
 // Dynamically associate models after all are initialized

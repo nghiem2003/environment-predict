@@ -1,0 +1,321 @@
+import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
+import {
+  Card,
+  Table,
+  Button,
+  Space,
+  Modal,
+  Form,
+  Input,
+  Select,
+  Switch,
+  message,
+  Popconfirm,
+  Tag,
+  Typography,
+  Tooltip,
+} from 'antd';
+import {
+  MailOutlined,
+  PlusOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  EyeOutlined,
+  CheckCircleOutlined,
+  CloseCircleOutlined,
+} from '@ant-design/icons';
+import axios from '../axios';
+
+const { Title, Text } = Typography;
+const { Option } = Select;
+
+const EmailList = () => {
+  const { t } = useTranslation();
+  const [form] = Form.useForm();
+  const [subscriptions, setSubscriptions] = useState([]);
+  const [areas, setAreas] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [pagination, setPagination] = useState({
+    current: 1,
+    pageSize: 10,
+    total: 0,
+  });
+
+  // Fetch subscriptions
+  const fetchSubscriptions = async (page = 1, pageSize = 10) => {
+    setLoading(true);
+    try {
+      const response = await axios.get('/api/express/emails', {
+        params: { limit: pageSize, offset: (page - 1) * pageSize },
+      });
+      setSubscriptions(response.data.subscriptions);
+      setPagination({
+        ...pagination,
+        current: page,
+        total: response.data.total,
+      });
+    } catch (error) {
+      message.error('Không thể tải danh sách đăng ký email');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch areas for select
+  const fetchAreas = async () => {
+    try {
+      const response = await axios.get('/api/express/areas');
+      setAreas(response.data.areas);
+    } catch (error) {
+      console.error('Error fetching areas:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchSubscriptions();
+    fetchAreas();
+  }, []);
+
+  // Handle form submit
+  const handleSubmit = async (values) => {
+    try {
+      if (editingId) {
+        await axios.put(`/api/express/emails/${editingId}`, values);
+        message.success(t('email.updateSuccess'));
+      } else {
+        await axios.post('/api/express/emails/subscribe', values);
+        message.success(t('email.createSuccess'));
+      }
+      setModalVisible(false);
+      form.resetFields();
+      setEditingId(null);
+      fetchSubscriptions(pagination.current, pagination.pageSize);
+    } catch (error) {
+      const errorMsg = error.response?.data?.error || t('email.createFailed');
+      message.error(errorMsg);
+    }
+  };
+
+  // Handle delete
+  const handleDelete = async (id) => {
+    try {
+      await axios.delete(`/api/express/emails/${id}`);
+      message.success(t('email.deleteSuccess'));
+      fetchSubscriptions(pagination.current, pagination.pageSize);
+    } catch (error) {
+      message.error(t('email.deleteFailed'));
+    }
+  };
+
+  // Handle edit
+  const handleEdit = (record) => {
+    setEditingId(record.id);
+    form.setFieldsValue({
+      email: record.email,
+      area_id: record.area_id,
+      is_active: record.is_active,
+    });
+    setModalVisible(true);
+  };
+
+  // Handle add new
+  const handleAdd = () => {
+    setEditingId(null);
+    form.resetFields();
+    setModalVisible(true);
+  };
+
+  // Table columns
+  const columns = [
+    {
+      title: 'Email',
+      dataIndex: 'email',
+      key: 'email',
+      render: (email) => (
+        <Space>
+          <MailOutlined />
+          <Text copyable>{email}</Text>
+        </Space>
+      ),
+    },
+    {
+      title: 'Khu vực',
+      dataIndex: ['area', 'name'],
+      key: 'area_name',
+      render: (name, record) => (
+        <Space>
+          <Text strong>{name}</Text>
+          <Tag color={record.area?.area_type === 'oyster' ? 'blue' : 'green'}>
+            {record.area?.area_type}
+          </Tag>
+        </Space>
+      ),
+    },
+    {
+      title: 'Trạng thái',
+      dataIndex: 'is_active',
+      key: 'is_active',
+      render: (isActive) => (
+        <Tag
+          color={isActive ? 'green' : 'red'}
+          icon={isActive ? <CheckCircleOutlined /> : <CloseCircleOutlined />}
+        >
+          {isActive ? t('email.active') : t('email.inactive')}
+        </Tag>
+      ),
+    },
+    {
+      title: 'Ngày tạo',
+      dataIndex: 'created_at',
+      key: 'created_at',
+      render: (date) => new Date(date).toLocaleDateString('vi-VN'),
+    },
+    {
+      title: 'Thao tác',
+      key: 'actions',
+      render: (_, record) => (
+        <Space>
+          <Tooltip title="Sửa">
+            <Button
+              type="primary"
+              icon={<EditOutlined />}
+              size="small"
+              onClick={() => handleEdit(record)}
+            />
+          </Tooltip>
+          <Popconfirm
+            title={t('email.confirmDelete')}
+            description={t('email.deleteConfirmMessage')}
+            onConfirm={() => handleDelete(record.id)}
+            okText={t('email.yes')}
+            cancelText={t('email.no')}
+          >
+            <Tooltip title="Xóa">
+              <Button
+                type="primary"
+                danger
+                icon={<DeleteOutlined />}
+                size="small"
+              />
+            </Tooltip>
+          </Popconfirm>
+        </Space>
+      ),
+    },
+  ];
+
+  return (
+    <div style={{ padding: '24px' }}>
+      <Card>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: '16px',
+          }}
+        >
+          <Title level={3}>
+            <MailOutlined /> {t('email.title')}
+          </Title>
+          <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
+            {t('email.addSubscription')}
+          </Button>
+        </div>
+
+        <Table
+          columns={columns}
+          dataSource={subscriptions}
+          rowKey="id"
+          loading={loading}
+          pagination={{
+            ...pagination,
+            showSizeChanger: true,
+            showQuickJumper: true,
+            showTotal: (total, range) =>
+              `${range[0]}-${range[1]} của ${total} đăng ký`,
+            onChange: (page, pageSize) => fetchSubscriptions(page, pageSize),
+          }}
+        />
+      </Card>
+
+      <Modal
+        title={
+          editingId ? t('email.editSubscription') : t('email.addSubscription')
+        }
+        open={modalVisible}
+        onCancel={() => {
+          setModalVisible(false);
+          setEditingId(null);
+          form.resetFields();
+        }}
+        footer={null}
+        width={600}
+      >
+        <Form form={form} layout="vertical" onFinish={handleSubmit}>
+          <Form.Item
+            name="email"
+            label="Email"
+            rules={[
+              { required: true, message: t('email.required') },
+              { type: 'email', message: t('email.invalidEmail') },
+            ]}
+          >
+            <Input
+              placeholder="your-email@example.com"
+              prefix={<MailOutlined />}
+            />
+          </Form.Item>
+
+          <Form.Item
+            name="area_id"
+            label="Khu vực"
+            rules={[{ required: true, message: t('email.selectArea') }]}
+          >
+            <Select placeholder="Chọn khu vực">
+              {areas.map((area) => (
+                <Option key={area.id} value={area.id}>
+                  {area.name} ({area.area_type})
+                </Option>
+              ))}
+            </Select>
+          </Form.Item>
+
+          <Form.Item
+            name="is_active"
+            label="Trạng thái"
+            valuePropName="checked"
+            initialValue={true}
+          >
+            <Switch
+              checkedChildren={t('email.active')}
+              unCheckedChildren={t('email.inactive')}
+            />
+          </Form.Item>
+
+          <Form.Item>
+            <Space>
+              <Button type="primary" htmlType="submit">
+                {editingId ? t('email.save') : t('email.save')}
+              </Button>
+              <Button
+                onClick={() => {
+                  setModalVisible(false);
+                  setEditingId(null);
+                  form.resetFields();
+                }}
+              >
+                {t('email.cancel')}
+              </Button>
+            </Space>
+          </Form.Item>
+        </Form>
+      </Modal>
+    </div>
+  );
+};
+
+export default EmailList;

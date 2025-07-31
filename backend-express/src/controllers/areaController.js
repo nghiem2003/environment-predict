@@ -1,5 +1,6 @@
 const { Op } = require('sequelize');
 const { Area, Province, District } = require('../models');
+const { sendPredictionNotification } = require('./emailController');
 
 exports.getAllAreas = async (req, res) => {
   try {
@@ -16,7 +17,7 @@ exports.getAllAreas = async (req, res) => {
       district,
       province,
     } = req.query;
-  console.log(req.query);
+    console.log(req.query);
 
     // Start with an empty query object
     let query = {};
@@ -55,19 +56,20 @@ exports.getAllAreas = async (req, res) => {
     console.log('Query for Areas:', query);
     const options = {
       where: query,
-      include:[
-      {
-        model: Province,
-        as: 'Province',
-        required: false,
-        attributes: ['id', 'name'],
-      },
-      {model: District,
-        as: 'District',
-        required: false,
-        attributes: ['id', 'name'],
-      }
-    ],
+      include: [
+        {
+          model: Province,
+          as: 'Province',
+          required: false,
+          attributes: ['id', 'name'],
+        },
+        {
+          model: District,
+          as: 'District',
+          required: false,
+          attributes: ['id', 'name'],
+        },
+      ],
     };
 
     if (limit) {
@@ -98,7 +100,7 @@ exports.getAreaById = async (req, res) => {
       where: { id: id },
       include: {
         model: Province,
-        
+
         as: 'Province',
         required: false,
       },
@@ -116,7 +118,8 @@ exports.getAreaById = async (req, res) => {
 
 exports.createArea = async (req, res) => {
   try {
-    const { name, latitude, longitude, province, district, area_type } = req.body;
+    const { name, latitude, longitude, province, district, area_type } =
+      req.body;
 
     if (area_type !== 'oyster' && area_type !== 'cobia') {
       return res.status(400).json({
@@ -133,6 +136,8 @@ exports.createArea = async (req, res) => {
       area: 1000,
       area_type,
     });
+
+    // Note: Email notifications are now sent when predictions are created, not when areas are created
 
     res.status(201).json(newArea);
   } catch (error) {
@@ -155,6 +160,9 @@ exports.deleteArea = async (req, res) => {
     }
 
     console.log('Deleting area:', area.name);
+
+    // Note: Email notifications are now sent when predictions are created, not when areas are deleted
+
     await area.destroy();
 
     res.status(200).json({ message: 'Area deleted successfully.' });
@@ -171,9 +179,10 @@ exports.deleteArea = async (req, res) => {
 exports.updateArea = async (req, res) => {
   try {
     console.log(req.body);
-    
+
     const { id } = req.params;
-    const { name, latitude, longitude, province, district, area, area_type } = req.body;
+    const { name, latitude, longitude, province, district, area, area_type } =
+      req.body;
 
     if (area_type !== 'oyster' && area_type !== 'cobia') {
       return res.status(400).json({
@@ -197,6 +206,8 @@ exports.updateArea = async (req, res) => {
 
     console.log('Updating area:', selectedArea.name);
     await selectedArea.save();
+
+    // Note: Email notifications are now sent when predictions are created, not when areas are updated
 
     res.status(200).json(selectedArea);
   } catch (error) {

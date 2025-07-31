@@ -10,6 +10,7 @@ const {
 const { Op } = require('sequelize');
 require('dotenv').config();
 const axios = require('axios');
+const { sendPredictionNotification } = require('./emailController');
 
 exports.createPrediction = async (req, res) => {
   try {
@@ -57,6 +58,17 @@ exports.createPrediction = async (req, res) => {
       });
     }
     console.log('Prediction created successfully:', predictionRecord.id);
+
+    // Send email notification to subscribers
+    try {
+      await sendPredictionNotification(areaId, {
+        result: prediction,
+        model: modelName,
+        predictionId: predictionRecord.id,
+      });
+    } catch (emailError) {
+      console.error('Failed to send prediction notification:', emailError);
+    }
 
     res.json({
       prediction_id: predictionRecord.id,

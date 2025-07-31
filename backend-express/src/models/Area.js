@@ -18,7 +18,7 @@ const Area = sequelize.define(
 
 Area.associate = (models) => {
   console.log(models);
-  
+
   Area.belongsTo(models.Province, {
     foreignKey: 'province',
     targetKey: 'id',
@@ -27,6 +27,10 @@ Area.associate = (models) => {
     foreignKey: 'district',
     targetKey: 'id',
   });
-}
+  Area.hasMany(models.Email, {
+    foreignKey: 'area_id',
+    as: 'emailSubscriptions',
+  });
+};
 
 module.exports = Area;
