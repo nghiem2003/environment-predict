@@ -3,11 +3,11 @@ const nodemailer = require('nodemailer');
 const crypto = require('crypto');
 
 // Email transporter configuration
-const transporter = nodemailer.createTransporter({
+const transporter = nodemailer.createTransport({
   service: 'gmail', // or your email service
   auth: {
     user: process.env.EMAIL_USER || 'your-email@gmail.com',
-    pass: process.env.EMAIL_PASSWORD || 'your-app-password',
+    pass: process.env.EMAIL_PASS || 'your-app-password',
   },
 });
 
