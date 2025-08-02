@@ -24,6 +24,7 @@ import {
   EyeOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
+  SendOutlined,
 } from '@ant-design/icons';
 import axios from '../axios';
 
@@ -128,6 +129,16 @@ const EmailList = () => {
     setModalVisible(true);
   };
 
+  const handleTestEmail = async (email) => {
+    try {
+      await axios.post('/api/express/emails/test', { email });
+      message.success(t('email.testSuccess'));
+    } catch (error) {
+      const errorMsg = error.response?.data?.error || t('email.testFailed');
+      message.error(errorMsg);
+    }
+  };
+
   // Table columns
   const columns = [
     {
@@ -184,6 +195,14 @@ const EmailList = () => {
               icon={<EditOutlined />}
               size="small"
               onClick={() => handleEdit(record)}
+            />
+          </Tooltip>
+          <Tooltip title={t('email.testEmail')}>
+            <Button
+              type="default"
+              icon={<SendOutlined />}
+              size="small"
+              onClick={() => handleTestEmail(record.email)}
             />
           </Tooltip>
           <Popconfirm

@@ -78,7 +78,8 @@
     "unidentified": "Môi trường chưa được xác định",
     "goBack": "Nhấn vào đây để quay lại trang chào mừng",
     "return": "Trở lại",
-    "areaNotFound": "Khu vực không được tìm thấy. Vui lòng chọn khu vực hợp lệ."
+    "areaNotFound": "Khu vực không được tìm thấy. Vui lòng chọn khu vực hợp lệ.",
+    "subscribeEmail": "Đăng ký nhận thông báo Email"
   },
   "login": {
     "title": "Đăng nhập",
@@ -174,6 +175,7 @@
     "area_list": "Xem danh sách khu vực",
     "prediction_list": "Xem danh sách dự đoán",
     "user_list": "Xem danh sách người dùng",
+    "email_list": "Đăng ký Email",
     "create_prediction": "Tạo dự đoán",
     "logout": "Đăng xuất"
   },

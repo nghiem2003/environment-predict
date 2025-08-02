@@ -22,6 +22,9 @@ import './App.css'; // Import CSS for header and footer
 import AreaList from './components/AreaList';
 import UserList from './components/UserList';
 import UserProfile from './components/UserProfile';
+import EmailList from './components/EmailList';
+import EmailSubscription from './components/EmailSubscription';
+import UnsubscribePage from './components/UnsubscribePage';
 import { useTranslation } from 'react-i18next';
 import LanguageSwitch from './components/LanguageSwitch';
 import {
@@ -49,6 +52,7 @@ import {
   LogoutOutlined,
   GlobalOutlined,
   ProfileOutlined,
+  MailOutlined,
 } from '@ant-design/icons';
 
 const { Header, Sider, Content } = Layout;
@@ -97,6 +101,11 @@ const App = () => {
           key: '/user-list',
           icon: <UserOutlined />,
           label: t('sidebar.user_list'),
+        },
+        {
+          key: '/email-list',
+          icon: <MailOutlined />,
+          label: t('sidebar.email_list'),
         },
       ];
     } else if (role === 'expert') {
@@ -457,6 +466,19 @@ const App = () => {
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/email-list"
+              element={
+                <ProtectedRoute roles={['admin']}>
+                  <EmailList />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/email-subscription/:areaId"
+              element={<EmailSubscription />}
+            />
+            <Route path="/unsubscribe/:token" element={<UnsubscribePage />} />
           </Routes>
         </Content>
       </Layout>

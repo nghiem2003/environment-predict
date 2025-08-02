@@ -4,6 +4,7 @@ import { useSelector } from 'react-redux';
 import { jwtDecode } from 'jwt-decode';
 import './AreaList.css';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import {
   MapContainer,
   TileLayer,
@@ -28,7 +29,12 @@ import {
   Col,
 } from 'antd';
 
-import { EditOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons';
+import {
+  EditOutlined,
+  DeleteOutlined,
+  PlusOutlined,
+  MailOutlined,
+} from '@ant-design/icons';
 
 const { Option } = Select;
 const { Title } = Typography;
@@ -44,6 +50,7 @@ const AreaList = () => {
   const [form] = Form.useForm();
   const { t } = useTranslation();
   const { token } = useSelector((state) => state.auth);
+  const navigate = useNavigate();
   const [map, setMap] = useState(null);
   const [position, setPosition] = useState(null);
   const [currentPage, setCurrentPage] = useState(0);
@@ -270,6 +277,13 @@ const AreaList = () => {
             onClick={() => handleUpdate(area.id)}
           >
             {t('area_list.popup.update')}
+          </Button>
+          <Button
+            size="small"
+            icon={<MailOutlined />}
+            onClick={() => navigate(`/email-subscription/${area.id}`)}
+          >
+            {t('userList.email')}
           </Button>
           <Button
             size="small"

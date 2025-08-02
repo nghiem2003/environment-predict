@@ -1,6 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Card, Form, Input, Button, Alert, Typography, Space } from 'antd';
+import { useParams } from 'react-router-dom';
+import {
+  Card,
+  Form,
+  Input,
+  Button,
+  Alert,
+  Typography,
+  Space,
+  Spin,
+} from 'antd';
 import {
   MailOutlined,
   CheckCircleOutlined,
@@ -10,13 +20,34 @@ import axios from '../axios';
 
 const { Title, Text } = Typography;
 
-const EmailSubscription = ({ areaId, areaName }) => {
+const EmailSubscription = () => {
   const { t } = useTranslation();
+  const { areaId } = useParams();
   const [form] = Form.useForm();
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [area, setArea] = useState(null);
+  const [areaLoading, setAreaLoading] = useState(true);
+
+  // Fetch area information
+  useEffect(() => {
+    const fetchArea = async () => {
+      try {
+        const response = await axios.get(`/api/express/areas/area/${areaId}`);
+        setArea(response.data);
+      } catch (error) {
+        setError('Không thể tải thông tin khu vực');
+      } finally {
+        setAreaLoading(false);
+      }
+    };
+
+    if (areaId) {
+      fetchArea();
+    }
+  }, [areaId]);
 
   const handleSubscribe = async (values) => {
     setLoading(true);
@@ -43,92 +74,129 @@ const EmailSubscription = ({ areaId, areaName }) => {
     }
   };
 
+  const handleSubscribeAnother = () => {
+    setIsSubscribed(false);
+    setMessage('');
+    setError('');
+    form.resetFields();
+  };
+
+  if (areaLoading) {
+    return (
+      <div style={{ textAlign: 'center', padding: '50px' }}>
+        <Spin size="large" />
+        <div style={{ marginTop: 16 }}>Đang tải thông tin khu vực...</div>
+      </div>
+    );
+  }
+
+  if (!area) {
+    return (
+      <Alert
+        message="Lỗi"
+        description="Không tìm thấy thông tin khu vực"
+        type="error"
+        showIcon
+      />
+    );
+  }
+
   return (
-    <Card
-      title={
-        <Space>
-          <MailOutlined />
-          <span>{t('email.subscriptions')}</span>
-        </Space>
-      }
-      style={{ maxWidth: 500, margin: '20px 0' }}
+    <div
+      style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        minHeight: '50vh',
+        padding: '20px',
+      }}
     >
-      <Text type="secondary">
-        Đăng ký nhận thông báo cho khu vực <Text strong>{areaName}</Text>
-      </Text>
+      <Card
+        title={
+          <Space>
+            <MailOutlined />
+            <span>{t('email.subscriptions')}</span>
+          </Space>
+        }
+        style={{ maxWidth: 500, width: '100%' }}
+      >
+        <Text type="secondary">
+          Đăng ký nhận thông báo cho khu vực <Text strong>{area.name}</Text>
+        </Text>
 
-      {!isSubscribed ? (
-        <Form
-          form={form}
-          layout="vertical"
-          onFinish={handleSubscribe}
-          style={{ marginTop: 16 }}
-        >
-          <Form.Item
-            name="email"
-            label={t('email.email')}
-            rules={[
-              { required: true, message: t('email.required') },
-              { type: 'email', message: t('email.invalidEmail') },
-            ]}
+        {!isSubscribed ? (
+          <Form
+            form={form}
+            layout="vertical"
+            onFinish={handleSubscribe}
+            style={{ marginTop: 16 }}
           >
-            <Input
-              placeholder="your-email@example.com"
-              disabled={loading}
-              prefix={<MailOutlined />}
-            />
-          </Form.Item>
-
-          <Form.Item>
-            <Button
-              type="primary"
-              htmlType="submit"
-              loading={loading}
-              icon={<MailOutlined />}
-              block
+            <Form.Item
+              name="email"
+              label={t('email.email')}
+              rules={[
+                { required: true, message: t('email.required') },
+                { type: 'email', message: t('email.invalidEmail') },
+              ]}
             >
-              Đăng ký nhận thông báo
+              <Input
+                placeholder="your-email@example.com"
+                disabled={loading}
+                prefix={<MailOutlined />}
+              />
+            </Form.Item>
+
+            <Form.Item>
+              <Button
+                type="primary"
+                htmlType="submit"
+                loading={loading}
+                icon={<MailOutlined />}
+                block
+              >
+                Đăng ký nhận thông báo
+              </Button>
+            </Form.Item>
+          </Form>
+        ) : (
+          <div style={{ textAlign: 'center', marginTop: 16 }}>
+            <Alert
+              message="Đăng ký thành công"
+              description={message}
+              type="success"
+              showIcon
+              icon={<CheckCircleOutlined />}
+              style={{ marginBottom: 16 }}
+            />
+            <Button onClick={handleSubscribeAnother} type="default">
+              Đăng ký email khác
             </Button>
-          </Form.Item>
-        </Form>
-      ) : (
-        <div style={{ textAlign: 'center', marginTop: 16 }}>
+          </div>
+        )}
+
+        {error && (
           <Alert
-            message="Đăng ký thành công"
+            message="Lỗi"
+            description={error}
+            type="error"
+            showIcon
+            icon={<ExclamationCircleOutlined />}
+            style={{ marginTop: 16 }}
+          />
+        )}
+
+        {message && !isSubscribed && (
+          <Alert
+            message="Thành công"
             description={message}
             type="success"
             showIcon
             icon={<CheckCircleOutlined />}
-            style={{ marginBottom: 16 }}
+            style={{ marginTop: 16 }}
           />
-          <Button onClick={() => setIsSubscribed(false)} type="default">
-            Đăng ký email khác
-          </Button>
-        </div>
-      )}
-
-      {error && (
-        <Alert
-          message="Lỗi"
-          description={error}
-          type="error"
-          showIcon
-          icon={<ExclamationCircleOutlined />}
-          style={{ marginTop: 16 }}
-        />
-      )}
-
-      {message && !isSubscribed && (
-        <Alert
-          message="Thành công"
-          description={message}
-          type="success"
-          showIcon
-          icon={<CheckCircleOutlined />}
-          style={{ marginTop: 16 }}
-        />
-      )}
-    </Card>
+        )}
+      </Card>
+    </div>
   );
 };
 

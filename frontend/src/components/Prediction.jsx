@@ -13,6 +13,7 @@ import {
   LoadingOutlined,
   QuestionCircleOutlined,
   WarningOutlined,
+  MailOutlined,
 } from '@ant-design/icons';
 
 const { Title, Text } = Typography;
@@ -98,6 +99,10 @@ const Prediction = () => {
     navigate('/');
   };
 
+  const handleEmailSubscription = () => {
+    navigate(`/email-subscription/${areaId}`);
+  };
+
   if (loading) {
     return (
       <Result
@@ -105,14 +110,17 @@ const Prediction = () => {
         title={t('prediction.loadingArea')}
         extra={
           <Button
-          style={{
-            whiteSpace: 'normal',      
-            wordBreak: 'break-word',   
-            maxWidth: '100%',   
-            height: 'auto',        
-          }}
-           type="primary" icon={<HomeOutlined />} onClick={handleBack}>
-          <p>  {t('prediction.return')} </p>
+            style={{
+              whiteSpace: 'normal',
+              wordBreak: 'break-word',
+              maxWidth: '100%',
+              height: 'auto',
+            }}
+            type="primary"
+            icon={<HomeOutlined />}
+            onClick={handleBack}
+          >
+            <p> {t('prediction.return')} </p>
           </Button>
         }
       />
@@ -126,13 +134,16 @@ const Prediction = () => {
         title={t('prediction.areaNotFound')}
         extra={
           <Button
-          style={{
-            whiteSpace: 'normal',      
-            wordBreak: 'break-word',   
-            maxWidth: '100%',  
-            height: 'auto',           
-          }}
-           type="primary" icon={<HomeOutlined />} onClick={handleBack}>
+            style={{
+              whiteSpace: 'normal',
+              wordBreak: 'break-word',
+              maxWidth: '100%',
+              height: 'auto',
+            }}
+            type="primary"
+            icon={<HomeOutlined />}
+            onClick={handleBack}
+          >
             {t('prediction.return')}
           </Button>
         }
@@ -172,6 +183,16 @@ const Prediction = () => {
             result={prediction?.prediction_text}
             area={area?.area}
           />
+          <Space style={{ justifyContent: 'center', width: '100%' }}>
+            <Button
+              type="primary"
+              icon={<MailOutlined />}
+              onClick={handleEmailSubscription}
+              size="large"
+            >
+              {t('prediction.subscribeEmail')}
+            </Button>
+          </Space>
         </Space>
       ) : (
         <Space direction="vertical" size="large" style={{ width: '100%' }}>
@@ -179,19 +200,29 @@ const Prediction = () => {
             status="warning"
             title={t('prediction.noPrediction')}
             extra={
-              <Button
-              style={{
-                whiteSpace: 'normal',      
-                wordBreak: 'break-word', 
-                maxWidth: '100%',
-                height: 'auto',       
-              }}
-                type="primary"
-                icon={<HomeOutlined />}
-                onClick={handleBack}
-              >
-                {t('prediction.goBack')}
-              </Button>
+              <Space>
+                <Button
+                  style={{
+                    whiteSpace: 'normal',
+                    wordBreak: 'break-word',
+                    maxWidth: '100%',
+                    height: 'auto',
+                  }}
+                  type="primary"
+                  icon={<HomeOutlined />}
+                  onClick={handleBack}
+                >
+                  {t('prediction.goBack')}
+                </Button>
+                <Button
+                  type="default"
+                  icon={<MailOutlined />}
+                  onClick={handleEmailSubscription}
+                  size="large"
+                >
+                  {t('prediction.subscribeEmail')}
+                </Button>
+              </Space>
             }
           />
           <MapView
