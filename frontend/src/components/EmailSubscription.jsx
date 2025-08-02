@@ -24,12 +24,16 @@ const EmailSubscription = () => {
   const { t } = useTranslation();
   const { areaId } = useParams();
   const [form] = Form.useForm();
+  const [otpForm] = Form.useForm();
   const [isSubscribed, setIsSubscribed] = useState(false);
+  const [showOTPForm, setShowOTPForm] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [otpLoading, setOtpLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [area, setArea] = useState(null);
   const [areaLoading, setAreaLoading] = useState(true);
+  const [emailForOTP, setEmailForOTP] = useState('');
 
   // Fetch area information
   useEffect(() => {
@@ -49,25 +53,55 @@ const EmailSubscription = () => {
     }
   }, [areaId]);
 
-  const handleSubscribe = async (values) => {
-    setLoading(true);
+  const handleSendOTP = async (values) => {
+    setOtpLoading(true);
     setError('');
     setMessage('');
 
     try {
-      const response = await axios.post('/api/express/emails/subscribe', {
+      const response = await axios.post('/api/express/emails/send-otp', {
         email: values.email,
         area_id: areaId,
       });
 
-      setMessage(response.data.message);
-      setIsSubscribed(true);
+      setMessage(
+        'Mã OTP đã được gửi đến email của bạn. Vui lòng kiểm tra hộp thư.'
+      );
+      setEmailForOTP(values.email);
+      setShowOTPForm(true);
       form.resetFields();
     } catch (err) {
       if (err.response?.data?.error) {
         setError(err.response.data.error);
       } else {
-        setError(t('email.createFailed'));
+        setError('Không thể gửi mã OTP. Vui lòng thử lại.');
+      }
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+
+  const handleVerifyOTP = async (values) => {
+    setLoading(true);
+    setError('');
+    setMessage('');
+
+    try {
+      const response = await axios.post('/api/express/emails/verify-otp', {
+        email: emailForOTP,
+        area_id: areaId,
+        otp_code: values.otp_code,
+      });
+
+      setMessage(response.data.message);
+      setIsSubscribed(true);
+      setShowOTPForm(false);
+      otpForm.resetFields();
+    } catch (err) {
+      if (err.response?.data?.error) {
+        setError(err.response.data.error);
+      } else {
+        setError('Mã OTP không đúng hoặc đã hết hạn.');
       }
     } finally {
       setLoading(false);
@@ -76,9 +110,33 @@ const EmailSubscription = () => {
 
   const handleSubscribeAnother = () => {
     setIsSubscribed(false);
+    setShowOTPForm(false);
     setMessage('');
     setError('');
     form.resetFields();
+    otpForm.resetFields();
+  };
+
+  const handleResendOTP = async () => {
+    setOtpLoading(true);
+    setError('');
+
+    try {
+      await axios.post('/api/express/emails/send-otp', {
+        email: emailForOTP,
+        area_id: areaId,
+      });
+
+      setMessage('Mã OTP mới đã được gửi đến email của bạn.');
+    } catch (err) {
+      if (err.response?.data?.error) {
+        setError(err.response.data.error);
+      } else {
+        setError('Không thể gửi lại mã OTP. Vui lòng thử lại.');
+      }
+    } finally {
+      setOtpLoading(false);
+    }
   };
 
   if (areaLoading) {
@@ -124,11 +182,11 @@ const EmailSubscription = () => {
           Đăng ký nhận thông báo cho khu vực <Text strong>{area.name}</Text>
         </Text>
 
-        {!isSubscribed ? (
+        {!isSubscribed && !showOTPForm ? (
           <Form
             form={form}
             layout="vertical"
-            onFinish={handleSubscribe}
+            onFinish={handleSendOTP}
             style={{ marginTop: 16 }}
           >
             <Form.Item
@@ -141,7 +199,7 @@ const EmailSubscription = () => {
             >
               <Input
                 placeholder="your-email@example.com"
-                disabled={loading}
+                disabled={otpLoading}
                 prefix={<MailOutlined />}
               />
             </Form.Item>
@@ -150,14 +208,69 @@ const EmailSubscription = () => {
               <Button
                 type="primary"
                 htmlType="submit"
-                loading={loading}
+                loading={otpLoading}
                 icon={<MailOutlined />}
                 block
               >
-                Đăng ký nhận thông báo
+                Gửi mã xác thực
               </Button>
             </Form.Item>
           </Form>
+        ) : showOTPForm && !isSubscribed ? (
+          <div style={{ marginTop: 16 }}>
+            <Alert
+              message="Nhập mã OTP"
+              description={`Vui lòng nhập mã 6 số đã được gửi đến ${emailForOTP}`}
+              type="info"
+              showIcon
+              style={{ marginBottom: 16 }}
+            />
+            <Form form={otpForm} layout="vertical" onFinish={handleVerifyOTP}>
+              <Form.Item
+                name="otp_code"
+                label="Mã OTP"
+                rules={[
+                  { required: true, message: 'Vui lòng nhập mã OTP' },
+                  { len: 6, message: 'Mã OTP phải có 6 số' },
+                  { pattern: /^\d{6}$/, message: 'Mã OTP chỉ được chứa số' },
+                ]}
+              >
+                <Input
+                  placeholder="123456"
+                  maxLength={6}
+                  disabled={loading}
+                  style={{
+                    textAlign: 'center',
+                    fontSize: '18px',
+                    letterSpacing: '2px',
+                  }}
+                />
+              </Form.Item>
+
+              <Form.Item>
+                <Space
+                  style={{ width: '100%', justifyContent: 'space-between' }}
+                >
+                  <Button
+                    type="default"
+                    onClick={handleResendOTP}
+                    loading={otpLoading}
+                    disabled={loading}
+                  >
+                    Gửi lại mã
+                  </Button>
+                  <Button
+                    type="primary"
+                    htmlType="submit"
+                    loading={loading}
+                    icon={<CheckCircleOutlined />}
+                  >
+                    Xác thực và đăng ký
+                  </Button>
+                </Space>
+              </Form.Item>
+            </Form>
+          </div>
         ) : (
           <div style={{ textAlign: 'center', marginTop: 16 }}>
             <Alert

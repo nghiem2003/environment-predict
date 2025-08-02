@@ -8,6 +8,8 @@ const {
   deleteEmailSubscription,
   unsubscribeFromPredictions,
   testEmail,
+  sendOTP,
+  verifyOTPAndSubscribe,
 } = require('../controllers/emailController');
 
 const router = express.Router();
@@ -23,7 +25,13 @@ router.get(
   getEmailSubscriptionById
 );
 
-// Subscribe to prediction notifications (public endpoint)
+// Send OTP for email subscription (public endpoint)
+router.post('/send-otp', sendOTP);
+
+// Verify OTP and subscribe (public endpoint)
+router.post('/verify-otp', verifyOTPAndSubscribe);
+
+// Subscribe to prediction notifications (public endpoint) - legacy
 router.post('/subscribe', subscribeToPredictions);
 
 // Unsubscribe from prediction notifications (public endpoint)

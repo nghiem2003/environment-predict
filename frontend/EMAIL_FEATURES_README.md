@@ -14,9 +14,11 @@ Hệ thống đã được thêm các tính năng quản lý email subscription 
 - **Truy cập**: Công khai (không cần đăng nhập)
 - **Chức năng**:
   - Hiển thị thông tin khu vực
-  - Form đăng ký email
-  - Validation email
-  - Thông báo thành công/lỗi
+  - Form đăng ký email với xác thực OTP
+  - Gửi mã OTP 6 số qua email
+  - Xác thực OTP trước khi lưu vào DB
+  - Mã OTP hết hạn sau 5 phút
+  - Chức năng gửi lại mã OTP
 
 ### 2. Email List (Danh sách Email)
 
@@ -43,7 +45,9 @@ Hệ thống đã được thêm các tính năng quản lý email subscription 
 
 1. **Từ Area List**: Vào trang Area List, click button "Email" bên cạnh khu vực muốn đăng ký
 2. **Từ Prediction Page**: Vào trang prediction của khu vực, click button "Subscribe to Email Notifications"
-3. Điền email và submit form
+3. Điền email và click "Gửi mã xác thực"
+4. Kiểm tra email và nhập mã OTP 6 số
+5. Click "Xác thực và đăng ký" để hoàn tất
 
 ### Để quản lý email (Admin):
 
@@ -53,7 +57,9 @@ Hệ thống đã được thêm các tính năng quản lý email subscription 
 
 ## API Endpoints
 
-- `POST /api/express/emails/subscribe` - Đăng ký email
+- `POST /api/express/emails/send-otp` - Gửi mã OTP
+- `POST /api/express/emails/verify-otp` - Xác thực OTP và đăng ký
+- `POST /api/express/emails/subscribe` - Đăng ký email (legacy)
 - `GET /api/express/emails` - Lấy danh sách email (admin)
 - `PUT /api/express/emails/:id` - Cập nhật email (admin)
 - `DELETE /api/express/emails/:id` - Xóa email (admin)
@@ -79,14 +85,31 @@ Hệ thống đã được thêm các tính năng quản lý email subscription 
 - ✅ Thêm route unsubscribe: `/unsubscribe/:token`
 - ✅ Thêm UnsubscribePage component
 
+## OTP Features
+
+Đã thêm hệ thống xác thực OTP:
+
+- ✅ Model OTP với migration
+- ✅ API gửi OTP: `/api/express/emails/send-otp`
+- ✅ API xác thực OTP: `/api/express/emails/verify-otp`
+- ✅ Mã OTP 6 số, hết hạn sau 5 phút
+- ✅ Email template đẹp cho OTP
+- ✅ Form xác thực OTP trong frontend
+- ✅ Chức năng gửi lại mã OTP
+
 ## Cấu trúc file
 
 ```
 frontend/src/components/
-├── EmailSubscription.jsx    # Component đăng ký email
+├── EmailSubscription.jsx    # Component đăng ký email với OTP
 ├── EmailList.jsx           # Component quản lý email (admin)
 ├── AreaList.jsx            # Đã thêm button email
 └── Prediction.jsx          # Đã thêm button email subscription
+
+backend-express/src/
+├── models/Otp.js           # Model OTP
+├── controllers/emailController.js  # API OTP
+└── config/migrations/      # Migration OTP
 
 frontend/src/locales/
 ├── en.json                 # Translation tiếng Anh

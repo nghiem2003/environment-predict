@@ -1,4 +1,4 @@
-const { Email, Area } = require('../models');
+const { Email, Area, Otp } = require('../models');
 const nodemailer = require('nodemailer');
 const crypto = require('crypto');
 
@@ -82,7 +82,183 @@ exports.getEmailSubscriptionById = async (req, res) => {
   }
 };
 
-// Subscribe to prediction notifications for an area
+// Generate OTP code
+const generateOTP = () => {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+};
+
+// Send OTP email
+const sendOTPEmail = async (email, otpCode, areaName) => {
+  const mailOptions = {
+    from: process.env.EMAIL_USER || 'your-email@gmail.com',
+    to: email,
+    subject: 'Mã xác thực đăng ký email - Hệ thống Dự đoán Nuôi trồng Thủy sản',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #2c3e50;">Mã xác thực đăng ký email</h2>
+        <p>Xin chào,</p>
+        <p>Bạn đã yêu cầu đăng ký nhận thông báo dự đoán cho khu vực <strong>${areaName}</strong>.</p>
+        <div style="background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin: 20px 0; text-align: center;">
+          <h3 style="margin-top: 0; color: #2c3e50;">Mã xác thực của bạn:</h3>
+          <div style="font-size: 32px; font-weight: bold; color: #3498db; letter-spacing: 5px; padding: 10px;">
+            ${otpCode}
+          </div>
+          <p style="font-size: 14px; color: #666; margin-top: 10px;">
+            Mã này sẽ hết hạn sau 5 phút
+          </p>
+        </div>
+        <p>Vui lòng nhập mã này vào form xác thực để hoàn tất đăng ký.</p>
+        <p>Nếu bạn không yêu cầu đăng ký này, vui lòng bỏ qua email này.</p>
+        <p>Trân trọng,<br>Hệ thống Dự đoán Nuôi trồng Thủy sản</p>
+      </div>
+    `,
+  };
+
+  return transporter.sendMail(mailOptions);
+};
+
+// Send OTP for email subscription
+exports.sendOTP = async (req, res) => {
+  try {
+    const { email, area_id } = req.body;
+
+    // Validate required fields
+    if (!email || !area_id) {
+      return res.status(400).json({
+        error: 'Email and area_id are required',
+      });
+    }
+
+    // Check if area exists
+    const area = await Area.findByPk(area_id);
+    if (!area) {
+      return res.status(404).json({ error: 'Area not found' });
+    }
+
+    // Check if subscription already exists
+    const existingSubscription = await Email.findOne({
+      where: { email, area_id },
+    });
+
+    if (existingSubscription && existingSubscription.is_active) {
+      return res.status(400).json({
+        error: 'You are already subscribed to predictions for this area',
+      });
+    }
+
+    // Generate OTP
+    const otpCode = generateOTP();
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+
+    // Delete any existing OTP for this email and area
+    await Otp.destroy({
+      where: { email, area_id },
+    });
+
+    // Save OTP to database
+    await Otp.create({
+      email,
+      area_id,
+      otp_code: otpCode,
+      expires_at: expiresAt,
+    });
+
+    // Send OTP email
+    await sendOTPEmail(email, otpCode, area.name);
+
+    res.status(200).json({
+      message: 'OTP sent successfully',
+      email: email,
+      area_id: area_id,
+    });
+  } catch (error) {
+    console.error('Send OTP Error:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Verify OTP and subscribe
+exports.verifyOTPAndSubscribe = async (req, res) => {
+  try {
+    const { email, area_id, otp_code } = req.body;
+
+    // Validate required fields
+    if (!email || !area_id || !otp_code) {
+      return res.status(400).json({
+        error: 'Email, area_id, and otp_code are required',
+      });
+    }
+
+    // Find OTP record
+    const otpRecord = await Otp.findOne({
+      where: { email, area_id, otp_code, is_used: false },
+    });
+
+    if (!otpRecord) {
+      return res.status(400).json({
+        error: 'Invalid OTP code',
+      });
+    }
+
+    // Check if OTP is expired
+    if (new Date() > otpRecord.expires_at) {
+      return res.status(400).json({
+        error: 'OTP code has expired',
+      });
+    }
+
+    // Mark OTP as used
+    otpRecord.is_used = true;
+    await otpRecord.save();
+
+    // Check if subscription already exists
+    const existingSubscription = await Email.findOne({
+      where: { email, area_id },
+    });
+
+    if (existingSubscription) {
+      if (existingSubscription.is_active) {
+        return res.status(400).json({
+          error: 'You are already subscribed to predictions for this area',
+        });
+      } else {
+        // Reactivate existing subscription
+        existingSubscription.is_active = true;
+        await existingSubscription.save();
+      }
+    } else {
+      // Create new subscription
+      const unsubscribeToken = crypto.randomBytes(32).toString('hex');
+      await Email.create({
+        email,
+        area_id,
+        is_active: true,
+        unsubscribe_token: unsubscribeToken,
+      });
+    }
+
+    const subscriptionWithArea = await Email.findOne({
+      where: { email, area_id },
+      include: [
+        {
+          model: Area,
+          as: 'area',
+          attributes: ['id', 'name', 'area_type'],
+        },
+      ],
+    });
+
+    res.status(200).json({
+      message: 'Successfully subscribed to prediction notifications',
+      subscription: subscriptionWithArea,
+    });
+  } catch (error) {
+    console.error('Verify OTP and Subscribe Error:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Subscribe to prediction notifications for an area (legacy - kept for backward compatibility)
 exports.subscribeToPredictions = async (req, res) => {
   try {
     const { email, area_id } = req.body;

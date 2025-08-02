@@ -206,9 +206,9 @@ const Prediction = () => {
                     whiteSpace: 'normal',
                     wordBreak: 'break-word',
                     maxWidth: '100%',
-                    height: 'auto',
                   }}
                   type="primary"
+                  size="large"
                   icon={<HomeOutlined />}
                   onClick={handleBack}
                 >
