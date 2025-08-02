@@ -5,7 +5,7 @@
 -- Dumped from database version 17.0
 -- Dumped by pg_dump version 17.0
 
--- Started on 2025-06-08 11:26:22
+-- Started on 2025-08-02 20:01:54
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -28,7 +28,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA public;
 
 
 --
--- TOC entry 4943 (class 0 OID 0)
+-- TOC entry 4968 (class 0 OID 0)
 -- Dependencies: 2
 -- Name: EXTENSION "uuid-ossp"; Type: COMMENT; Schema: -; Owner: 
 --
@@ -37,7 +37,7 @@ COMMENT ON EXTENSION "uuid-ossp" IS 'generate universally unique identifiers (UU
 
 
 --
--- TOC entry 869 (class 1247 OID 296827)
+-- TOC entry 873 (class 1247 OID 296827)
 -- Name: enum_diagnose_areas_area_type; Type: TYPE; Schema: public; Owner: postgres
 --
 
@@ -50,7 +50,7 @@ CREATE TYPE public.enum_diagnose_areas_area_type AS ENUM (
 ALTER TYPE public.enum_diagnose_areas_area_type OWNER TO postgres;
 
 --
--- TOC entry 872 (class 1247 OID 296832)
+-- TOC entry 876 (class 1247 OID 296832)
 -- Name: enum_users_role; Type: TYPE; Schema: public; Owner: postgres
 --
 
@@ -64,7 +64,7 @@ CREATE TYPE public.enum_users_role AS ENUM (
 ALTER TYPE public.enum_users_role OWNER TO postgres;
 
 --
--- TOC entry 875 (class 1247 OID 296840)
+-- TOC entry 879 (class 1247 OID 296840)
 -- Name: enum_users_status; Type: TYPE; Schema: public; Owner: postgres
 --
 
@@ -129,7 +129,7 @@ CREATE SEQUENCE public.diagnose_areas_id_seq
 ALTER SEQUENCE public.diagnose_areas_id_seq OWNER TO postgres;
 
 --
--- TOC entry 4944 (class 0 OID 0)
+-- TOC entry 4969 (class 0 OID 0)
 -- Dependencies: 220
 -- Name: diagnose_areas_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
@@ -167,7 +167,7 @@ CREATE SEQUENCE public.diagnose_naturalelements_id_seq
 ALTER SEQUENCE public.diagnose_naturalelements_id_seq OWNER TO postgres;
 
 --
--- TOC entry 4945 (class 0 OID 0)
+-- TOC entry 4970 (class 0 OID 0)
 -- Dependencies: 222
 -- Name: diagnose_naturalelements_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
@@ -207,7 +207,7 @@ CREATE SEQUENCE public.diagnose_prediction_natureelements_id_seq
 ALTER SEQUENCE public.diagnose_prediction_natureelements_id_seq OWNER TO postgres;
 
 --
--- TOC entry 4946 (class 0 OID 0)
+-- TOC entry 4971 (class 0 OID 0)
 -- Dependencies: 224
 -- Name: diagnose_prediction_natureelements_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
@@ -249,7 +249,7 @@ CREATE SEQUENCE public.diagnose_predictions_id_seq
 ALTER SEQUENCE public.diagnose_predictions_id_seq OWNER TO postgres;
 
 --
--- TOC entry 4947 (class 0 OID 0)
+-- TOC entry 4972 (class 0 OID 0)
 -- Dependencies: 226
 -- Name: diagnose_predictions_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
@@ -272,6 +272,93 @@ CREATE TABLE public.districts (
 
 
 ALTER TABLE public.districts OWNER TO postgres;
+
+--
+-- TOC entry 232 (class 1259 OID 305001)
+-- Name: email_subscriptions; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.email_subscriptions (
+    id integer NOT NULL,
+    email character varying(255) NOT NULL,
+    area_id integer NOT NULL,
+    is_active boolean DEFAULT true,
+    unsubscribe_token character varying(255) NOT NULL,
+    created_at timestamp with time zone,
+    updated_at timestamp with time zone
+);
+
+
+ALTER TABLE public.email_subscriptions OWNER TO postgres;
+
+--
+-- TOC entry 231 (class 1259 OID 305000)
+-- Name: email_subscriptions_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.email_subscriptions_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.email_subscriptions_id_seq OWNER TO postgres;
+
+--
+-- TOC entry 4973 (class 0 OID 0)
+-- Dependencies: 231
+-- Name: email_subscriptions_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.email_subscriptions_id_seq OWNED BY public.email_subscriptions.id;
+
+
+--
+-- TOC entry 234 (class 1259 OID 305018)
+-- Name: otps; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.otps (
+    id integer NOT NULL,
+    email character varying(255) NOT NULL,
+    area_id integer NOT NULL,
+    otp_code character varying(6) NOT NULL,
+    expires_at timestamp with time zone NOT NULL,
+    is_used boolean DEFAULT false,
+    created_at timestamp with time zone NOT NULL,
+    updated_at timestamp with time zone NOT NULL
+);
+
+
+ALTER TABLE public.otps OWNER TO postgres;
+
+--
+-- TOC entry 233 (class 1259 OID 305017)
+-- Name: otps_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.otps_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.otps_id_seq OWNER TO postgres;
+
+--
+-- TOC entry 4974 (class 0 OID 0)
+-- Dependencies: 233
+-- Name: otps_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.otps_id_seq OWNED BY public.otps.id;
+
 
 --
 -- TOC entry 229 (class 1259 OID 296946)
@@ -325,7 +412,7 @@ CREATE SEQUENCE public.users_id_seq
 ALTER SEQUENCE public.users_id_seq OWNER TO postgres;
 
 --
--- TOC entry 4948 (class 0 OID 0)
+-- TOC entry 4975 (class 0 OID 0)
 -- Dependencies: 228
 -- Name: users_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
@@ -334,7 +421,7 @@ ALTER SEQUENCE public.users_id_seq OWNED BY public.users.id;
 
 
 --
--- TOC entry 4747 (class 2604 OID 296890)
+-- TOC entry 4757 (class 2604 OID 296890)
 -- Name: diagnose_areas id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -342,7 +429,7 @@ ALTER TABLE ONLY public.diagnose_areas ALTER COLUMN id SET DEFAULT nextval('publ
 
 
 --
--- TOC entry 4748 (class 2604 OID 296891)
+-- TOC entry 4758 (class 2604 OID 296891)
 -- Name: diagnose_naturalelements id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -350,7 +437,7 @@ ALTER TABLE ONLY public.diagnose_naturalelements ALTER COLUMN id SET DEFAULT nex
 
 
 --
--- TOC entry 4749 (class 2604 OID 296892)
+-- TOC entry 4759 (class 2604 OID 296892)
 -- Name: diagnose_prediction_natureelements id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -358,7 +445,7 @@ ALTER TABLE ONLY public.diagnose_prediction_natureelements ALTER COLUMN id SET D
 
 
 --
--- TOC entry 4750 (class 2604 OID 296893)
+-- TOC entry 4760 (class 2604 OID 296893)
 -- Name: diagnose_predictions id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -366,7 +453,23 @@ ALTER TABLE ONLY public.diagnose_predictions ALTER COLUMN id SET DEFAULT nextval
 
 
 --
--- TOC entry 4751 (class 2604 OID 296895)
+-- TOC entry 4763 (class 2604 OID 305004)
+-- Name: email_subscriptions id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.email_subscriptions ALTER COLUMN id SET DEFAULT nextval('public.email_subscriptions_id_seq'::regclass);
+
+
+--
+-- TOC entry 4765 (class 2604 OID 305021)
+-- Name: otps id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.otps ALTER COLUMN id SET DEFAULT nextval('public.otps_id_seq'::regclass);
+
+
+--
+-- TOC entry 4761 (class 2604 OID 296895)
 -- Name: users id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -374,7 +477,7 @@ ALTER TABLE ONLY public.users ALTER COLUMN id SET DEFAULT nextval('public.users_
 
 
 --
--- TOC entry 4925 (class 0 OID 296845)
+-- TOC entry 4946 (class 0 OID 296845)
 -- Dependencies: 218
 -- Data for Name: SequelizeMeta; Type: TABLE DATA; Schema: public; Owner: postgres
 --
@@ -384,60 +487,17 @@ COPY public."SequelizeMeta" (name) FROM stdin;
 
 
 --
--- TOC entry 4926 (class 0 OID 296848)
+-- TOC entry 4947 (class 0 OID 296848)
 -- Dependencies: 219
 -- Data for Name: diagnose_areas; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
 COPY public.diagnose_areas (id, name, latitude, longitude, area, area_type, province, district) FROM stdin;
-13	Bãi A	18.7651	105.7336	388	cobia	f851f9a1-330b-4d29-98ae-f4092e7e7f70	b246ae91-2e2e-4f29-8a6b-29be23b6e663
-14	Bãi A	13.7376	109.2051	1518	oyster	f851f9a1-330b-4d29-98ae-f4092e7e7f70	b246ae91-2e2e-4f29-8a6b-29be23b6e663
-15	Bãi 2	15.4506	108.6577	1776	cobia	f851f9a1-330b-4d29-98ae-f4092e7e7f70	b246ae91-2e2e-4f29-8a6b-29be23b6e663
-7	Rừng ngập mặn huyện Thái Thụy	20.57005905173713	106.5977587766479	999	oyster	f851f9a1-330b-4d29-98ae-f4092e7e7f70	b246ae91-2e2e-4f29-8a6b-29be23b6e663
-8	Bãi nuôi cá giò vịnh Cái Bèo	20.729263681499532	107.05760892842237	998	cobia	f851f9a1-330b-4d29-98ae-f4092e7e7f70	b246ae91-2e2e-4f29-8a6b-29be23b6e663
-12	Bãi C	18.0684	106.279	1360	cobia	f851f9a1-330b-4d29-98ae-f4092e7e7f70	b246ae91-2e2e-4f29-8a6b-29be23b6e663
-23	Bãi B	20.9684	107.0518	1810	oyster	f851f9a1-330b-4d29-98ae-f4092e7e7f70	b246ae91-2e2e-4f29-8a6b-29be23b6e663
-29	Bãi A	20.96849545001074	107.12143857848233	1146	cobia	f851f9a1-330b-4d29-98ae-f4092e7e7f70	b246ae91-2e2e-4f29-8a6b-29be23b6e663
-2	Bãi nuôi hàu A	20.79733427294842	106.89798933402452	1000	oyster	f851f9a1-330b-4d29-98ae-f4092e7e7f70	b246ae91-2e2e-4f29-8a6b-29be23b6e663
-3	Bãi nuôi hàu B	20.793249193451075	106.89032987374179	1000	oyster	f851f9a1-330b-4d29-98ae-f4092e7e7f70	b246ae91-2e2e-4f29-8a6b-29be23b6e663
-4	Bãi nuôi hàu C	20.793249246956822	106.88169403201009	1000	oyster	f851f9a1-330b-4d29-98ae-f4092e7e7f70	b246ae91-2e2e-4f29-8a6b-29be23b6e663
-5	Bãi nuôi hàu D	20.790221270695948	106.85532378657973	1000	oyster	f851f9a1-330b-4d29-98ae-f4092e7e7f70	b246ae91-2e2e-4f29-8a6b-29be23b6e663
-9	Bãi nuôi cá giò Cát Hải	20.81654250437656	106.86634647048794	1000	cobia	f851f9a1-330b-4d29-98ae-f4092e7e7f70	b246ae91-2e2e-4f29-8a6b-29be23b6e663
-1	Bãi nuôi hàu Cát Hảiaaaa	20.805679913425646	106.89990787550379	1000	oyster	f851f9a1-330b-4d29-98ae-f4092e7e7f70	b246ae91-2e2e-4f29-8a6b-29be23b6e663
-6	Rừng ngập mặn huyện Tiền Hải	20.23803735995301	106.56538722286332	1000	oyster	f851f9a1-330b-4d29-98ae-f4092e7e7f70	b246ae91-2e2e-4f29-8a6b-29be23b6e663
-16	Bãi C	20.6571	106.8273	1354	cobia	f851f9a1-330b-4d29-98ae-f4092e7e7f70	b246ae91-2e2e-4f29-8a6b-29be23b6e663
-17	Bãi D	20.6563	106.8255	1331	cobia	f851f9a1-330b-4d29-98ae-f4092e7e7f70	b246ae91-2e2e-4f29-8a6b-29be23b6e663
-18	Bãi A	21.0806	107.3602	414	oyster	f851f9a1-330b-4d29-98ae-f4092e7e7f70	b246ae91-2e2e-4f29-8a6b-29be23b6e663
-19	Bãi B	13.7147	109.2518	1861	oyster	f851f9a1-330b-4d29-98ae-f4092e7e7f70	b246ae91-2e2e-4f29-8a6b-29be23b6e663
-20	Bãi B	21.0682	107.3987	601	oyster	f851f9a1-330b-4d29-98ae-f4092e7e7f70	b246ae91-2e2e-4f29-8a6b-29be23b6e663
-21	Bãi Nam	20.8049	106.9524	1536	oyster	f851f9a1-330b-4d29-98ae-f4092e7e7f70	b246ae91-2e2e-4f29-8a6b-29be23b6e663
-22	Bãi 1	15.4087	108.6168	338	oyster	f851f9a1-330b-4d29-98ae-f4092e7e7f70	b246ae91-2e2e-4f29-8a6b-29be23b6e663
-25	Bãi 2	19.2548	106.9451	1566	cobia	f851f9a1-330b-4d29-98ae-f4092e7e7f70	b246ae91-2e2e-4f29-8a6b-29be23b6e663
-26	Bãi Cháy	20.7142	106.7963	764	cobia	f851f9a1-330b-4d29-98ae-f4092e7e7f70	b246ae91-2e2e-4f29-8a6b-29be23b6e663
-27	Bãi 2	15.3631	109.1591	583	cobia	f851f9a1-330b-4d29-98ae-f4092e7e7f70	b246ae91-2e2e-4f29-8a6b-29be23b6e663
-28	Bãi C	18.7763	105.7705	1929	oyster	f851f9a1-330b-4d29-98ae-f4092e7e7f70	b246ae91-2e2e-4f29-8a6b-29be23b6e663
-30	Bãi 1	15.4328	109.0651	1208	cobia	f851f9a1-330b-4d29-98ae-f4092e7e7f70	b246ae91-2e2e-4f29-8a6b-29be23b6e663
-31	Bãi 1	19.2825	105.6728	149	oyster	f851f9a1-330b-4d29-98ae-f4092e7e7f70	b246ae91-2e2e-4f29-8a6b-29be23b6e663
-32	Bãi 2	18.2495	106.0232	577	oyster	f851f9a1-330b-4d29-98ae-f4092e7e7f70	b246ae91-2e2e-4f29-8a6b-29be23b6e663
-33	Bãi B	18.0579	106.3011	1262	cobia	f851f9a1-330b-4d29-98ae-f4092e7e7f70	b246ae91-2e2e-4f29-8a6b-29be23b6e663
-34	Bãi A	18.0227	106.3015	890	cobia	f851f9a1-330b-4d29-98ae-f4092e7e7f70	b246ae91-2e2e-4f29-8a6b-29be23b6e663
-35	Bãi Đen	20.6934	106.7962	933	oyster	f851f9a1-330b-4d29-98ae-f4092e7e7f70	b246ae91-2e2e-4f29-8a6b-29be23b6e663
-36	Bãi B	18.7482	105.788	1318	cobia	f851f9a1-330b-4d29-98ae-f4092e7e7f70	b246ae91-2e2e-4f29-8a6b-29be23b6e663
-37	Bãi 1	18.2797	106.0346	601	oyster	f851f9a1-330b-4d29-98ae-f4092e7e7f70	b246ae91-2e2e-4f29-8a6b-29be23b6e663
-38	Bãi Cá Chớp	20.776	106.9555	1054	oyster	f851f9a1-330b-4d29-98ae-f4092e7e7f70	b246ae91-2e2e-4f29-8a6b-29be23b6e663
-40	Bãi Test	19.3039	105.763607	1000	oyster	f851f9a1-330b-4d29-98ae-f4092e7e7f70	b246ae91-2e2e-4f29-8a6b-29be23b6e663
-41	Rừng ngập mặn huyện Thái Thụy	20.57005905173713	106.5977587766479	1000	oyster	f851f9a1-330b-4d29-98ae-f4092e7e7f70	b246ae91-2e2e-4f29-8a6b-29be23b6e663
-42	Rừng ngập mặn huyện Thái Thụy	20.57005905173713	106.5977587766479	1000	oyster	f851f9a1-330b-4d29-98ae-f4092e7e7f70	b246ae91-2e2e-4f29-8a6b-29be23b6e663
-24	Bãi Yên Tử	20.7718	106.9055	257	oyster	fdca33cf-6b24-409b-9d07-46efb37051f5	991a48e3-03ec-4b2f-b2ea-509e5b119f36
-43	Rừng ngập mặn huyện Thái Thụy	20.57005905173713	106.5977587766479	1000	oyster	f851f9a1-330b-4d29-98ae-f4092e7e7f70	b246ae91-2e2e-4f29-8a6b-29be23b6e663
-44	Bãi nuôi cá giò vịnh Cái Bèo	20.729263681499532	107.05760892842237	1000	cobia	f851f9a1-330b-4d29-98ae-f4092e7e7f70	b246ae91-2e2e-4f29-8a6b-29be23b6e663
-45	Bãi nuôi cá giò vịnh Cái Bèo	20.729263681499532	107.05760892842237	1000	cobia	f851f9a1-330b-4d29-98ae-f4092e7e7f70	b246ae91-2e2e-4f29-8a6b-29be23b6e663
-46	Rừng ngập mặn huyện Thái Thụy	20.57005905173713	106.5977587766479	1000	oyster	f851f9a1-330b-4d29-98ae-f4092e7e7f70	b246ae91-2e2e-4f29-8a6b-29be23b6e663
 \.
 
 
 --
--- TOC entry 4928 (class 0 OID 296853)
+-- TOC entry 4949 (class 0 OID 296853)
 -- Dependencies: 221
 -- Data for Name: diagnose_naturalelements; Type: TABLE DATA; Schema: public; Owner: postgres
 --
@@ -461,453 +521,27 @@ COPY public.diagnose_naturalelements (id, name) FROM stdin;
 
 
 --
--- TOC entry 4930 (class 0 OID 296857)
+-- TOC entry 4951 (class 0 OID 296857)
 -- Dependencies: 223
 -- Data for Name: diagnose_prediction_natureelements; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
 COPY public.diagnose_prediction_natureelements (id, prediction_id, nature_element_id, value) FROM stdin;
-15	12	8	1.2
-16	12	9	90.5
-17	12	10	6.8
-18	12	11	25.4
-19	12	12	35.1
-20	12	13	120.5
-21	12	14	18.7
-22	12	15	45.2
-23	12	16	5.6
-24	12	17	12.3
-25	12	18	2.1
-26	12	19	5.8
-27	12	20	3.4
-28	12	21	22.6
-29	13	8	11
-30	13	9	10
-31	13	10	11
-32	13	11	11
-33	13	12	11
-34	13	13	11
-35	13	14	11
-36	13	15	11
-37	13	16	11
-38	13	17	11
-39	13	18	11
-40	13	19	11
-41	13	20	11
-42	13	21	11
-43	14	8	22
-44	14	9	111
-45	14	10	11
-46	14	11	34
-47	14	12	12
-48	14	13	22
-49	14	14	11
-50	14	15	23
-51	14	16	44
-52	14	17	55
-53	14	18	33
-54	14	19	66
-55	14	20	77
-56	14	21	11
-57	15	8	1.2
-58	15	9	97
-59	15	10	5
-60	15	11	25
-61	15	12	35
-62	15	13	0.1
-63	15	14	20
-64	15	15	150
-65	15	16	10
-66	15	17	5
-67	15	18	1
-68	15	19	10
-69	15	20	0.03
-70	15	21	25
-71	16	8	1.2
-72	16	9	97
-73	16	10	5
-74	16	11	25
-75	16	12	35
-76	16	13	0.1
-77	16	14	20
-78	16	15	150
-79	16	16	10
-80	16	17	5
-81	16	18	1
-82	16	19	10
-83	16	20	0.03
-84	16	21	25
-85	17	8	1
-86	17	9	1
-87	17	10	1
-88	17	11	1
-89	17	12	1
-90	17	13	1
-91	17	14	1
-92	17	15	1
-93	17	16	1
-94	17	17	1
-95	17	18	1
-96	17	19	1
-97	17	20	1
-98	17	21	1
-99	18	8	1.2
-100	18	9	97
-101	18	10	5
-102	18	11	25
-103	18	12	35
-104	18	13	0.1
-105	18	14	20
-106	18	15	150
-107	18	16	10
-108	18	17	5
-109	18	18	1
-110	18	19	10
-111	18	20	0.03
-112	18	21	25
-113	19	8	1.2
-114	19	9	97
-115	19	10	5
-116	19	11	25
-117	19	12	35
-118	19	13	0.1
-119	19	14	20
-120	19	15	150
-121	19	16	10
-122	19	17	5
-123	19	18	1
-124	19	19	10
-125	19	20	0.03
-126	19	21	25
-127	20	8	1.2
-128	20	9	97
-129	20	10	5
-130	20	11	25
-131	20	12	35
-132	20	13	0.1
-133	20	14	20
-134	20	15	150
-135	20	16	10
-136	20	17	5
-137	20	18	1
-138	20	19	10
-139	20	20	0.03
-140	20	21	25
-141	21	8	1
-142	21	9	1
-143	21	10	1
-144	21	11	1
-145	21	12	1
-146	21	13	1
-147	21	14	1
-148	21	15	1
-149	21	16	1
-150	21	17	1
-151	21	18	1
-152	21	19	1
-153	21	20	1
-154	21	21	1
-155	22	8	1.2
-156	22	9	97
-157	22	10	5
-158	22	11	25
-159	22	12	35
-160	22	13	0.1
-161	22	14	20
-162	22	15	150
-163	22	16	10
-164	22	17	5
-165	22	18	1
-166	22	19	10
-167	22	20	0.03
-168	22	21	25
-169	23	8	1.2
-170	23	9	97
-171	23	10	5
-172	23	11	25
-173	23	12	35
-174	23	13	0.1
-175	23	14	20
-176	23	15	150
-177	23	16	10
-178	23	17	5
-179	23	18	1
-180	23	19	10
-181	23	20	0.03
-182	23	21	25
-183	24	8	1.2
-184	24	9	97
-185	24	10	5
-186	24	11	25
-187	24	12	35
-188	24	13	0.1
-189	24	14	20
-190	24	15	150
-191	24	16	10
-192	24	17	5
-193	24	18	1
-194	24	19	10
-195	24	20	0.03
-196	24	21	25
-197	25	8	1
-198	25	9	1
-199	25	10	1
-200	25	11	1
-201	25	12	1
-202	25	13	1
-203	25	14	1
-204	25	15	1
-205	25	16	1
-206	25	17	1
-207	25	18	1
-208	25	19	1
-209	25	20	1
-210	25	21	1
-211	26	8	13
-212	26	9	13
-213	26	10	13
-214	26	11	13
-215	26	12	13
-216	26	13	14
-217	26	14	13
-218	26	15	15
-219	26	16	13
-220	26	17	13
-221	26	18	13
-222	26	19	111
-223	26	20	12
-224	26	21	123
-253	29	8	1
-254	29	9	1
-255	29	10	1
-256	29	11	1
-257	29	12	1
-258	29	13	1
-259	29	14	1
-260	29	15	1
-261	29	16	1
-262	29	17	1
-263	29	18	1
-264	29	19	1
-265	29	20	1
-266	29	21	1
-267	34	8	1
-268	34	9	1
-269	34	10	1
-270	34	11	1
-271	34	12	1
-272	34	13	1
-273	35	8	1
-274	35	9	1
-275	35	10	1
-276	35	11	1
-277	35	12	1
-278	35	13	1
-279	36	8	1
-280	36	9	1
-281	36	10	1
-282	36	11	1
-283	36	12	1
-284	36	13	1
-285	37	8	1
-286	37	9	1
-287	37	10	1
-288	37	11	1
-289	37	12	1
-290	37	13	1
-291	37	14	1
-292	37	15	1
-293	37	16	1
-294	37	17	1
-295	37	18	1
-296	37	19	1
-297	37	20	1
-298	38	8	1
-299	38	9	1
-300	38	10	1
-301	38	11	1
-302	38	12	1
-303	38	13	1
-304	38	14	1
-305	38	15	1
-306	38	16	1
-307	38	17	1
-308	38	18	1
-309	38	19	1
-310	38	20	1
-311	39	8	1
-312	39	9	1
-313	39	10	1
-314	39	11	1
-315	39	12	1
-316	39	13	1
-317	39	14	1
-318	39	15	1
-319	39	16	1
-320	39	17	1
-321	39	18	1
-322	39	19	1
-323	39	20	1
-324	40	8	1
-325	40	9	1
-326	40	10	1
-327	40	11	1
-328	40	12	1
-329	40	13	1
-330	40	14	1
-331	40	15	1
-332	40	16	1
-333	40	17	1
-334	40	18	1
-335	40	19	1
-336	40	20	1
-337	41	8	1
-338	41	9	1
-339	41	10	1
-340	41	11	1
-341	41	12	1
-342	41	13	1
-343	41	14	1
-344	41	15	1
-345	41	16	1
-346	41	17	1
-347	41	18	1
-348	41	19	1
-349	41	20	1
-350	41	21	1
-351	42	8	2
-352	42	9	2
-353	42	10	2
-354	42	11	2
-355	42	12	2
-356	42	13	2
-357	42	14	2
-358	42	15	2
-359	42	16	2
-360	42	17	2
-361	42	18	2
-362	42	19	2
-363	42	20	2
-364	42	21	1
-365	43	8	1
-366	43	9	1
-367	43	10	1
-368	43	11	1
-369	43	12	1
-370	43	13	1
-371	43	14	1
-372	43	15	1
-373	43	16	1
-374	43	17	1
-375	43	18	1
-376	43	19	1
-377	43	20	1
-378	43	21	1
-379	44	8	2
-380	44	9	2
-381	44	10	2
-382	44	11	2
-383	44	12	2
-384	44	13	2
-385	44	14	2
-386	44	15	2
-387	44	16	2
-388	44	17	2
-389	44	18	2
-390	44	19	2
-391	44	20	2
-392	44	21	1
-393	45	8	1
-394	45	9	1
-395	45	10	1
-396	45	11	1
-397	45	12	1
-398	45	13	1
-399	45	14	1
-400	45	15	1
-401	45	16	1
-402	45	17	1
-403	45	18	1
-404	45	19	1
-405	45	20	1
-406	45	21	1
-407	46	8	1
-408	46	9	1
-409	46	10	1
-410	46	11	1
-411	46	12	1
-412	46	13	1
-413	46	14	1
-414	46	15	1
-415	46	16	1
-416	46	17	1
-417	46	18	1
-418	46	19	1
-419	46	20	1
-420	46	21	1
-421	47	8	2
-422	47	9	2
-423	47	10	2
-424	47	11	2
-425	47	12	2
-426	47	13	2
-427	47	14	2
-428	47	15	2
-429	47	16	2
-430	47	17	2
-431	47	18	2
-432	47	19	2
-433	47	20	2
-434	47	21	1
 \.
 
 
 --
--- TOC entry 4932 (class 0 OID 296861)
+-- TOC entry 4953 (class 0 OID 296861)
 -- Dependencies: 225
 -- Data for Name: diagnose_predictions; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
 COPY public.diagnose_predictions (id, user_id, area_id, prediction_text, "createdAt", "updatedAt") FROM stdin;
-12	4	8	-1	2024-01-15 19:34:56+07	2024-01-15 19:34:56+07
-13	3	2	-1	2024-02-14 15:00:00+07	2024-02-14 15:00:00+07
-14	4	8	-1	2024-05-05 12:05:05+07	2024-05-05 12:05:05+07
-15	5	3	-1	2024-11-11 18:11:11+07	2024-11-11 18:11:11+07
-16	5	3	-1	2025-03-01 06:59:59+07	2025-03-01 06:59:59+07
-17	3	2	3	2025-03-10 19:34:56+07	2025-03-10 19:34:56+07
-18	5	3	-1	2025-03-15 15:05:12+07	2025-03-15 15:05:12+07
-19	5	3	-1	2025-03-26 02:15:33+07	2025-03-26 02:15:33+07
-20	4	3	-1	2025-03-31 04:45:12+07	2025-03-31 04:45:12+07
-21	3	3	0	2025-03-10 19:34:56+07	2025-03-10 19:34:56+07
-22	4	3	-1	2025-02-05 13:45:00+07	2025-02-05 13:45:00+07
-23	3	3	-1	2024-12-15 12:45:23+07	2024-12-15 12:45:23+07
-24	3	3	-1	2024-10-21 02:55:12+07	2024-10-21 02:55:12+07
-25	3	5	13	2024-12-01 06:01:01+07	2024-12-01 06:01:01+07
-26	3	4	-1	2025-03-15 15:05:12+07	2025-03-15 15:05:12+07
-29	4	7	-1	2025-04-27 15:13:19.799+07	2025-04-27 15:13:19.802+07
-30	4	7	-1	1970-01-01 07:00:00.001+07	2025-04-27 15:13:33.878+07
-31	4	7	-1	1970-01-01 07:00:00.001+07	2025-04-27 15:14:22.121+07
-32	4	7	-1	1970-01-01 07:00:00.001+07	2025-04-27 15:15:35.583+07
-33	4	7	-1	1970-01-01 07:00:00.001+07	2025-04-27 15:16:05.422+07
-34	4	7	-1	1970-01-01 07:00:00.001+07	2025-04-27 15:16:41.308+07
-35	4	7	-1	1970-01-01 07:00:00.001+07	2025-04-27 15:17:32.899+07
-36	4	7	-1	1970-01-01 07:00:00.001+07	2025-04-27 15:17:55.373+07
-37	4	7	-1	1970-01-01 07:00:00.001+07	2025-04-27 15:18:30.512+07
-38	4	7	-1	1970-01-01 07:00:00.001+07	2025-04-27 15:19:01.938+07
-39	4	7	-1	1970-01-01 07:00:00.001+07	2025-04-27 15:21:46.531+07
-40	4	7	-1	1970-01-01 07:00:00.001+07	2025-04-27 15:22:19.295+07
-41	4	7	3	1970-01-01 07:00:00.001+07	2025-04-27 15:23:06.424+07
-42	4	7	3	1970-01-01 07:00:00.001+07	2025-04-27 15:23:07.454+07
-43	4	28	-1	1970-01-01 07:00:00.001+07	2025-05-10 22:31:52.428+07
-44	4	28	-1	1970-01-01 07:00:00.001+07	2025-05-10 22:31:53.49+07
-45	4	28	-1	2025-05-10 22:32:52.295+07	2025-05-10 22:32:52.295+07
-46	4	13	-1	1970-01-01 07:00:00.001+07	2025-05-10 22:39:42.886+07
-47	4	13	-1	1970-01-01 07:00:00.001+07	2025-05-10 22:39:43.952+07
 \.
 
 
 --
--- TOC entry 4937 (class 0 OID 296951)
+-- TOC entry 4958 (class 0 OID 296951)
 -- Dependencies: 230
 -- Data for Name: districts; Type: TABLE DATA; Schema: public; Owner: postgres
 --
@@ -951,7 +585,27 @@ ab02b04a-b3fc-4e5f-94e8-f27de6016c50	Sơn Tịnh	15.2124	108.7422	2b708477-89e2-
 
 
 --
--- TOC entry 4936 (class 0 OID 296946)
+-- TOC entry 4960 (class 0 OID 305001)
+-- Dependencies: 232
+-- Data for Name: email_subscriptions; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.email_subscriptions (id, email, area_id, is_active, unsubscribe_token, created_at, updated_at) FROM stdin;
+\.
+
+
+--
+-- TOC entry 4962 (class 0 OID 305018)
+-- Dependencies: 234
+-- Data for Name: otps; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.otps (id, email, area_id, otp_code, expires_at, is_used, created_at, updated_at) FROM stdin;
+\.
+
+
+--
+-- TOC entry 4957 (class 0 OID 296946)
 -- Dependencies: 229
 -- Data for Name: provinces; Type: TABLE DATA; Schema: public; Owner: postgres
 --
@@ -971,7 +625,7 @@ fdca33cf-6b24-409b-9d07-46efb37051f5	Thừa Thiên Huế
 
 
 --
--- TOC entry 4934 (class 0 OID 296882)
+-- TOC entry 4955 (class 0 OID 296882)
 -- Dependencies: 227
 -- Data for Name: users; Type: TABLE DATA; Schema: public; Owner: postgres
 --
@@ -981,21 +635,25 @@ COPY public.users (id, username, password, role, email, address, phone, status, 
 3	administrator	$2b$10$8drYopD10fl9OyxWHCybXeDccD4h2sZa4v2sx5FmDP/RBLfYhv7LO	admin	administrator@gmail.com	82 Ngo Quyen 	0111111111	active	f851f9a1-330b-4d29-98ae-f4092e7e7f70	b246ae91-2e2e-4f29-8a6b-29be23b6e663
 4	manager1	$2b$10$yvYCht8x1OP3WQRUJlTgWOKoCU5rux22RaK9VwVChWJJzU7O9Rsk.	expert	manager@gmail.com	82 Ngo Quyen.St	0111111113	active	f851f9a1-330b-4d29-98ae-f4092e7e7f70	b246ae91-2e2e-4f29-8a6b-29be23b6e663
 6	nghiem1	$2b$10$0jw8EJoMR7wbpyYOeca16OLA9tx.ege84z/FCbLtqMr5zoHTGjDbi	manager	nghiem1@gmail.com	82 Ngo Quyen 	0111111114	active	f851f9a1-330b-4d29-98ae-f4092e7e7f70	\N
-8	nghiem2	$2b$10$8AffzeFiRtdFeml3W5RRyOPg4w4/2RgRdlbX56Yc9.Vop6fy16mGi	manager	nghiem2@gmail.com	82 Ngo Quyen 	0111111112	active	f851f9a1-330b-4d29-98ae-f4092e7e7f70	d97d8c8e-3e2a-49f3-bf03-8be56e7da5f4
+9	nghiem.eo.buaa.18	$2b$10$P3Kg43M2yHFe/0jJskylwubl73Br438uLHOWQpS3eDgDdUvYYT6JC	manager	nghiem.eo.buaa.18@gmail.com	82 Ngo Quyen.St	0354685515	active	f851f9a1-330b-4d29-98ae-f4092e7e7f70	\N
+10	adadad	$2b$10$wX1Iw9z1VDhlbfvFJMtrIel8iKOUha0BpVwHhTbAVe8Qi4JXbBk5.	manager	adadad@caa.com	ewqewqe	01212121	active	fb7e3341-2d65-44ba-868a-1c89c85e36a1	\N
+11	adadaad	$2b$10$iLrbOvKjNLNIAmTHI9DsFewPdmRPTT/WJgpl7hp9I.b3p2KSYbhk2	manager	adadaad@caa.com	ewqewqe2	012121211	active	fb7e3341-2d65-44ba-868a-1c89c85e36a1	e1de6f8d-e46b-4e7a-b0d3-09bb7ae0b7e9
+8	nghiem2	$2b$10$8AffzeFiRtdFeml3W5RRyOPg4w4/2RgRdlbX56Yc9.Vop6fy16mGi	manager	nghiem2@gmail.com	82 Ngo Quyen 	0111111112	active	f851f9a1-330b-4d29-98ae-f4092e7e7f70	40ebf59b-c17e-43a6-a2cd-1f8c77daae92
+12	abcdef	$2b$10$URhuGKaLJylqnzbWSfELJuPQ4jIeIXBqx4f0Us5ml/Ks9k0UuKFcO	manager	abcdef@gmail.com	82 Ngo Quyen	034343333	active	f851f9a1-330b-4d29-98ae-f4092e7e7f70	b246ae91-2e2e-4f29-8a6b-29be23b6e663
 \.
 
 
 --
--- TOC entry 4949 (class 0 OID 0)
+-- TOC entry 4976 (class 0 OID 0)
 -- Dependencies: 220
 -- Name: diagnose_areas_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.diagnose_areas_id_seq', 46, true);
+SELECT pg_catalog.setval('public.diagnose_areas_id_seq', 48, true);
 
 
 --
--- TOC entry 4950 (class 0 OID 0)
+-- TOC entry 4977 (class 0 OID 0)
 -- Dependencies: 222
 -- Name: diagnose_naturalelements_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
@@ -1004,7 +662,7 @@ SELECT pg_catalog.setval('public.diagnose_naturalelements_id_seq', 21, true);
 
 
 --
--- TOC entry 4951 (class 0 OID 0)
+-- TOC entry 4978 (class 0 OID 0)
 -- Dependencies: 224
 -- Name: diagnose_prediction_natureelements_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
@@ -1013,7 +671,7 @@ SELECT pg_catalog.setval('public.diagnose_prediction_natureelements_id_seq', 434
 
 
 --
--- TOC entry 4952 (class 0 OID 0)
+-- TOC entry 4979 (class 0 OID 0)
 -- Dependencies: 226
 -- Name: diagnose_predictions_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
@@ -1022,16 +680,34 @@ SELECT pg_catalog.setval('public.diagnose_predictions_id_seq', 47, true);
 
 
 --
--- TOC entry 4953 (class 0 OID 0)
+-- TOC entry 4980 (class 0 OID 0)
+-- Dependencies: 231
+-- Name: email_subscriptions_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.email_subscriptions_id_seq', 3, true);
+
+
+--
+-- TOC entry 4981 (class 0 OID 0)
+-- Dependencies: 233
+-- Name: otps_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.otps_id_seq', 1, true);
+
+
+--
+-- TOC entry 4982 (class 0 OID 0)
 -- Dependencies: 228
 -- Name: users_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.users_id_seq', 8, true);
+SELECT pg_catalog.setval('public.users_id_seq', 12, true);
 
 
 --
--- TOC entry 4756 (class 2606 OID 296897)
+-- TOC entry 4770 (class 2606 OID 296897)
 -- Name: SequelizeMeta SequelizeMeta_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1040,7 +716,7 @@ ALTER TABLE ONLY public."SequelizeMeta"
 
 
 --
--- TOC entry 4758 (class 2606 OID 296899)
+-- TOC entry 4772 (class 2606 OID 296899)
 -- Name: diagnose_areas diagnose_areas_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1049,7 +725,7 @@ ALTER TABLE ONLY public.diagnose_areas
 
 
 --
--- TOC entry 4760 (class 2606 OID 296901)
+-- TOC entry 4774 (class 2606 OID 296901)
 -- Name: diagnose_naturalelements diagnose_naturalelements_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1058,7 +734,7 @@ ALTER TABLE ONLY public.diagnose_naturalelements
 
 
 --
--- TOC entry 4762 (class 2606 OID 296903)
+-- TOC entry 4776 (class 2606 OID 296903)
 -- Name: diagnose_prediction_natureelements diagnose_prediction_natureelements_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1067,7 +743,7 @@ ALTER TABLE ONLY public.diagnose_prediction_natureelements
 
 
 --
--- TOC entry 4764 (class 2606 OID 296905)
+-- TOC entry 4778 (class 2606 OID 296905)
 -- Name: diagnose_predictions diagnose_predictions_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1076,7 +752,7 @@ ALTER TABLE ONLY public.diagnose_predictions
 
 
 --
--- TOC entry 4772 (class 2606 OID 296955)
+-- TOC entry 4786 (class 2606 OID 296955)
 -- Name: districts districts_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1085,7 +761,34 @@ ALTER TABLE ONLY public.districts
 
 
 --
--- TOC entry 4770 (class 2606 OID 296950)
+-- TOC entry 4788 (class 2606 OID 305009)
+-- Name: email_subscriptions email_subscriptions_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.email_subscriptions
+    ADD CONSTRAINT email_subscriptions_pkey PRIMARY KEY (id);
+
+
+--
+-- TOC entry 4790 (class 2606 OID 305011)
+-- Name: email_subscriptions email_subscriptions_unsubscribe_token_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.email_subscriptions
+    ADD CONSTRAINT email_subscriptions_unsubscribe_token_key UNIQUE (unsubscribe_token);
+
+
+--
+-- TOC entry 4792 (class 2606 OID 305024)
+-- Name: otps otps_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.otps
+    ADD CONSTRAINT otps_pkey PRIMARY KEY (id);
+
+
+--
+-- TOC entry 4784 (class 2606 OID 296950)
 -- Name: provinces provinces_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1094,7 +797,7 @@ ALTER TABLE ONLY public.provinces
 
 
 --
--- TOC entry 4766 (class 2606 OID 296913)
+-- TOC entry 4780 (class 2606 OID 296913)
 -- Name: users users_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1103,7 +806,7 @@ ALTER TABLE ONLY public.users
 
 
 --
--- TOC entry 4768 (class 2606 OID 296915)
+-- TOC entry 4782 (class 2606 OID 296915)
 -- Name: users users_username_key; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1112,7 +815,7 @@ ALTER TABLE ONLY public.users
 
 
 --
--- TOC entry 4775 (class 2606 OID 296921)
+-- TOC entry 4795 (class 2606 OID 296921)
 -- Name: diagnose_prediction_natureelements diagnose_prediction_natureelements_nature_element_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1121,7 +824,7 @@ ALTER TABLE ONLY public.diagnose_prediction_natureelements
 
 
 --
--- TOC entry 4776 (class 2606 OID 296926)
+-- TOC entry 4796 (class 2606 OID 296926)
 -- Name: diagnose_prediction_natureelements diagnose_prediction_natureelements_prediction_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1130,7 +833,7 @@ ALTER TABLE ONLY public.diagnose_prediction_natureelements
 
 
 --
--- TOC entry 4777 (class 2606 OID 296931)
+-- TOC entry 4797 (class 2606 OID 296931)
 -- Name: diagnose_predictions diagnose_predictions_area_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1139,7 +842,7 @@ ALTER TABLE ONLY public.diagnose_predictions
 
 
 --
--- TOC entry 4778 (class 2606 OID 296936)
+-- TOC entry 4798 (class 2606 OID 296936)
 -- Name: diagnose_predictions diagnose_predictions_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1148,7 +851,7 @@ ALTER TABLE ONLY public.diagnose_predictions
 
 
 --
--- TOC entry 4779 (class 2606 OID 296956)
+-- TOC entry 4799 (class 2606 OID 296956)
 -- Name: districts districts_province_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1157,7 +860,16 @@ ALTER TABLE ONLY public.districts
 
 
 --
--- TOC entry 4773 (class 2606 OID 296966)
+-- TOC entry 4800 (class 2606 OID 305012)
+-- Name: email_subscriptions email_subscriptions_area_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.email_subscriptions
+    ADD CONSTRAINT email_subscriptions_area_id_fkey FOREIGN KEY (area_id) REFERENCES public.diagnose_areas(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- TOC entry 4793 (class 2606 OID 296966)
 -- Name: diagnose_areas fk_district; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1166,7 +878,7 @@ ALTER TABLE ONLY public.diagnose_areas
 
 
 --
--- TOC entry 4774 (class 2606 OID 296961)
+-- TOC entry 4794 (class 2606 OID 296961)
 -- Name: diagnose_areas fk_province; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1174,7 +886,7 @@ ALTER TABLE ONLY public.diagnose_areas
     ADD CONSTRAINT fk_province FOREIGN KEY (province) REFERENCES public.provinces(id);
 
 
--- Completed on 2025-06-08 11:26:23
+-- Completed on 2025-08-02 20:01:55
 
 --
 -- PostgreSQL database dump complete
