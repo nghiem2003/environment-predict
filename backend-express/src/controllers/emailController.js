@@ -449,54 +449,50 @@ exports.sendPredictionNotification = async (areaId, predictionData) => {
 
     // Email content
     const subject = `Dự đoán mới cho khu vực: ${area.name}`;
-    const htmlContent = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #2c3e50;">Thông báo dự đoán mới</h2>
-        <p>Xin chào,</p>
-        <p>Có dự đoán mới cho khu vực <strong>${area.name}</strong> (${
-      area.area_type
-    }).</p>
-        <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0;">
-          <h3 style="margin-top: 0;">Thông tin dự đoán:</h3>
-          <p><strong>Khu vực:</strong> ${area.name}</p>
-          <p><strong>Loại khu vực:</strong> ${area.area_type}</p>
-          <p><strong>Kết quả dự đoán:</strong> ${
-            predictionData.result || 'Đang xử lý'
-          }</p>
-          <p><strong>Thời gian:</strong> ${new Date().toLocaleString(
-            'vi-VN'
-          )}</p>
-        </div>
-        <div style="text-align: center; margin: 30px 0;">
-          <a href="${baseUrl}/prediction/${areaId}" 
-             style="background-color: #3498db; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
-            Xem chi tiết dự đoán
-          </a>
-        </div>
-        <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
-        <p style="font-size: 12px; color: #666;">
-          Bạn nhận được email này vì đã đăng ký nhận thông báo dự đoán cho khu vực ${
-            area.name
-          }.<br>
-          <a href="${baseUrl}/unsubscribe?token=${
-      subscription.unsubscribe_token
-    }" 
-             style="color: #e74c3c;">Hủy đăng ký nhận thông báo</a>
-        </p>
-        <p>Trân trọng,<br>Hệ thống Dự đoán Nuôi trồng Thủy sản</p>
-      </div>
-    `;
 
     // Send emails to all subscribers
     const emailPromises = subscriptions.map((subscription) => {
+      const htmlContent = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #2c3e50;">Thông báo dự đoán mới</h2>
+          <p>Xin chào,</p>
+          <p>Có dự đoán mới cho khu vực <strong>${area.name}</strong> (${
+        area.area_type
+      }).</p>
+          <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0;">
+            <h3 style="margin-top: 0;">Thông tin dự đoán:</h3>
+            <p><strong>Khu vực:</strong> ${area.name}</p>
+            <p><strong>Loại khu vực:</strong> ${area.area_type}</p>
+            <p><strong>Kết quả dự đoán:</strong> ${
+              predictionData.result || 'Đang xử lý'
+            }</p>
+            <p><strong>Thời gian:</strong> ${new Date().toLocaleString(
+              'vi-VN'
+            )}</p>
+          </div>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${baseUrl}/prediction/${areaId}" 
+               style="background-color: #3498db; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
+              Xem chi tiết dự đoán
+            </a>
+          </div>
+          <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+          <p style="font-size: 12px; color: #666;">
+            Bạn nhận được email này vì đã đăng ký nhận thông báo dự đoán cho khu vực ${
+              area.name
+            }.<br>
+            <a href="${baseUrl}/unsubscribe/${subscription.unsubscribe_token}" 
+               style="color: #e74c3c;">Hủy đăng ký nhận thông báo</a>
+          </p>
+          <p>Trân trọng,<br>Hệ thống Dự đoán Nuôi trồng Thủy sản</p>
+        </div>
+      `;
+
       const mailOptions = {
         from: process.env.EMAIL_USER || 'your-email@gmail.com',
         to: subscription.email,
         subject: subject,
-        html: htmlContent.replace(
-          '${subscription.unsubscribe_token}',
-          subscription.unsubscribe_token
-        ),
+        html: htmlContent,
       };
 
       return transporter.sendMail(mailOptions);
