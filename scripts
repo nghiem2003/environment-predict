@@ -11,11 +11,13 @@ rsync -avz --progress \
   --exclude='build/' \
   ./ tbu@14.253.124.159:/home/tbu/complete/
 b2: clear các volume, container, iamge cũ
-    sudo docker ls
+    sudo docker  container ls
     sudo docker volume ls
-    sudo docker images ls
-    sudo docker rm container_name (kiểm tra xem có container nào có tên là complete không)
-    sudo docker volume rm volume_name (kiểm tra xem có volume nào có tên là complete không)
-    sudo docker rmi image_name (kiểm tra xem có image nào có tên là complete không)
+    sudo docker image ls
+    sudo docker stop container_name (kiểm tra xem có container nào có tên bắt đầu là complete không)
+    sudo docker rm container_name (kiểm tra xem có container nào có tên bắt đầu là complete không)
+    sudo docker volume rm volume_name (kiểm tra xem có volume nào có tên bắt đầu là complete không)
+    sudo docker rmi image_name (kiểm tra xem có image nào có tên bắt đầu là complete không)
 b3:
   docker compose up -d
+
