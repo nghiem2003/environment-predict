@@ -1,0 +1,16 @@
+b1: chuyển file
+rsync -avz --progress \
+  --exclude='node_modules/' \
+  --exclude='.vscode/' \
+  --exclude='.git/' \
+  --exclude='.gitignore' \
+  --exclude='backend-flask/' \
+  --exclude='*.log' \
+  --exclude='.env*' \
+  --exclude='dist/' \
+  --exclude='build/' \
+  ./ tbu@14.253.124.159:/home/tbu/complete/
+b2: clear các volume, container, iamge cũ
+
+b3:
+  docker compose up -d
