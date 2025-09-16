@@ -66,13 +66,28 @@ const UserList = () => {
       });
       console.log(response.data.data);
       setUsers(response.data.data || []);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+    }
+  };
+
+  // Fetch provinces and districts independently so selects are always available
+  const fetchRegions = async () => {
+    try {
       const regionResponse = await axios.get('/api/express/areas/provinces');
       setRegionList(regionResponse.data);
+    } catch (error) {
+      console.error('Error fetching provinces:', error);
+    }
+  };
+
+  const fetchDistricts = async () => {
+    try {
       const districtResponse = await axios.get('/api/express/areas/districts');
       setDistrictList(districtResponse.data);
       setFilteredDistrictList(districtResponse.data);
     } catch (error) {
-      console.error('Error fetching users:', error);
+      console.error('Error fetching districts:', error);
     }
   };
 
@@ -94,6 +109,14 @@ const UserList = () => {
       fetchUsers();
     }
   }, [authData, searchTerm]);
+
+  // Always load provinces/districts once token is available
+  useEffect(() => {
+    if (token) {
+      fetchRegions();
+      fetchDistricts();
+    }
+  }, [token]);
 
   const getRegionNameFromId = (id) => {
     const region = regionList.find((r) => r.id === id);
@@ -274,6 +297,28 @@ const UserList = () => {
       role: '',
     });
     form.resetFields();
+
+    // Pre-fill province/district for managers (especially district managers)
+    try {
+      if (token) {
+        const decoded = jwtDecode(token);
+        if (decoded.role === 'manager') {
+          if (decoded.province) {
+            form.setFieldsValue({ province: decoded.province });
+            // Filter district options to selected province
+            setFilteredDistrictList(
+              districtList.filter((d) => d.province_id === decoded.province)
+            );
+          }
+          if (decoded.district) {
+            form.setFieldsValue({ district: decoded.district });
+          }
+        }
+      }
+    } catch (e) {
+      // ignore decode issues
+    }
+
     setIsUserPopupOpen(true);
   };
 
@@ -303,6 +348,7 @@ const UserList = () => {
         <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
           <Col xs={24} sm={16} md={8}>
             <Input
+              size='large'
               placeholder={t('userList.searchPlaceholder')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -313,6 +359,7 @@ const UserList = () => {
             <Button
               type="primary"
               icon={<UserAddOutlined />}
+              size='large'
               block
               onClick={handleAddUser}
             >
@@ -320,8 +367,9 @@ const UserList = () => {
             </Button>
           </Col>
         </Row>
-        <div style={{ overflowX: 'auto', width: '100%' }}>
+        <div style={{ overflowX: 'auto', width: '100%', position: 'relative' }}>
           <Table
+            className="user-actions-table"
             columns={[
               {
                 title: t('userList.fullName'),
@@ -382,15 +430,19 @@ const UserList = () => {
               {
                 title: t('userList.actions'),
                 key: 'actions',
-                width: 200,
-                fixed: 'right',
+                width: 300,
+                align: 'center',
+                onCell: () => ({
+                  style: { whiteSpace: 'nowrap' },
+                }),
                 render: (_, user) => (
-                  <Space size="middle">
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'nowrap', alignItems: 'center', justifyContent: 'center' }}>
                     <Button
                       type="primary"
                       size="small"
                       icon={<EditOutlined />}
                       onClick={() => handleModifyUser(user)}
+                      style={{ whiteSpace: 'nowrap' }}
                     >
                       {t('userList.editUser')}
                     </Button>
@@ -403,9 +455,9 @@ const UserList = () => {
                           icon={<StopOutlined />}
                           onClick={() => {
                             setSelectedUser(user);
-
                             setIsConfirmPopupOpen(true);
                           }}
+                          style={{ whiteSpace: 'nowrap' }}
                         >
                           {t('userList.deactivateUser')}
                         </Button>
@@ -415,6 +467,7 @@ const UserList = () => {
                           size="small"
                           icon={<CheckOutlined />}
                           onClick={() => handleActivateUser(user.id)}
+                          style={{ whiteSpace: 'nowrap' }}
                         >
                           {t('userList.activateUser')}
                         </Button>
@@ -425,17 +478,18 @@ const UserList = () => {
                         <Button
                           danger
                           type="default"
-                          size="middle"
+                          size="small"
                           icon={<DeleteOutlined />}
                           onClick={() => {
                             setSelectedUser(user);
                             setIsDeleteConfirmOpen(true);
                           }}
+                          style={{ whiteSpace: 'nowrap' }}
                         >
                           {t('userList.deleteUser') || 'Xoá'}
                         </Button>
                       )}
-                  </Space>
+                  </div>
                 ),
               },
             ]}
@@ -453,7 +507,7 @@ const UserList = () => {
             total={users.length}
             pageSize={10}
             showSizeChanger={false}
-            // onChange={...} // Add pagination logic if needed
+          // onChange={...} // Add pagination logic if needed
           />
         </div>
         {/* Modals for add/edit, confirm, etc. can be refactored similarly if needed */}
@@ -471,6 +525,8 @@ const UserList = () => {
           setSelectedRegionName('');
         }}
         footer={null}
+        styles={{ body: { maxHeight: '70vh', overflowY: 'auto' } }}
+        width={700}
       >
         <Form
           form={form}
@@ -484,7 +540,7 @@ const UserList = () => {
             label={t('userList.fullName')}
             rules={[{ required: true, message: t('userList.required') }]}
           >
-            <Input />
+            <Input size='large' />
           </Form.Item>
 
           <Form.Item
@@ -495,7 +551,7 @@ const UserList = () => {
               { type: 'email', message: t('userList.invalidEmail') },
             ]}
           >
-            <Input />
+            <Input size='large' />
           </Form.Item>
 
           <Form.Item
@@ -503,7 +559,7 @@ const UserList = () => {
             label={t('userList.address')}
             rules={[{ required: true, message: t('userList.required') }]}
           >
-            <Input />
+            <Input size='large' />
           </Form.Item>
 
           <Form.Item
@@ -511,32 +567,43 @@ const UserList = () => {
             label={t('userList.phone')}
             rules={[{ required: true, message: t('userList.required') }]}
           >
-            <Input />
+            <Input width={50} size='large' />
           </Form.Item>
 
-          {/* Show role select for admin when editing or always when creating */}
-          {(!userPopupData.id || jwtDecode(token).role === 'admin') && (
+          {/* Show role select for admin or manager when editing or always when creating */}
+          {(!userPopupData.id || ['admin', 'manager'].includes(jwtDecode(token).role)) && (
             <Form.Item
               name="role"
               label={t('userList.role')}
               rules={[{ required: true, message: t('userList.required') }]}
             >
               <Select
+                disabled={jwtDecode(token).role === 'manager'}
+                size='large'
                 placeholder={t('userList.selectRole')}
-                options={[
-                  {
-                    value: 'expert',
-                    label: t('userList.expert'),
-                  },
-                  {
-                    value: 'province_manager',
-                    label: t('userList.provinceManager'),
-                  },
-                  {
-                    value: 'district_manager',
-                    label: t('userList.districtManager'),
-                  },
-                ]}
+                options={
+                  jwtDecode(token).role === 'manager'
+                    ? [
+                      {
+                        value: 'district_manager',
+                        label: t('userList.districtManager'),
+                      },
+                    ]
+                    : [
+                      {
+                        value: 'expert',
+                        label: t('userList.expert'),
+                      },
+                      {
+                        value: 'province_manager',
+                        label: t('userList.provinceManager'),
+                      },
+                      {
+                        value: 'district_manager',
+                        label: t('userList.districtManager'),
+                      },
+                    ]
+                }
                 onChange={(value) => {
                   // Province and district logic when changing role
                   if (value === 'province_manager') {
@@ -548,6 +615,13 @@ const UserList = () => {
                       district: undefined,
                       role: 'province_manager',
                     });
+                    // If current user is manager, lock province to their own
+                    try {
+                      const decoded = jwtDecode(token);
+                      if (decoded.role === 'manager' && decoded.province) {
+                        form.setFieldsValue({ province: decoded.province });
+                      }
+                    } catch (e) { }
                   } else if (value === 'district_manager') {
                     // Must have province, district
                     if (!form.getFieldValue('province')) {
@@ -561,6 +635,13 @@ const UserList = () => {
                     form.setFieldsValue({
                       role: 'district_manager',
                     });
+                    // If current user is manager, lock province to their own
+                    try {
+                      const decoded = jwtDecode(token);
+                      if (decoded.role === 'manager' && decoded.province) {
+                        form.setFieldsValue({ province: decoded.province });
+                      }
+                    } catch (e) { }
                   } else {
                     // expert: must have province, district
                     if (!form.getFieldValue('province')) {
@@ -595,6 +676,7 @@ const UserList = () => {
             rules={[{ required: true, message: t('userList.required') }]}
           >
             <Select
+              size='large'
               disabled={jwtDecode(token).role === 'manager'}
               showSearch
               placeholder={t('userList.selectProvince')}
@@ -633,6 +715,7 @@ const UserList = () => {
             dependencies={['role', 'province']}
           >
             <Select
+              size='large'
               showSearch
               placeholder={t('userList.selectDistrict')}
               optionFilterProp="children"
@@ -658,7 +741,7 @@ const UserList = () => {
               label={t('userList.password')}
               rules={[{ required: true, message: t('userList.required') }]}
             >
-              <Input.Password />
+              <Input.Password size='large' />
             </Form.Item>
           )}
 

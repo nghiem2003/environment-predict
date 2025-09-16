@@ -84,7 +84,7 @@ const Dashboard = () => {
     }
   }, [currentPage]);
 
-  useEffect(() => {}, [predictionList]);
+  useEffect(() => { }, [predictionList]);
 
   const handleViewDetails = (predictionId) => {
     setSelectedPredictionId(predictionId);
@@ -119,7 +119,7 @@ const Dashboard = () => {
         }}
         bodyStyle={{ padding: 24 }}
       >
-        <Title level={3} style={{ marginBottom: 24 }}>
+        <Title level={3} style={{ marginBottom: 24, zIndex: 1000 }}>
           {t('dashboard.title')}
         </Title>
         <Table
@@ -132,12 +132,12 @@ const Dashboard = () => {
             },
             ...(userRole === 'admin' || userRole === 'manager'
               ? [
-                  {
-                    title: t('dashboard.creator'),
-                    dataIndex: ['User', 'username'],
-                    key: 'creator',
-                  },
-                ]
+                {
+                  title: t('dashboard.creator'),
+                  dataIndex: ['User', 'username'],
+                  key: 'creator',
+                },
+              ]
               : []),
             {
               title: t('dashboard.area'),
@@ -146,19 +146,19 @@ const Dashboard = () => {
             },
             ...(userRole === 'admin' || userRole === 'manager'
               ? [
-                  {
-                    title: t('dashboard.province'),
-                    dataIndex: ['Area', 'Province', 'name'],
-                    key: 'province',
-                    render: (text) => text || '-',
-                  },
-                  {
-                    title: t('dashboard.district'),
-                    dataIndex: ['Area', 'District', 'name'],
-                    key: 'district',
-                    render: (text) => text || '-',
-                  },
-                ]
+                {
+                  title: t('dashboard.province'),
+                  dataIndex: ['Area', 'Province', 'name'],
+                  key: 'province',
+                  render: (text) => text || '-',
+                },
+                {
+                  title: t('dashboard.district'),
+                  dataIndex: ['Area', 'District', 'name'],
+                  key: 'district',
+                  render: (text) => text || '-',
+                },
+              ]
               : []),
             {
               title: t('dashboard.actions'),
@@ -197,7 +197,7 @@ const Dashboard = () => {
           footer={null}
           width={800}
           style={{ maxWidth: '100vw' }}
-          bodyStyle={{ overflowX: 'auto' }}
+          styles={{ body: { maxHeight: '70vh', overflowY: 'auto', overflowX: 'auto' } }}
         >
           <div style={{ minWidth: '750px' }}>
             <PredictionDetails predictionId={selectedPredictionId} />

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Form, Input, Button, Typography, message } from 'antd';
-import { UserOutlined, LockOutlined } from '@ant-design/icons';
+import { UserOutlined, LockOutlined, ArrowLeftOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
@@ -42,7 +42,7 @@ const Login = () => {
   const handleLogin = async () => {
     try {
       console.log(password, email);
-      
+
       const response = await axios.post('/api/express/auth/login', {
         email,
         password,
@@ -86,6 +86,14 @@ const Login = () => {
           boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
         }}
       >
+        <Button
+          type="text"
+          icon={<ArrowLeftOutlined />}
+          onClick={() => navigate(-1)}
+          style={{ marginBottom: 8, paddingLeft: 0 }}
+        >
+          {t('common.back') || 'Trở về'}
+        </Button>
         <Title level={2} style={{ textAlign: 'center', marginBottom: 24 }}>
           {t('login.title')}
         </Title>

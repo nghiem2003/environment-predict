@@ -86,6 +86,10 @@
     "email": "Email",
     "password": "Mật khẩu",
     "button": "Đăng nhập",
+    "invalidEmail": "Email không hợp lệ",
+    "emailRequired": "Vui lòng nhập email",
+    "passwordRequired": "Vui lòng nhập mật khẩu",
+    "error": "Đăng nhập thất bại. Vui lòng thử lại.",
     "invalidCredentials": "Sai tên đăng nhập hoặc mật khẩu. Vui lòng thử lại.",
     "invalidToken": "Token không hợp lệ. Vui lòng đăng nhập lại."
   },
@@ -178,6 +182,9 @@
     "email_list": "Đăng ký Email",
     "create_prediction": "Tạo dự đoán",
     "logout": "Đăng xuất"
+  },
+  "common": {
+    "back": "Trở về"
   },
   "logout": {
     "success": "Đăng xuất thành công"

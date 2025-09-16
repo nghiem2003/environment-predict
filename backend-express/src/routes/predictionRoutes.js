@@ -14,7 +14,7 @@ const router = express.Router();
 router.post(
   '/batch',
   authenticate,
-  authorize(['expert']),
+  authorize(['expert', 'manager']),
   createBatchPrediction
 );
 

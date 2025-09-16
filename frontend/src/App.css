@@ -61,3 +61,17 @@
 ul {
   border: none !important;
 }
+input {
+  max-width: 100% !important;
+  margin: auto !important;
+}
+
+input[type='text'] {
+  width: 100% !important;
+  margin: 0px !important;
+  max-width: 100% !important;
+  margin: auto !important;
+  box-shadow: none !important;
+}
+
+

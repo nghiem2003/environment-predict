@@ -4,8 +4,8 @@ import axios from 'axios';
 const getToken = () => {
   return localStorage.getItem('token'); // Adjust the key name based on your token storage
 };
-  console.log(process.env.REACT_APP_API_URL); // Debugging line to check the API URL
-  
+console.log(process.env.REACT_APP_API_URL); // Debugging line to check the API URL
+
 
 // Create an Axios instance with default headers
 const axiosInstance = axios.create({
@@ -30,3 +30,4 @@ axiosInstance.interceptors.request.use(
 );
 
 export default axiosInstance;
+// 

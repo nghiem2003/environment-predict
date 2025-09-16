@@ -15,15 +15,20 @@ const { authenticate, authorize } = require('../middlewares/authMiddleware');
 const router = express.Router();
 
 router.post('/login', login);
-router.post('/update/:id', authenticate, updateUserById);
+router.post('/update/:id', authenticate, authorize(['admin', 'manager']), updateUserById);
 router.get('/', authenticate, authorize(['admin', 'manager']), getAllUser);
 router.patch(
   '/deactivate/:id',
   authenticate,
-  authorize(['admin']),
+  authorize(['admin', 'manager']),
   deactiveUser
 );
-router.patch('/activate/:id', authenticate, authorize(['admin']), activateUser);
+router.patch(
+  '/activate/:id',
+  authenticate,
+  authorize(['admin', 'manager']),
+  activateUser
+);
 router.post(
   '/create-user',
   authenticate,

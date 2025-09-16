@@ -135,12 +135,12 @@ const App = () => {
         },
         ...(!jwtDecode(token).district
           ? [
-              {
-                key: '/user-list',
-                icon: <UserOutlined />,
-                label: t('sidebar.user_list'),
-              },
-            ]
+            {
+              key: '/user-list',
+              icon: <UserOutlined />,
+              label: t('sidebar.user_list'),
+            },
+          ]
           : []),
       ];
     }
@@ -174,7 +174,7 @@ const App = () => {
         width: '100%',
       }}
     >
-      <Row align="middle" justify="start" style={{ height: '100%' }}>
+      <Row align="large" justify="start" style={{ height: '100%' }}>
         <Col
           style={{
             display: 'flex',
@@ -290,6 +290,13 @@ const App = () => {
     }
   }, [screens.xs]);
 
+  useEffect(() => {
+    // Auto-expand sidebar when leaving mobile
+    if (!screens.xs && isSidebarVisible) {
+      setCollapsed(false);
+    }
+  }, [screens.xs, isSidebarVisible]);
+
   // Inject custom CSS for Ant Design dropdown menu width
   useEffect(() => {
     const style = document.createElement('style');
@@ -300,6 +307,7 @@ const App = () => {
         max-width: 260px;
         white-space: nowrap;
       }
+      .custom-sider .ant-layout-sider-children { display: flex; flex-direction: column; height: 100%; overflow-y: auto; }
     `;
     document.head.appendChild(style);
     return () => {
@@ -379,8 +387,8 @@ const App = () => {
             ? screens.xs
               ? 0
               : collapsed
-              ? 80
-              : '15vw'
+                ? 80
+                : '15vw'
             : 0,
           transition: 'all 0.2s',
         }}
@@ -432,8 +440,8 @@ const App = () => {
               element={
                 <ProtectedRoute roles={['admin', 'manager']}>
                   {token &&
-                  jwtDecode(token).role === 'manager' &&
-                  jwtDecode(token).district ? (
+                    jwtDecode(token).role === 'manager' &&
+                    jwtDecode(token).district ? (
                     <Navigate to="/" replace />
                   ) : (
                     <UserList />

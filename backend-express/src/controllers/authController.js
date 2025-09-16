@@ -128,6 +128,16 @@ exports.deactiveUser = async (req, res) => {
     const user = await User.findOne({ where: { id: id } });
     if (!user) return res.status(404).json({ error: 'User not found' });
 
+    // Managers can only deactivate users within their province and not admins
+    if (req.user.role === 'manager') {
+      if (user.role === 'admin') {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+      if (user.province !== req.user.province) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+    }
+
     user.status = 'inactive';
     await user.save();
     return res
@@ -148,6 +158,16 @@ exports.activateUser = async (req, res) => {
     const { id } = req.params;
     const user = await User.findOne({ where: { id } });
     if (!user) return res.status(404).json({ error: 'User not found' });
+
+    // Managers can only activate users within their province and not admins
+    if (req.user.role === 'manager') {
+      if (user.role === 'admin') {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+      if (user.province !== req.user.province) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+    }
     user.status = 'active';
     await user.save();
     return res
@@ -179,6 +199,20 @@ exports.updateUserById = async (req, res) => {
     } = req.body;
     const user = await User.findOne({ where: { id: id } });
     if (!user) res.status(404).json({ message: 'User not found' });
+
+    // Managers can only update users within their province and cannot modify admins
+    if (req.user.role === 'manager') {
+      if (user.role === 'admin') {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+      if (user.province !== req.user.province) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+      // Prevent managers from changing a user's province outside their own
+      if (province && province !== req.user.province) {
+        return res.status(400).json({ error: 'Managers cannot assign other provinces' });
+      }
+    }
 
     user.username = name ? name : user.username;
     user.address = address ? address : user.address;

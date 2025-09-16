@@ -15,6 +15,9 @@ import {
   Tag,
   Typography,
   Tooltip,
+  Grid,
+  Row,
+  Col,
 } from 'antd';
 import {
   MailOutlined,
@@ -33,6 +36,8 @@ const { Option } = Select;
 
 const EmailList = () => {
   const { t } = useTranslation();
+  const { useBreakpoint } = Grid;
+  const screens = useBreakpoint();
   const [form] = Form.useForm();
   const [subscriptions, setSubscriptions] = useState([]);
   const [areas, setAreas] = useState([]);
@@ -193,7 +198,7 @@ const EmailList = () => {
             <Button
               type="primary"
               icon={<EditOutlined />}
-              size="small"
+              size="middle"
               onClick={() => handleEdit(record)}
             />
           </Tooltip>
@@ -201,7 +206,7 @@ const EmailList = () => {
             <Button
               type="default"
               icon={<SendOutlined />}
-              size="small"
+              size="middle"
               onClick={() => handleTestEmail(record.email)}
             />
           </Tooltip>
@@ -217,7 +222,7 @@ const EmailList = () => {
                 type="primary"
                 danger
                 icon={<DeleteOutlined />}
-                size="small"
+                size="middle"
               />
             </Tooltip>
           </Popconfirm>
@@ -226,36 +231,55 @@ const EmailList = () => {
     },
   ];
 
+  // Inject lightweight CSS to stack size changer below the pager
+  React.useEffect(() => {
+    const style = document.createElement('style');
+    style.innerHTML = `
+      .email-pagination { display: flex; justify-content: center; align-items: center; margin-top: 12px; }
+      .email-pagination .ant-pagination-item,
+      .email-pagination .ant-pagination-prev,
+      .email-pagination .ant-pagination-next { margin-top: 20px; }
+      .email-pagination .ant-pagination-options { order: 2; width: 100%; display: flex; justify-content: center; margin-top: 12px; }
+    `;
+    document.head.appendChild(style);
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, []);
+
   return (
-    <div style={{ padding: '24px' }}>
+    <Space direction="vertical" style={{ width: '100%', padding: 24 }}>
       <Card>
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: '16px',
-          }}
-        >
-          <Title level={3}>
-            <MailOutlined /> {t('email.title')}
-          </Title>
-          <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
-            {t('email.addSubscription')}
-          </Button>
-        </div>
+        <Row align="middle" justify="space-between" gutter={[12, 12]} style={{ marginBottom: 16 }}>
+          <Col flex="auto">
+            <Title level={3} style={{ margin: 0 }}>
+              <MailOutlined /> {t('email.title')}
+            </Title>
+          </Col>
+          <Col>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={handleAdd}
+              block={screens.xs}
+            >
+              {t('email.addSubscription')}
+            </Button>
+          </Col>
+        </Row>
 
         <Table
           columns={columns}
           dataSource={subscriptions}
           rowKey="id"
           loading={loading}
+          style={{ width: '100%' }}
+          scroll={{ x: 'max-content' }}
           pagination={{
+            className: 'email-pagination',
+            position: ['bottomCenter'],
             ...pagination,
-            showSizeChanger: true,
             showQuickJumper: true,
-            showTotal: (total, range) =>
-              `${range[0]}-${range[1]} của ${total} đăng ký`,
             onChange: (page, pageSize) => fetchSubscriptions(page, pageSize),
           }}
         />
@@ -273,6 +297,8 @@ const EmailList = () => {
         }}
         footer={null}
         width={600}
+        style={{ maxWidth: '100vw' }}
+        styles={{ body: { maxHeight: '70vh', overflowY: 'auto' } }}
       >
         <Form form={form} layout="vertical" onFinish={handleSubmit}>
           <Form.Item
@@ -333,7 +359,7 @@ const EmailList = () => {
           </Form.Item>
         </Form>
       </Modal>
-    </div>
+    </Space>
   );
 };
 

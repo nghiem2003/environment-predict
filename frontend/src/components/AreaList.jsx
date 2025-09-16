@@ -272,21 +272,21 @@ const AreaList = () => {
       render: (_, area) => (
         <Space>
           <Button
-            size="small"
+            size="middle"
             icon={<EditOutlined />}
             onClick={() => handleUpdate(area.id)}
           >
             {t('area_list.popup.update')}
           </Button>
           <Button
-            size="small"
+            size="middle"
             icon={<MailOutlined />}
             onClick={() => navigate(`/email-subscription/${area.id}`)}
           >
             {t('userList.email')}
           </Button>
           <Button
-            size="small"
+            size="middle"
             danger
             icon={<DeleteOutlined />}
             onClick={() => {
@@ -318,16 +318,19 @@ const AreaList = () => {
         <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
           <Col xs={24} sm={12} md={6}>
             <Input
+              size="large"
               placeholder={
                 t('area_list.search_placeholder') || 'Tìm kiếm theo tên khu vực'
               }
               value={searchTerm}
               onChange={handleSearch}
+              type="text"
               allowClear
             />
           </Col>
-          <Col xs={24} sm={12} md={3}>
+          <Col xs={24} sm={12} md={2}>
             <Select
+              size="large"
               value={areaType}
               onChange={setAreaType}
               style={{ width: '100%' }}
@@ -341,6 +344,7 @@ const AreaList = () => {
           </Col>
           <Col xs={24} sm={12} md={3}>
             <Input
+              size="large"
               placeholder={t('area_list.filter.min_lat') || 'Vĩ độ tối thiểu'}
               value={latRange.min}
               onChange={(e) =>
@@ -351,6 +355,7 @@ const AreaList = () => {
           </Col>
           <Col xs={24} sm={12} md={3}>
             <Input
+              size="large"
               placeholder={t('area_list.filter.max_lat') || 'Vĩ độ tối đa'}
               value={latRange.max}
               onChange={(e) =>
@@ -361,6 +366,7 @@ const AreaList = () => {
           </Col>
           <Col xs={24} sm={12} md={3}>
             <Input
+              size="large"
               placeholder={
                 t('area_list.filter.min_long') || 'Kinh độ tối thiểu'
               }
@@ -373,6 +379,7 @@ const AreaList = () => {
           </Col>
           <Col xs={24} sm={12} md={3}>
             <Input
+              size="large"
               placeholder={t('area_list.filter.max_long') || 'Kinh độ tối đa'}
               value={longRange.max}
               onChange={(e) =>
@@ -381,9 +388,10 @@ const AreaList = () => {
               type="number"
             />
           </Col>
-          <Col xs={24} sm={12} md={3}>
+          <Col xs={24} sm={12} md={4}>
             <Button
               type="primary"
+              size="large"
               block
               icon={<PlusOutlined />}
               onClick={() => {
@@ -396,6 +404,10 @@ const AreaList = () => {
                       district.province_id === jwtDecode(token).province
                   )
                 );
+                // If manager has a district in token, prefill it
+                if (jwtDecode(token).district) {
+                  form.setFieldValue('district', jwtDecode(token).district);
+                }
                 setIsPopupOpen(true);
               }}
             >
@@ -434,6 +446,7 @@ const AreaList = () => {
             form.resetFields();
           }}
           footer={null}
+          styles={{ body: { maxHeight: '70vh', overflowY: 'auto' } }}
           width={700}
         >
           <Row gutter={[24, 24]}>

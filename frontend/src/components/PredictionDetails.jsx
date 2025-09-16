@@ -68,7 +68,7 @@ const PredictionDetails = ({ predictionId }) => {
       <Descriptions
         bordered
         column={1}
-        size="middle"
+        size="large"
         style={{ marginBottom: 24 }}
       >
         <Descriptions.Item label={t('predictionDetails.id')}>
@@ -95,7 +95,7 @@ const PredictionDetails = ({ predictionId }) => {
         dataSource={prediction.NaturalElements}
         rowKey="id"
         pagination={false}
-        size="middle"
+        size="large"
         bordered
       />
     </div>
