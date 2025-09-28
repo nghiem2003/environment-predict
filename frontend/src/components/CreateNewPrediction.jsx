@@ -14,6 +14,7 @@ import {
   Card,
   Typography,
   message,
+  Spin,
 } from 'antd';
 import { UploadOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
@@ -50,6 +51,9 @@ const CreateNewPrediction = () => {
   const [activeTab, setActiveTab] = useState('single');
   const [singleForm] = Form.useForm();
   const [batchForm] = Form.useForm();
+  const [isBatchLoading, setIsBatchLoading] = useState(false);
+  const [isSingleLoading, setIsSingleLoading] = useState(false);
+  const [batchProgress, setBatchProgress] = useState(0);
 
   // Predefined list of models
   const allModels = [
@@ -115,10 +119,14 @@ const CreateNewPrediction = () => {
   };
 
   const handleSubmitBatch = async (values) => {
+    setIsBatchLoading(true);
+    setBatchProgress(0);
     try {
       const { userIdForm, areaId, modelName } = values;
       if (!areaId || !modelName)
         throw new Error('You need to select area and model');
+
+      setBatchProgress(20);
       const headers = csvElements[0].split(',');
       const data = csvElements.slice(1).map((line) => {
         const parts = line.split(',');
@@ -131,22 +139,30 @@ const CreateNewPrediction = () => {
         return obj;
       });
       console.log('data', data);
+
+      setBatchProgress(50);
       await axios.post('api/express/predictions/batch', {
         userId,
         areaId,
         modelName,
         data,
       });
-      message.success('Created predictions from file successful!');
+
+      setBatchProgress(100);
+      message.success(`Đã tạo thành công ${data.length} dự đoán từ file CSV!`);
       batchForm.resetFields();
       setCsvElements([]);
       navigate('/dashboard');
     } catch (error) {
       message.error(`${error}`);
+    } finally {
+      setIsBatchLoading(false);
+      setBatchProgress(0);
     }
   };
 
   const handleSubmitSingle = async (values) => {
+    setIsSingleLoading(true);
     try {
       const { userIdForm, areaId, modelName, ...inputValues } = values;
       await axios.post('api/express/predictions', {
@@ -160,6 +176,8 @@ const CreateNewPrediction = () => {
       navigate('/dashboard');
     } catch (e) {
       message.error(`${e}`);
+    } finally {
+      setIsSingleLoading(false);
     }
   };
 
@@ -172,187 +190,211 @@ const CreateNewPrediction = () => {
       <Title level={3} style={{ textAlign: 'center', marginBottom: 24 }}>
         {t('prediction_form.title')}
       </Title>
-      <Tabs
-        activeKey={activeTab}
-        onChange={setActiveTab}
-        items={[
-          {
-            key: 'single',
-            label: t('prediction_form.tabs.single'),
-            children: (
-              <Form
-                form={singleForm}
-                layout="vertical"
-                onFinish={handleSubmitSingle}
-                initialValues={{ userId }}
-              >
-                <Form.Item label="User ID" name="userIdForm">
-                  <Input type="number" value={userId} readOnly disabled />
-                </Form.Item>
-                <Form.Item
-                  label={t('prediction_form.select_area')}
-                  name="areaId"
-                  rules={[
-                    {
-                      required: true,
-                      message: t('prediction_form.select_area'),
-                    },
-                  ]}
+      <Spin
+        spinning={isBatchLoading || isSingleLoading}
+        tip={
+          isBatchLoading
+            ? `Đang xử lý dự đoán hàng loạt... ${batchProgress}%`
+            : 'Đang tạo dự đoán...'
+        }
+      >
+        <Tabs
+          activeKey={activeTab}
+          onChange={setActiveTab}
+          disabled={isBatchLoading || isSingleLoading}
+          items={[
+            {
+              key: 'single',
+              label: t('prediction_form.tabs.single'),
+              children: (
+                <Form
+                  form={singleForm}
+                  layout="vertical"
+                  onFinish={handleSubmitSingle}
+                  initialValues={{ userId }}
+                  disabled={isSingleLoading}
                 >
-                  <Select
-                    placeholder={t('prediction_form.select_area')}
-                    onChange={(val) => {
-                      setSelectedAreaId(val);
-                      const area = areas.find((a) => a.id === +val);
-                      setAreaType(area?.area_type);
-                      singleForm.setFieldsValue({ modelName: undefined });
-                    }}
+                  <Form.Item name="userIdForm" style={{ display: 'none' }}>
+                    <Input type="hidden" value={userId} />
+                  </Form.Item>
+                  <Form.Item
+                    label={t('prediction_form.select_area')}
+                    name="areaId"
+                    rules={[
+                      {
+                        required: true,
+                        message: t('prediction_form.select_area'),
+                      },
+                    ]}
                   >
-                    {areas.map((area) => (
-                      <Option key={area.id} value={area.id}>
-                        {area.name}
-                      </Option>
-                    ))}
-                  </Select>
-                </Form.Item>
-                <Form.Item
-                  label={t('prediction_form.select_model')}
-                  name="modelName"
-                  rules={[
-                    {
-                      required: true,
-                      message: t('prediction_form.select_model'),
-                    },
-                  ]}
-                >
-                  <Select
-                    placeholder={t('prediction_form.select_model')}
-                    disabled={!areaType}
-                  >
-                    {filteredModels.map((model) => (
-                      <Option key={model.value} value={model.value}>
-                        {model.label}
-                      </Option>
-                    ))}
-                  </Select>
-                </Form.Item>
-                {areaType &&
-                  Object.keys(inputs).map((key) => (
-                    <Form.Item
-                      key={key}
-                      label={key}
-                      name={key}
-                      rules={[
-                        { required: true, message: `${key} is required` },
-                      ]}
+                    <Select
+                      placeholder={t('prediction_form.select_area')}
+                      onChange={(val) => {
+                        setSelectedAreaId(val);
+                        const area = areas.find((a) => a.id === +val);
+                        setAreaType(area?.area_type);
+                        singleForm.setFieldsValue({ modelName: undefined });
+                      }}
                     >
-                      <Input type="number" />
-                    </Form.Item>
-                  ))}
-                <Form.Item>
-                  <Button type="primary" htmlType="submit" block>
-                    {t('prediction_form.submit_single')}
-                  </Button>
-                </Form.Item>
-              </Form>
-            ),
-          },
-          {
-            key: 'batch',
-            label: t('prediction_form.tabs.batch'),
-            children: (
-              <Form
-                form={batchForm}
-                layout="vertical"
-                onFinish={handleSubmitBatch}
-                initialValues={{ userId }}
-              >
-                <Form.Item label="User ID" name="userIdForm">
-                  <Input type="number" value={userId} readOnly disabled />
-                </Form.Item>
-                <Form.Item
-                  label={t('prediction_form.select_area')}
-                  name="areaId"
-                  rules={[
-                    {
-                      required: true,
-                      message: t('prediction_form.select_area'),
-                    },
-                  ]}
-                >
-                  <Select
-                    placeholder={t('prediction_form.select_area')}
-                    onChange={(val) => {
-                      setSelectedAreaId(val);
-                      const area = areas.find((a) => a.id === +val);
-                      setAreaType(area?.area_type);
-                      batchForm.setFieldsValue({ modelName: undefined });
-                    }}
+                      {areas.map((area) => (
+                        <Option key={area.id} value={area.id}>
+                          {area.name}
+                        </Option>
+                      ))}
+                    </Select>
+                  </Form.Item>
+                  <Form.Item
+                    label={t('prediction_form.select_model')}
+                    name="modelName"
+                    rules={[
+                      {
+                        required: true,
+                        message: t('prediction_form.select_model'),
+                      },
+                    ]}
                   >
-                    {areas.map((area) => (
-                      <Option key={area.id} value={area.id}>
-                        {area.name}
-                      </Option>
+                    <Select
+                      placeholder={t('prediction_form.select_model')}
+                      disabled={!areaType}
+                    >
+                      {filteredModels.map((model) => (
+                        <Option key={model.value} value={model.value}>
+                          {model.label}
+                        </Option>
+                      ))}
+                    </Select>
+                  </Form.Item>
+                  {areaType &&
+                    Object.keys(inputs).map((key) => (
+                      <Form.Item
+                        key={key}
+                        label={key}
+                        name={key}
+                        rules={[
+                          { required: true, message: `${key} is required` },
+                        ]}
+                      >
+                        <Input type="number" />
+                      </Form.Item>
                     ))}
-                  </Select>
-                </Form.Item>
-                <Form.Item
-                  label={t('prediction_form.select_model')}
-                  name="modelName"
-                  rules={[
-                    {
-                      required: true,
-                      message: t('prediction_form.select_model'),
-                    },
-                  ]}
-                >
-                  <Select
-                    placeholder={t('prediction_form.select_model')}
-                    disabled={!areaType}
-                  >
-                    {filteredModels.map((model) => (
-                      <Option key={model.value} value={model.value}>
-                        {model.label}
-                      </Option>
-                    ))}
-                  </Select>
-                </Form.Item>
-                <Form.Item
-                  label={t('prediction_form.upload_csv') || 'Upload CSV'}
-                  name="csv"
-                  rules={[
-                    {
-                      required: true,
-                      message: t('prediction_form.upload_csv') || 'Upload CSV',
-                    },
-                  ]}
-                >
-                  <Upload
-                    accept=".csv"
-                    beforeUpload={() => false}
-                    onChange={handleCSVUpload}
-                    maxCount={1}
-                    fileList={
-                      csvElements.length > 0
-                        ? [{ name: 'data.csv', status: 'done' }]
-                        : []
-                    }
-                  >
-                    <Button icon={<UploadOutlined />}>
-                      {t('prediction_form.upload_csv') || 'Upload CSV'}
+                  <Form.Item>
+                    <Button
+                      type="primary"
+                      htmlType="submit"
+                      block
+                      loading={isSingleLoading}
+                      disabled={isSingleLoading}
+                    >
+                      {isSingleLoading ? 'Đang tạo dự đoán...' : t('prediction_form.submit_single')}
                     </Button>
-                  </Upload>
-                </Form.Item>
-                <Form.Item>
-                  <Button type="primary" htmlType="submit" block>
-                    {t('prediction_form.submit_batch')}
-                  </Button>
-                </Form.Item>
-              </Form>
-            ),
-          },
-        ]}
-      />
+                  </Form.Item>
+                </Form>
+              ),
+            },
+            {
+              key: 'batch',
+              label: t('prediction_form.tabs.batch'),
+              children: (
+                <Form
+                  form={batchForm}
+                  layout="vertical"
+                  onFinish={handleSubmitBatch}
+                  initialValues={{ userId }}
+                  disabled={isBatchLoading}
+                >
+                  <Form.Item name="userIdForm" style={{ display: 'none' }}>
+                    <Input type="hidden" value={userId} />
+                  </Form.Item>
+                  <Form.Item
+                    label={t('prediction_form.select_area')}
+                    name="areaId"
+                    rules={[
+                      {
+                        required: true,
+                        message: t('prediction_form.select_area'),
+                      },
+                    ]}
+                  >
+                    <Select
+                      placeholder={t('prediction_form.select_area')}
+                      onChange={(val) => {
+                        setSelectedAreaId(val);
+                        const area = areas.find((a) => a.id === +val);
+                        setAreaType(area?.area_type);
+                        batchForm.setFieldsValue({ modelName: undefined });
+                      }}
+                    >
+                      {areas.map((area) => (
+                        <Option key={area.id} value={area.id}>
+                          {area.name}
+                        </Option>
+                      ))}
+                    </Select>
+                  </Form.Item>
+                  <Form.Item
+                    label={t('prediction_form.select_model')}
+                    name="modelName"
+                    rules={[
+                      {
+                        required: true,
+                        message: t('prediction_form.select_model'),
+                      },
+                    ]}
+                  >
+                    <Select
+                      placeholder={t('prediction_form.select_model')}
+                      disabled={!areaType}
+                    >
+                      {filteredModels.map((model) => (
+                        <Option key={model.value} value={model.value}>
+                          {model.label}
+                        </Option>
+                      ))}
+                    </Select>
+                  </Form.Item>
+                  <Form.Item
+                    label={t('prediction_form.upload_csv') || 'Upload CSV'}
+                    name="csv"
+                    rules={[
+                      {
+                        required: true,
+                        message: t('prediction_form.upload_csv') || 'Upload CSV',
+                      },
+                    ]}
+                  >
+                    <Upload
+                      accept=".csv"
+                      beforeUpload={() => false}
+                      onChange={handleCSVUpload}
+                      maxCount={1}
+                      fileList={
+                        csvElements.length > 0
+                          ? [{ name: 'data.csv', status: 'done' }]
+                          : []
+                      }
+                    >
+                      <Button icon={<UploadOutlined />}>
+                        {t('prediction_form.upload_csv') || 'Upload CSV'}
+                      </Button>
+                    </Upload>
+                  </Form.Item>
+                  <Form.Item>
+                    <Button
+                      type="primary"
+                      htmlType="submit"
+                      block
+                      loading={isBatchLoading}
+                      disabled={isBatchLoading}
+                    >
+                      {isBatchLoading ? 'Đang tạo dự đoán hàng loạt...' : t('prediction_form.submit_batch')}
+                    </Button>
+                  </Form.Item>
+                </Form>
+              ),
+            },
+          ]}
+        />
+      </Spin>
     </Card>
   );
 };

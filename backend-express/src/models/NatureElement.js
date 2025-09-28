@@ -6,6 +6,9 @@ const NaturalElement = sequelize.define(
   {
     id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
     name: { type: DataTypes.STRING, allowNull: false },
+    description: { type: DataTypes.TEXT, allowNull: true },
+    unit: { type: DataTypes.STRING, allowNull: true },
+    category: { type: DataTypes.STRING, allowNull: true },
   },
   { timestamps: false, tableName: 'diagnose_naturalelements' }
 );

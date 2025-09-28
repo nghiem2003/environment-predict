@@ -10,6 +10,8 @@ const {
   testEmail,
   sendOTP,
   verifyOTPAndSubscribe,
+  sendManualNotification,
+  getAreaSubscribers,
 } = require('../controllers/emailController');
 
 const router = express.Router();
@@ -55,5 +57,11 @@ router.delete(
 
 // Test email sending (admin only)
 router.post('/test', authenticate, authorize(['admin']), testEmail);
+
+// Get email subscribers for an area (admin and manager)
+router.get('/area/:areaId/subscribers', authenticate, authorize(['admin', 'manager']), getAreaSubscribers);
+
+// Send manual notification (admin and manager)
+router.post('/send-manual', authenticate, authorize(['admin', 'manager']), sendManualNotification);
 
 module.exports = router;

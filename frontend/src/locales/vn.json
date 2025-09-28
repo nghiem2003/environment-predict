@@ -123,7 +123,8 @@
     "select_model": "Chọn Mô Hình",
     "submit_single": "Gửi Dự Đoán Cá Nhân",
     "submit_batch": "Gửi Dự Đoán Hàng Loạt",
-    "loading_areas": "Đang tải khu vực..."
+    "loading_areas": "Đang tải khu vực...",
+    "upload_csv": "Tải lên CSV"
   },
   "area_list": {
     "title": "Danh sách khu vực",

@@ -10,13 +10,13 @@ const Prediction = sequelize.define(
     prediction_text: { type: DataTypes.TEXT, allowNull: false },
     createdAt: {
       type: DataTypes.DATE,
-      defaultValue: Sequelize.NOW,
       allowNull: false,
+      defaultValue: DataTypes.NOW,
     },
     updatedAt: {
       type: DataTypes.DATE,
-      defaultValue: Sequelize.NOW, 
       allowNull: false,
+      defaultValue: DataTypes.NOW,
     }
   },
   { timestamps: true, tableName: 'diagnose_predictions' }
@@ -33,8 +33,8 @@ Prediction.associate = (models) => {
     otherKey: 'nature_element_id',
   });
   Prediction.belongsTo(models.User, {
-  foreignKey: 'user_id',
-});
+    foreignKey: 'user_id',
+  });
 };
 
 module.exports = Prediction;

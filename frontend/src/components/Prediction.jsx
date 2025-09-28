@@ -177,6 +177,25 @@ const Prediction = () => {
               {predictionInfo.text}
             </Text>
           </Space>
+          {prediction.createdAt && (
+            <div style={{
+              textAlign: 'center',
+              padding: '12px 16px',
+              backgroundColor: '#f5f5f5',
+              borderRadius: '6px',
+              border: '1px solid #d9d9d9'
+            }}>
+              <Text type="secondary" style={{ fontSize: '14px' }}>
+                📅 Ngày tạo: {new Date(prediction.createdAt).toLocaleString('vi-VN', {
+                  year: 'numeric',
+                  month: '2-digit',
+                  day: '2-digit',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })}
+              </Text>
+            </div>
+          )}
           <MapView
             latitude={area?.latitude}
             longitude={area?.longitude}

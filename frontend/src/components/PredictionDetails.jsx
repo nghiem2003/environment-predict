@@ -86,6 +86,16 @@ const PredictionDetails = ({ predictionId }) => {
         <Descriptions.Item label={t('predictionDetails.expertId')}>
           {prediction.user_id}
         </Descriptions.Item>
+        <Descriptions.Item label="Ngày tạo">
+          {prediction.createdAt ? new Date(prediction.createdAt).toLocaleString('vi-VN', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+          }) : '-'}
+        </Descriptions.Item>
       </Descriptions>
       <Title level={4} style={{ marginBottom: 12 }}>
         {t('predictionDetails.naturalElements')}

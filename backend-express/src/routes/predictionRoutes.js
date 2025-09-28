@@ -6,6 +6,8 @@ const {
   getPredictionsByUser,
   getAllPredictionsWithFilters,
   createBatchPrediction,
+  getPredictionChartData,
+  getAllPredictionChartData,
 } = require('../controllers/predictionController');
 const { authenticate, authorize } = require('../middlewares/authMiddleware');
 
@@ -44,6 +46,18 @@ router.get(
   authenticate,
   authorize(['expert']),
   getPredictionsByUser
+);
+
+// Get prediction data for charts
+router.get(
+  '/chart/data',
+  getPredictionChartData
+);
+
+// Get all prediction data for charts (all areas)
+router.get(
+  '/chart/all',
+  getAllPredictionChartData
 );
 
 module.exports = router;

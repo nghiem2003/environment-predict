@@ -448,39 +448,44 @@ exports.sendPredictionNotification = async (areaId, predictionData) => {
     const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
 
     // Email content
-    const subject = `Dự đoán mới cho khu vực: ${area.name}`;
+    const isBatchPrediction = predictionData.batchPrediction;
+    const subject = isBatchPrediction
+      ? `Dự đoán hàng loạt mới cho khu vực: ${area.name}`
+      : `Dự đoán mới cho khu vực: ${area.name}`;
 
     // Send emails to all subscribers
     const emailPromises = subscriptions.map((subscription) => {
       const htmlContent = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #2c3e50;">Thông báo dự đoán mới</h2>
+        <h2 style="color: #2c3e50;">${isBatchPrediction ? 'Thông báo dự đoán hàng loạt mới' : 'Thông báo dự đoán mới'}</h2>
         <p>Xin chào,</p>
-        <p>Có dự đoán mới cho khu vực <strong>${area.name}</strong> (${
-        area.area_type
-      }).</p>
+        <p>${isBatchPrediction ? 'Có dự đoán hàng loạt mới' : 'Có dự đoán mới'} cho khu vực <strong>${area.name}</strong> (${area.area_type
+        }).</p>
         <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0;">
           <h3 style="margin-top: 0;">Thông tin dự đoán:</h3>
           <p><strong>Khu vực:</strong> ${area.name}</p>
           <p><strong>Loại khu vực:</strong> ${area.area_type}</p>
-          <p><strong>Kết quả dự đoán:</strong> ${
-            predictionData.result || 'Đang xử lý'
-          }</p>
+          ${isBatchPrediction ? `
+          <p><strong>Số lượng dự đoán:</strong> ${predictionData.predictionCount || 'Nhiều'}</p>
+          <p><strong>Mô tả:</strong> ${predictionData.result || 'Đã tạo dự đoán hàng loạt'}</p>
+          ` : `
+          <p><strong>Kết quả dự đoán:</strong> ${predictionData.result || 'Đang xử lý'
+        }</p>
+          `}
           <p><strong>Thời gian:</strong> ${new Date().toLocaleString(
-            'vi-VN'
-          )}</p>
+          'vi-VN'
+        )}</p>
         </div>
         <div style="text-align: center; margin: 30px 0;">
           <a href="${baseUrl}/prediction/${areaId}" 
              style="background-color: #3498db; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
-            Xem chi tiết dự đoán
+            ${isBatchPrediction ? 'Xem danh sách dự đoán' : 'Xem chi tiết dự đoán'}
           </a>
         </div>
         <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
         <p style="font-size: 12px; color: #666;">
-          Bạn nhận được email này vì đã đăng ký nhận thông báo dự đoán cho khu vực ${
-            area.name
-          }.<br>
+          Bạn nhận được email này vì đã đăng ký nhận thông báo dự đoán cho khu vực ${area.name
+        }.<br>
             <a href="${baseUrl}/unsubscribe/${subscription.unsubscribe_token}" 
              style="color: #e74c3c;">Hủy đăng ký nhận thông báo</a>
         </p>
@@ -580,6 +585,162 @@ exports.testEmail = async (req, res) => {
     res.status(200).json({ message: 'Test email sent successfully' });
   } catch (error) {
     console.error('Test Email Error:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Send manual notification to selected users
+exports.sendManualNotification = async (req, res) => {
+  try {
+    const { areaId, predictionData, selectedEmails, sendToAll = false } = req.body;
+
+    if (!areaId || !predictionData) {
+      return res.status(400).json({
+        error: 'areaId and predictionData are required'
+      });
+    }
+
+    // Get area information
+    const area = await Area.findByPk(areaId);
+    if (!area) {
+      return res.status(404).json({ error: 'Area not found' });
+    }
+
+    let targetEmails = [];
+
+    if (sendToAll) {
+      // Get all active email subscriptions for this area
+      const subscriptions = await Email.findAll({
+        where: {
+          area_id: areaId,
+          is_active: true,
+        },
+        attributes: ['email']
+      });
+      targetEmails = subscriptions.map(sub => sub.email);
+    } else if (selectedEmails && selectedEmails.length > 0) {
+      // Use selected emails
+      targetEmails = selectedEmails;
+    } else {
+      return res.status(400).json({
+        error: 'Either sendToAll must be true or selectedEmails must be provided'
+      });
+    }
+
+    if (targetEmails.length === 0) {
+      return res.status(404).json({
+        error: 'No email subscriptions found for this area'
+      });
+    }
+
+    const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const subject = `Thông báo dự đoán thủ công - Khu vực: ${area.name}`;
+
+    // Send emails to all target users
+    const emailPromises = targetEmails.map((email) => {
+      const htmlContent = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #2c3e50;">Thông báo dự đoán thủ công</h2>
+          <p>Xin chào,</p>
+          <p>Bạn nhận được thông báo dự đoán thủ công cho khu vực <strong>${area.name}</strong> (${area.area_type
+        }).</p>
+          <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0;">
+            <h3 style="margin-top: 0;">Thông tin dự đoán:</h3>
+            <p><strong>Khu vực:</strong> ${area.name}</p>
+            <p><strong>Loại khu vực:</strong> ${area.area_type}</p>
+            <p><strong>Kết quả dự đoán:</strong> ${predictionData.result || 'Thông tin dự đoán'
+        }</p>
+            <p><strong>Mô hình sử dụng:</strong> ${predictionData.model || 'Không xác định'
+        }</p>
+            <p><strong>Thời gian:</strong> ${new Date().toLocaleString(
+          'vi-VN'
+        )}</p>
+          </div>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${baseUrl}/prediction/${areaId}" 
+               style="background-color: #3498db; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
+              Xem chi tiết dự đoán
+            </a>
+          </div>
+          <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+          <p style="font-size: 12px; color: #666;">
+            Đây là thông báo dự đoán thủ công được gửi bởi quản trị viên.<br>
+            <a href="${baseUrl}/unsubscribe" 
+               style="color: #e74c3c;">Hủy đăng ký nhận thông báo</a>
+          </p>
+          <p>Trân trọng,<br>Hệ thống Dự đoán Nuôi trồng Thủy sản</p>
+        </div>
+      `;
+
+      const mailOptions = {
+        from: process.env.EMAIL_USER || 'your-email@gmail.com',
+        to: email,
+        subject: subject,
+        html: htmlContent,
+      };
+
+      return transporter.sendMail(mailOptions);
+    });
+
+    await Promise.all(emailPromises);
+
+    res.status(200).json({
+      success: true,
+      message: `Đã gửi thông báo thành công đến ${targetEmails.length} người dùng`,
+      sentTo: targetEmails,
+      area: {
+        id: area.id,
+        name: area.name,
+        area_type: area.area_type
+      }
+    });
+
+  } catch (error) {
+    console.error('Send Manual Notification Error:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Get email subscribers for an area
+exports.getAreaSubscribers = async (req, res) => {
+  try {
+    const { areaId } = req.params;
+
+    if (!areaId) {
+      return res.status(400).json({ error: 'areaId is required' });
+    }
+
+    // Get area information
+    const area = await Area.findByPk(areaId);
+    if (!area) {
+      return res.status(404).json({ error: 'Area not found' });
+    }
+
+    // Get all active email subscriptions for this area
+    const subscriptions = await Email.findAll({
+      where: {
+        area_id: areaId,
+        is_active: true,
+      },
+      attributes: ['id', 'email', 'created_at'],
+      order: [['created_at', 'DESC']]
+    });
+
+    res.status(200).json({
+      success: true,
+      data: {
+        area: {
+          id: area.id,
+          name: area.name,
+          area_type: area.area_type
+        },
+        subscribers: subscriptions,
+        total: subscriptions.length
+      }
+    });
+
+  } catch (error) {
+    console.error('Get Area Subscribers Error:', error);
     res.status(500).json({ error: error.message });
   }
 };

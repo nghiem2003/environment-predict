@@ -123,7 +123,8 @@
     "select_model": "Select Model",
     "submit_single": "Submit Single Prediction",
     "submit_batch": "Submit Batch Prediction",
-    "loading_areas": "Loading areas..."
+    "loading_areas": "Loading areas...",
+    "upload_csv":"Upload CSV"
   },
   "area_list": {
     "title": "Area List",
