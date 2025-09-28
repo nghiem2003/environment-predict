@@ -150,6 +150,7 @@
       "actions": "Hành động",
       "no_data": "Không tìm thấy khu vực nào"
     },
+    "noAreas": "Không có khu vực nào",
     "pagination": {
       "previous": "Trước",
       "next": "Tiếp",
@@ -185,7 +186,15 @@
     "logout": "Đăng xuất"
   },
   "common": {
-    "back": "Trở về"
+    "back": "Trở về",
+    "filter": "Bộ lọc",
+    "oyster": "Hàu",
+    "cobia": "Cá bớp",
+    "viewDetails": "Xem chi tiết",
+    "subscribeEmail": "Đăng ký email thông báo",
+    "showDetails": "Hiện chi tiết",
+    "hideDetails": "Ẩn chi tiết",
+    "close": "Đóng"
   },
   "logout": {
     "success": "Đăng xuất thành công"
@@ -249,5 +258,27 @@
     "cancel": "Hủy",
     "yes": "Có",
     "no": "Không"
+  }
+  ,
+  "detail": {
+    "infoTitle": "Thông tin chi tiết",
+    "typeLabel": "Loại",
+    "predictionLabel": "Dự báo",
+    "noPrediction": "Chưa có dự báo",
+    "good": "Tốt",
+    "average": "Trung bình",
+    "poor": "Kém",
+    "predictionDate": "Ngày dự báo",
+    "location": "Vị trí",
+    "area": "Diện tích",
+    "address": "Địa chỉ"
+  },
+  "filter": {
+    "areaType": "Loại khu vực",
+    "areaTypePlaceholder": "Chọn loại khu vực",
+    "province": "Tỉnh/Thành phố",
+    "provincePlaceholder": "Chọn tỉnh/thành phố",
+    "district": "Quận/Huyện",
+    "districtPlaceholder": "Chọn quận/huyện"
   }
 }

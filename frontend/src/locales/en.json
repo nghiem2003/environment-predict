@@ -151,6 +151,7 @@
       "actions": "Actions",
       "no_data": "No areas found"
     },
+    "noAreas": "No areas found",
     "pagination": {
       "previous": "Previous",
       "next": "Next",
@@ -248,7 +249,36 @@
     "yes": "Yes",
     "no": "No"
   },
+  "detail": {
+    "infoTitle": "Detail Information",
+    "typeLabel": "Type",
+    "predictionLabel": "Prediction",
+    "noPrediction": "No prediction",
+    "good": "Good",
+    "average": "Average",
+    "poor": "Poor",
+    "predictionDate": "Prediction date",
+    "location": "Location",
+    "area": "Area",
+    "address": "Address"
+  },
+  "filter": {
+    "areaType": "Area Type",
+    "areaTypePlaceholder": "Select area type",
+    "province": "Province/City",
+    "provincePlaceholder": "Select province/city",
+    "district": "District",
+    "districtPlaceholder": "Select district"
+  },
   "common": {
-    "back": "Back"
+    "back": "Back",
+    "filter": "Filter",
+    "oyster": "Oyster",
+    "cobia": "Cobia",
+    "viewDetails": "View Details",
+    "subscribeEmail": "Subscribe to Email Alerts",
+    "showDetails": "Show details",
+    "hideDetails": "Hide details",
+    "close": "Close"
   }
 }

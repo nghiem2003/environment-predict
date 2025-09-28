@@ -590,14 +590,14 @@ const InteractiveMap = () => {
                                     className="filter-button"
                                     icon={<FilterOutlined />}
                                 >
-                                    Bộ lọc
+                                    {t('common.filter')}
                                 </Button>
                             </div>
 
                             {/* Search */}
                             <Space direction="vertical" style={{ width: '100%', marginBottom: '16px' }}>
                                 <Input
-                                    placeholder="Tìm kiếm khu vực..."
+                                    placeholder={t('welcomePage.searchPlaceholder')}
                                     prefix={<SearchOutlined />}
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
@@ -609,7 +609,7 @@ const InteractiveMap = () => {
 
                                 <div style={{ textAlign: 'center', marginTop: '8px' }}>
                                     <Text strong style={{ color: '#1890ff' }}>
-                                        {filteredAreas.length} khu vực
+                                        {filteredAreas.length} {t('area_list.title').toLowerCase()}
                                     </Text>
                                     {loading && <Spin size="small" style={{ marginLeft: '8px' }} />}
                                     <Button
@@ -650,10 +650,10 @@ const InteractiveMap = () => {
                                                             {predictions[area.id] && (() => {
                                                                 const value = Number.parseInt(predictions[area.id].prediction_text, 10);
                                                                 let color = 'blue';
-                                                                let label = 'Chưa có dự báo';
-                                                                if (value === 1) { color = 'green'; label = 'Tốt'; }
-                                                                else if (value === 0) { color = 'orange'; label = 'Trung bình'; }
-                                                                else if (value === -1) { color = 'red'; label = 'Kém'; }
+                                                                let label = t('detail.noPrediction');
+                                                                if (value === 1) { color = 'green'; label = t('detail.good'); }
+                                                                else if (value === 0) { color = 'orange'; label = t('detail.average'); }
+                                                                else if (value === -1) { color = 'red'; label = t('detail.poor'); }
 
                                                                 return (
                                                                     <Space direction="vertical" size="small">
@@ -672,7 +672,7 @@ const InteractiveMap = () => {
                                                             </Text>
                                                             <Space>
                                                                 <Tag color={area.area_type === 'oyster' ? 'blue' : 'green'} size="small">
-                                                                    {area.area_type === 'oyster' ? 'Oyster' : 'Cobia'}
+                                                                    {area.area_type === 'oyster' ? t('common.oyster') : t('common.cobia')}
                                                                 </Tag>
                                                                 {area.area && (
                                                                     <Text type="secondary" style={{ fontSize: '11px' }}>
@@ -682,7 +682,7 @@ const InteractiveMap = () => {
                                                             </Space>
                                                             {predictions[area.id] && (
                                                                 <Text type="secondary" style={{ fontSize: '11px' }}>
-                                                                    Dự báo: {new Date(predictions[area.id].createdAt).toLocaleDateString('vi-VN')}
+                                                                    {t('detail.predictionLabel')}: {new Date(predictions[area.id].createdAt).toLocaleDateString('vi-VN')}
                                                                 </Text>
                                                             )}
                                                         </Space>
@@ -690,7 +690,7 @@ const InteractiveMap = () => {
                                                 />
                                             </List.Item>
                                         )}
-                                        locale={{ emptyText: 'Không có khu vực nào' }}
+                                        locale={{ emptyText: t('area_list.noAreas') }}
                                     />
                                 )}
                             </div>
@@ -705,10 +705,10 @@ const InteractiveMap = () => {
                                     onClick={handleBackToList}
                                     style={{ marginRight: '8px' }}
                                 >
-                                    Trở lại
+                                    {t('common.back')}
                                 </Button>
                                 <Title level={4} style={{ margin: 0, flex: 1, textAlign: 'center' }}>
-                                    Thông tin chi tiết
+                                    {t('detail.infoTitle')}
                                 </Title>
                             </div>
 
@@ -725,13 +725,13 @@ const InteractiveMap = () => {
                                 >
                                     <Space direction="vertical" style={{ width: '100%' }}>
                                         <div>
-                                            <Text strong>Loại: </Text>
+                                            <Text strong>{t('detail.typeLabel')}: </Text>
                                             <Tag color={selectedArea.area_type === 'oyster' ? 'blue' : 'green'}>
-                                                {selectedArea.area_type === 'oyster' ? 'Oyster' : 'Cobia'}
+                                                {selectedArea.area_type === 'oyster' ? t('common.oyster') : t('common.cobia')}
                                             </Tag>
                                         </div>
                                         <div>
-                                            <Text strong>Dự báo: </Text>
+                                            <Text strong>{t('detail.predictionLabel')}: </Text>
                                             {predictions[selectedArea.id] ? (() => {
                                                 const score = parseFloat(predictions[selectedArea.id].prediction_text);
                                                 const isScoreValid = !isNaN(score);
@@ -740,19 +740,19 @@ const InteractiveMap = () => {
                                                 if (!isScoreValid) {
                                                     result = -2;
                                                     color = 'blue';
-                                                    label = 'Chưa có dự báo';
+                                                    label = t('detail.noPrediction');
                                                 } else if (score >= 0.7) {
                                                     result = 1;
                                                     color = 'green';
-                                                    label = 'Tốt';
+                                                    label = t('detail.good');
                                                 } else if (score >= 0.4) {
                                                     result = 0;
                                                     color = 'orange';
-                                                    label = 'Trung bình';
+                                                    label = t('detail.average');
                                                 } else {
                                                     result = -1;
                                                     color = 'red';
-                                                    label = 'Kém';
+                                                    label = t('detail.poor');
                                                 }
 
                                                 return (
@@ -763,27 +763,27 @@ const InteractiveMap = () => {
                                                     </Space>
                                                 );
                                             })() : (
-                                                <Tag color="blue">Chưa có dự báo</Tag>
+                                                <Tag color="blue">{t('detail.noPrediction')}</Tag>
                                             )}
                                         </div>
                                         {predictions[selectedArea.id] && (
                                             <div>
-                                                <Text strong>Ngày dự báo: </Text>
+                                                <Text strong>{t('detail.predictionDate')}: </Text>
                                                 <Text>{new Date(predictions[selectedArea.id].createdAt).toLocaleDateString('vi-VN')}</Text>
                                             </div>
                                         )}
                                         <div>
-                                            <Text strong>Vị trí: </Text>
+                                            <Text strong>{t('detail.location')}: </Text>
                                             <Text>{selectedArea.latitude}, {selectedArea.longitude}</Text>
                                         </div>
                                         {selectedArea.area && (
                                             <div>
-                                                <Text strong>Diện tích: </Text>
+                                                <Text strong>{t('detail.area')}: </Text>
                                                 <Text>{selectedArea.area} ha</Text>
                                             </div>
                                         )}
                                         <div>
-                                            <Text strong>Địa chỉ: </Text>
+                                            <Text strong>{t('detail.address')}: </Text>
                                             <Text>{selectedArea.Province?.name}, {selectedArea.District?.name}</Text>
                                         </div>
                                         <div style={{ marginTop: '12px' }}>
@@ -795,7 +795,7 @@ const InteractiveMap = () => {
                                                         type={isDetailCardVisible ? "default" : "primary"}
                                                         block
                                                     >
-                                                        {isDetailCardVisible ? 'Ẩn chi tiết' : 'Hiện chi tiết'}
+                                                        {isDetailCardVisible ? t('common.hideDetails') : t('common.showDetails')}
                                                     </Button>
                                                 )}
                                                 <Button
@@ -804,7 +804,7 @@ const InteractiveMap = () => {
                                                     type="default"
                                                     block
                                                 >
-                                                    Đăng ký email thông báo
+                                                    {t('common.subscribeEmail')}
                                                 </Button>
                                             </Space>
                                         </div>
@@ -926,27 +926,27 @@ const InteractiveMap = () => {
             {/* Right Floating Filter Card */}
             {!isDetailView && isFilterCardVisible && (
                 <div className="right-filter">
-                    <Card size="small" title="Bộ lọc">
+                    <Card size="small" title={t('common.filter')}>
                         <Space direction="vertical" style={{ width: '100%' }}>
                             <div>
-                                <Text strong style={{ fontSize: '12px', color: '#666' }}>Loại khu vực</Text>
+                                <Text strong style={{ fontSize: '12px', color: '#666' }}>{t('filter.areaType')}</Text>
                                 <Select
-                                    placeholder="Chọn loại khu vực"
+                                    placeholder={t('filter.areaTypePlaceholder')}
                                     value={areaType}
                                     onChange={setAreaType}
                                     style={{ width: '100%', marginTop: '4px' }}
                                     allowClear
                                     size="small"
                                 >
-                                    <Option value="oyster">Oyster</Option>
-                                    <Option value="cobia">Cobia</Option>
+                                    <Option value="oyster">{t('common.oyster')}</Option>
+                                    <Option value="cobia">{t('common.cobia')}</Option>
                                 </Select>
                             </div>
 
                             <div>
-                                <Text strong style={{ fontSize: '12px', color: '#666' }}>Tỉnh/Thành phố</Text>
+                                <Text strong style={{ fontSize: '12px', color: '#666' }}>{t('filter.province')}</Text>
                                 <Select
-                                    placeholder="Chọn tỉnh/thành phố"
+                                    placeholder={t('filter.provincePlaceholder')}
                                     value={provinceFilter}
                                     onChange={handleProvinceChange}
                                     style={{ width: '100%', marginTop: '4px' }}
@@ -963,9 +963,9 @@ const InteractiveMap = () => {
                             </div>
 
                             <div>
-                                <Text strong style={{ fontSize: '12px', color: '#666' }}>Quận/Huyện</Text>
+                                <Text strong style={{ fontSize: '12px', color: '#666' }}>{t('filter.district')}</Text>
                                 <Select
-                                    placeholder="Chọn quận/huyện"
+                                    placeholder={t('filter.districtPlaceholder')}
                                     value={districtFilter}
                                     onChange={setDistrictFilter}
                                     style={{ width: '100%', marginTop: '4px' }}
@@ -986,7 +986,7 @@ const InteractiveMap = () => {
                                 onClick={() => setIsFilterCardVisible(false)}
                                 style={{ width: '100%', marginTop: '8px' }}
                             >
-                                Đóng
+                                {t('common.close')}
                             </Button>
                         </Space>
                     </Card>
