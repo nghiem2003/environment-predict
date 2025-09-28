@@ -612,13 +612,15 @@ const InteractiveMap = () => {
                                         {filteredAreas.length} {t('area_list.title').toLowerCase()}
                                     </Text>
                                     {loading && <Spin size="small" style={{ marginLeft: '8px' }} />}
-                                    <Button
-                                        size="small"
-                                        onClick={debugData}
-                                        style={{ marginLeft: '8px' }}
-                                    >
-                                        Debug
-                                    </Button>
+                                    {window.location.hostname === 'localhost' && (
+                                        <Button
+                                            size="small"
+                                            onClick={debugData}
+                                            style={{ marginLeft: '8px' }}
+                                        >
+                                            Debug
+                                        </Button>
+                                    )}
                                 </div>
                             </Space>
 
@@ -821,9 +823,11 @@ const InteractiveMap = () => {
                 <div className="right-detail">
                     <Card size="small" title="Chi tiết yếu tố môi trường">
                         <Space direction="vertical" style={{ width: '100%' }}>
-                            <Button onClick={() => fetchHistory(selectedArea?.id)} type="dashed" size="small">
-                                Test History API
-                            </Button>
+                            {window.location.hostname === 'localhost' && (
+                                <Button onClick={() => fetchHistory(selectedArea?.id)} type="dashed" size="small">
+                                    Test History API
+                                </Button>
+                            )}
                             {predictions[selectedArea.id].NaturalElements.map((el) => (
                                 <div key={el.id} style={{ marginBottom: '12px', padding: '8px', border: '1px solid #f0f0f0', borderRadius: '4px' }}>
                                     <Space style={{ width: '100%', justifyContent: 'space-between', marginBottom: '4px' }}>

@@ -5,7 +5,7 @@
 -- Dumped from database version 17.0
 -- Dumped by pg_dump version 17.0
 
--- Started on 2025-08-02 20:01:54
+-- Started on 2025-09-28 17:09:14
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -144,7 +144,10 @@ ALTER SEQUENCE public.diagnose_areas_id_seq OWNED BY public.diagnose_areas.id;
 
 CREATE TABLE public.diagnose_naturalelements (
     id integer NOT NULL,
-    name character varying(255) NOT NULL
+    name character varying(255) NOT NULL,
+    description text,
+    unit character varying(255),
+    category character varying(255)
 );
 
 
@@ -483,6 +486,7 @@ ALTER TABLE ONLY public.users ALTER COLUMN id SET DEFAULT nextval('public.users_
 --
 
 COPY public."SequelizeMeta" (name) FROM stdin;
+20250115000000-add-description-to-naturalelements.js
 \.
 
 
@@ -493,6 +497,8 @@ COPY public."SequelizeMeta" (name) FROM stdin;
 --
 
 COPY public.diagnose_areas (id, name, latitude, longitude, area, area_type, province, district) FROM stdin;
+49	adasd12121	10.762495303939643	106.66027620776322	1000	cobia	f851f9a1-330b-4d29-98ae-f4092e7e7f70	b246ae91-2e2e-4f29-8a6b-29be23b6e663
+50	Khu vực B	10.763728494588353	106.66367167890975	1000	cobia	fdca33cf-6b24-409b-9d07-46efb37051f5	40ebf59b-c17e-43a6-a2cd-1f8c77daae92
 \.
 
 
@@ -502,21 +508,21 @@ COPY public.diagnose_areas (id, name, latitude, longitude, area, area_type, prov
 -- Data for Name: diagnose_naturalelements; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.diagnose_naturalelements (id, name) FROM stdin;
-8	R_PO4
-9	O2Sat
-10	O2ml_L
-11	STheta
-12	Salnty
-13	R_DYNHT
-14	T_degC
-15	R_Depth
-16	Distance
-17	Wind_Spd
-18	Wave_Ht
-19	Wave_Prd
-20	IntChl
-21	Dry_T
+COPY public.diagnose_naturalelements (id, name, description, unit, category) FROM stdin;
+8	R_PO4	Reactive Phosphorus - Phospho phản ứng, một dạng phospho có thể được thực vật thủy sinh sử dụng trực tiếp	mg/L	Nutrients
+9	O2Sat	Oxygen Saturation - Độ bão hòa oxy trong nước, tỷ lệ phần trăm oxy hòa tan so với khả năng hòa tan tối đa	%	Water Quality
+10	O2ml_L	Oxygen Concentration - Nồng độ oxy hòa tan trong nước, đo bằng ml oxy trên 1 lít nước	ml/L	Water Quality
+11	STheta	Potential Temperature - Nhiệt độ tiềm năng, nhiệt độ nước sau khi điều chỉnh áp suất về mực nước biển	°C	Physical Properties
+12	Salnty	Salinity - Độ mặn của nước, tổng lượng muối hòa tan trong nước	PSU (Practical Salinity Units)	Physical Properties
+13	R_DYNHT	Dynamic Height - Chiều cao động lực, đo sự chênh lệch mực nước do dòng chảy	m	Physical Properties
+14	T_degC	Temperature - Nhiệt độ nước, ảnh hưởng đến tốc độ phản ứng sinh hóa và sự phát triển của sinh vật	°C	Physical Properties
+15	R_Depth	Depth - Độ sâu của nước, khoảng cách từ mặt nước đến đáy	m	Physical Properties
+16	Distance	Distance from Shore - Khoảng cách từ bờ biển, ảnh hưởng đến điều kiện môi trường	km	Location
+17	Wind_Spd	Wind Speed - Tốc độ gió, ảnh hưởng đến sóng và dòng chảy nước	m/s	Atmospheric
+18	Wave_Ht	Wave Height - Chiều cao sóng, đo từ đáy đến đỉnh sóng	m	Atmospheric
+19	Wave_Prd	Wave Period - Chu kỳ sóng, thời gian giữa hai đỉnh sóng liên tiếp	s	Atmospheric
+20	IntChl	Integrated Chlorophyll - Chlorophyll tích hợp, tổng lượng chlorophyll trong cột nước, chỉ thị mật độ tảo	mg/m²	Biological
+21	Dry_T	Dry Temperature - Nhiệt độ khô, nhiệt độ không khí không có độ ẩm	°C	Atmospheric
 \.
 
 
@@ -527,6 +533,90 @@ COPY public.diagnose_naturalelements (id, name) FROM stdin;
 --
 
 COPY public.diagnose_prediction_natureelements (id, prediction_id, nature_element_id, value) FROM stdin;
+435	48	8	1
+436	48	9	1
+437	48	10	1
+438	48	11	1
+439	48	12	1
+440	48	13	1
+441	48	14	1
+442	48	15	1
+443	48	16	1
+444	48	17	1
+445	48	18	1
+446	48	19	1
+447	48	20	1
+448	48	21	1
+449	49	8	2
+450	49	9	2
+451	49	10	2
+452	49	11	2
+453	49	12	2
+454	49	13	2
+455	49	14	2
+456	49	15	2
+457	49	16	2
+458	49	17	2
+459	49	18	2
+460	49	19	2
+461	49	20	2
+462	49	21	1
+463	50	8	1
+464	50	9	1
+465	50	10	1
+466	50	11	1
+467	50	12	1
+468	50	13	1
+469	50	14	1
+470	50	15	1
+471	50	16	1
+472	50	17	1
+473	50	18	1
+474	50	19	1
+475	50	20	1
+476	50	21	1
+477	51	8	2
+478	51	9	2
+479	51	10	2
+480	51	11	2
+481	51	12	2
+482	51	13	2
+483	51	14	2
+484	51	15	2
+485	51	16	2
+486	51	17	2
+487	51	18	2
+488	51	19	2
+489	51	20	2
+490	51	21	1
+491	52	8	1
+492	52	9	1
+493	52	10	1
+494	52	11	1
+495	52	12	1
+496	52	13	1
+497	52	14	1
+498	52	15	1
+499	52	16	1
+500	52	17	1
+501	52	18	1
+502	52	19	1
+503	52	20	1
+504	52	21	1
+505	53	8	111
+506	53	9	1
+507	53	10	1
+508	53	11	1
+509	53	12	1
+510	53	13	1
+511	53	14	1
+512	53	15	1
+513	53	16	1
+514	53	17	1
+515	53	18	1
+516	53	19	1
+517	53	20	1
+518	53	21	1
 \.
 
 
@@ -537,6 +627,12 @@ COPY public.diagnose_prediction_natureelements (id, prediction_id, nature_elemen
 --
 
 COPY public.diagnose_predictions (id, user_id, area_id, prediction_text, "createdAt", "updatedAt") FROM stdin;
+48	5	49	0	1970-01-01 07:00:00.001+07	2025-09-21 19:32:43.868+07
+49	5	49	0	1970-01-01 07:00:00.001+07	2025-09-21 19:32:44.321+07
+50	5	49	-1	1970-01-01 07:00:00.001+07	2025-09-21 19:50:57.424+07
+51	5	49	-1	1970-01-01 07:00:00.001+07	2025-09-21 19:50:58.269+07
+52	5	49	6	2025-09-21 20:25:02.255+07	2025-09-21 20:25:02.259+07
+53	5	49	-1	2025-09-21 20:47:28.356+07	2025-09-21 20:47:28.364+07
 \.
 
 
@@ -591,6 +687,8 @@ ab02b04a-b3fc-4e5f-94e8-f27de6016c50	Sơn Tịnh	15.2124	108.7422	2b708477-89e2-
 --
 
 COPY public.email_subscriptions (id, email, area_id, is_active, unsubscribe_token, created_at, updated_at) FROM stdin;
+5	nghiem.ld215102@sis.hust.edu.vn	49	t	a11c44d0229564946b48d540b14c7f161359707d866d40d9dec08a2a16fe4d85	2025-09-17 02:52:25.94+07	2025-09-17 02:52:25.941+07
+6	nghiem.eo.bua.18@gmail.com	49	t	cdb19ffa9592a555a11962d4a2e5add1c220eabc603c1aac177de9f28055bc77	2025-09-21 20:38:50.434+07	2025-09-21 20:38:50.435+07
 \.
 
 
@@ -601,6 +699,8 @@ COPY public.email_subscriptions (id, email, area_id, is_active, unsubscribe_toke
 --
 
 COPY public.otps (id, email, area_id, otp_code, expires_at, is_used, created_at, updated_at) FROM stdin;
+2	nghiem.ld215102@sis.hust.edu.vn	49	923330	2025-09-17 02:57:01.449+07	t	2025-09-17 02:52:01.495+07	2025-09-17 02:52:25.913+07
+3	nghiem.eo.bua.18@gmail.com	49	858264	2025-09-21 20:43:11.949+07	t	2025-09-21 20:38:11.976+07	2025-09-21 20:38:50.415+07
 \.
 
 
@@ -640,6 +740,7 @@ COPY public.users (id, username, password, role, email, address, phone, status, 
 11	adadaad	$2b$10$iLrbOvKjNLNIAmTHI9DsFewPdmRPTT/WJgpl7hp9I.b3p2KSYbhk2	manager	adadaad@caa.com	ewqewqe2	012121211	active	fb7e3341-2d65-44ba-868a-1c89c85e36a1	e1de6f8d-e46b-4e7a-b0d3-09bb7ae0b7e9
 8	nghiem2	$2b$10$8AffzeFiRtdFeml3W5RRyOPg4w4/2RgRdlbX56Yc9.Vop6fy16mGi	manager	nghiem2@gmail.com	82 Ngo Quyen 	0111111112	active	f851f9a1-330b-4d29-98ae-f4092e7e7f70	40ebf59b-c17e-43a6-a2cd-1f8c77daae92
 12	abcdef	$2b$10$URhuGKaLJylqnzbWSfELJuPQ4jIeIXBqx4f0Us5ml/Ks9k0UuKFcO	manager	abcdef@gmail.com	82 Ngo Quyen	034343333	active	f851f9a1-330b-4d29-98ae-f4092e7e7f70	b246ae91-2e2e-4f29-8a6b-29be23b6e663
+13	administrator1	$2b$10$J4bWMh.Qn.x8otvNDZ6gEOZLTYNuayUJ3cYJbAcoEX6MSnuN.73pa	manager	administrator1@gmail.com	82 Ngo Quyen.St	0354685510	active	fdca33cf-6b24-409b-9d07-46efb37051f5	e72ee733-77ab-4f3b-99a2-9963707d4c0d
 \.
 
 
@@ -649,7 +750,7 @@ COPY public.users (id, username, password, role, email, address, phone, status, 
 -- Name: diagnose_areas_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.diagnose_areas_id_seq', 48, true);
+SELECT pg_catalog.setval('public.diagnose_areas_id_seq', 50, true);
 
 
 --
@@ -667,7 +768,7 @@ SELECT pg_catalog.setval('public.diagnose_naturalelements_id_seq', 21, true);
 -- Name: diagnose_prediction_natureelements_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.diagnose_prediction_natureelements_id_seq', 434, true);
+SELECT pg_catalog.setval('public.diagnose_prediction_natureelements_id_seq', 518, true);
 
 
 --
@@ -676,7 +777,7 @@ SELECT pg_catalog.setval('public.diagnose_prediction_natureelements_id_seq', 434
 -- Name: diagnose_predictions_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.diagnose_predictions_id_seq', 47, true);
+SELECT pg_catalog.setval('public.diagnose_predictions_id_seq', 53, true);
 
 
 --
@@ -685,7 +786,7 @@ SELECT pg_catalog.setval('public.diagnose_predictions_id_seq', 47, true);
 -- Name: email_subscriptions_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.email_subscriptions_id_seq', 3, true);
+SELECT pg_catalog.setval('public.email_subscriptions_id_seq', 6, true);
 
 
 --
@@ -694,7 +795,7 @@ SELECT pg_catalog.setval('public.email_subscriptions_id_seq', 3, true);
 -- Name: otps_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.otps_id_seq', 1, true);
+SELECT pg_catalog.setval('public.otps_id_seq', 3, true);
 
 
 --
@@ -703,7 +804,7 @@ SELECT pg_catalog.setval('public.otps_id_seq', 1, true);
 -- Name: users_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.users_id_seq', 12, true);
+SELECT pg_catalog.setval('public.users_id_seq', 13, true);
 
 
 --
@@ -886,7 +987,7 @@ ALTER TABLE ONLY public.diagnose_areas
     ADD CONSTRAINT fk_province FOREIGN KEY (province) REFERENCES public.provinces(id);
 
 
--- Completed on 2025-08-02 20:01:55
+-- Completed on 2025-09-28 17:09:14
 
 --
 -- PostgreSQL database dump complete
