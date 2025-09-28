@@ -20,6 +20,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import 'leaflet/dist/leaflet.css';
 import './App.css'; // Import CSS for header and footer
 import AreaList from './components/AreaList';
+import InteractiveMap from './components/InteractiveMap';
 import UserList from './components/UserList';
 import UserProfile from './components/UserProfile';
 import EmailList from './components/EmailList';
@@ -53,6 +54,7 @@ import {
   GlobalOutlined,
   ProfileOutlined,
   MailOutlined,
+  EnvironmentOutlined,
 } from '@ant-design/icons';
 
 const { Header, Sider, Content } = Layout;
@@ -81,12 +83,16 @@ const App = () => {
     navigate('/');
   };
 
-  const isSidebarVisible =
-    role === 'admin' || role === 'expert' || role === 'manager';
+  const isSidebarVisible = location.pathname !== '/interactive-map' && (role === 'admin' || role === 'expert' || role === 'manager');
 
   const getMenuItems = () => {
+    // Common menu items for all users (including non-logged in)
+    const commonItems = [
+    ];
+
     if (role === 'admin') {
       return [
+        ...commonItems,
         {
           key: '/areas',
           icon: <AreaChartOutlined />,
@@ -110,6 +116,7 @@ const App = () => {
       ];
     } else if (role === 'expert') {
       return [
+        ...commonItems,
         {
           key: '/dashboard',
           icon: <DashboardOutlined />,
@@ -123,6 +130,7 @@ const App = () => {
       ];
     } else if (role === 'manager') {
       return [
+        ...commonItems,
         {
           key: '/dashboard',
           icon: <DashboardOutlined />,
@@ -144,7 +152,9 @@ const App = () => {
           : []),
       ];
     }
-    return [];
+
+    // For non-logged in users, only show the map
+    return commonItems;
   };
 
   const userMenuItems = [
@@ -396,11 +406,13 @@ const App = () => {
         {location.pathname !== '/Login' && renderHeader()}
         <Content
           style={{
-            margin: screens.xs ? '12px 8px' : '24px 16px',
-            padding: screens.xs ? 16 : 24,
-            background: colorBgContainer,
-            borderRadius: borderRadiusLG,
-            minHeight: 280,
+            margin: location.pathname === '/interactive-map' ? 0 : (screens.xs ? '12px 8px' : '24px 16px'),
+            padding: location.pathname === '/interactive-map' ? 0 : (screens.xs ? 16 : 24),
+            background: location.pathname === '/interactive-map' ? 'transparent' : colorBgContainer,
+            borderRadius: location.pathname === '/interactive-map' ? 0 : borderRadiusLG,
+            minHeight: location.pathname === '/interactive-map' ? 'calc(100vh - 64px)' : 280,
+            height: location.pathname === '/interactive-map' ? 'calc(100vh - 64px)' : 'auto',
+            overflow: location.pathname === '/interactive-map' ? 'hidden' : 'visible',
           }}
         >
           <Routes>
@@ -414,7 +426,7 @@ const App = () => {
                     <Navigate to="/dashboard" replace />
                   )
                 ) : (
-                  <WelcomePage />
+                  <Navigate to="/interactive-map" replace />
                 )
               }
             />
@@ -434,6 +446,10 @@ const App = () => {
                   <AreaList />
                 </ProtectedRoute>
               }
+            />
+            <Route
+              path="/interactive-map"
+              element={<InteractiveMap />}
             />
             <Route
               path="/user-list"

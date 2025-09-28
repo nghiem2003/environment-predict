@@ -97,7 +97,9 @@ exports.getLatestPrediction = async (req, res) => {
       include: [
         {
           model: NatureElement,
+          attributes: ['id', 'name', 'description', 'unit'],
           through: {
+            model: PredictionNatureElement,
             attributes: ['value'],
           },
         },
@@ -110,6 +112,40 @@ exports.getLatestPrediction = async (req, res) => {
     res.json(prediction);
   } catch (error) {
     console.error('Get Latest Prediction Error:', {
+      message: error.message,
+      stack: error.stack,
+      areaId: req.params.areaId,
+    });
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Get prediction history for an area within last N days (default 14)
+exports.getPredictionHistory = async (req, res) => {
+  try {
+    const { areaId } = req.params;
+    const days = Number.parseInt(req.query.days, 10) || 14;
+    const since = new Date();
+    since.setDate(since.getDate() - days);
+
+    const predictions = await Prediction.findAll({
+      where: {
+        area_id: areaId,
+        createdAt: { [Op.gte]: since },
+      },
+      order: [['createdAt', 'ASC']],
+      include: [
+        {
+          model: NatureElement,
+          attributes: ['id', 'name', 'description', 'unit'],
+          through: { model: PredictionNatureElement, attributes: ['value'] },
+        },
+      ],
+    });
+
+    res.json({ areaId, days, predictions });
+  } catch (error) {
+    console.error('Get Prediction History Error:', {
       message: error.message,
       stack: error.stack,
       areaId: req.params.areaId,

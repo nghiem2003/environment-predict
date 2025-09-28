@@ -61,6 +61,19 @@ exports.createManagerUser = async (req, res) => {
         .json({ error: 'District is required for expert role' });
     }
 
+    // Validate province/district relationship
+    if (province) {
+      const provinceObj = await require('../models').Province.findOne({ where: { id: province } });
+      if (!provinceObj) return res.status(400).json({ error: 'Province not found' });
+    }
+    if (district) {
+      const districtObj = await require('../models').District.findOne({ where: { id: district } });
+      if (!districtObj) return res.status(400).json({ error: 'District not found' });
+      if (province && String(districtObj.province_id) !== String(province)) {
+        return res.status(400).json({ error: 'District does not belong to the selected province' });
+      }
+    }
+
     const isExist = await User.findOne({ where: { email } });
     if (isExist) return res.status(403).json({ error: 'User existed' });
 
@@ -211,6 +224,20 @@ exports.updateUserById = async (req, res) => {
       // Prevent managers from changing a user's province outside their own
       if (province && province !== req.user.province) {
         return res.status(400).json({ error: 'Managers cannot assign other provinces' });
+      }
+    }
+
+    // Validate province/district relationship if provided
+    if (province) {
+      const provinceObj = await require('../models').Province.findOne({ where: { id: province } });
+      if (!provinceObj) return res.status(400).json({ error: 'Province not found' });
+    }
+    if (district) {
+      const districtObj = await require('../models').District.findOne({ where: { id: district } });
+      if (!districtObj) return res.status(400).json({ error: 'District not found' });
+      const effectiveProvince = province || user.province;
+      if (effectiveProvince && String(districtObj.province_id) !== String(effectiveProvince)) {
+        return res.status(400).json({ error: 'District does not belong to the selected province' });
       }
     }
 

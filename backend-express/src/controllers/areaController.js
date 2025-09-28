@@ -127,6 +127,25 @@ exports.createArea = async (req, res) => {
       });
     }
 
+    // Validate province/district relationship
+    if (province) {
+      const provinceObj = await Province.findOne({ where: { id: province } });
+      if (!provinceObj) {
+        return res.status(400).json({ error: 'Province not found' });
+      }
+    }
+    if (district) {
+      const districtObj = await District.findOne({ where: { id: district } });
+      if (!districtObj) {
+        return res.status(400).json({ error: 'District not found' });
+      }
+      if (province && String(districtObj.province_id) !== String(province)) {
+        return res
+          .status(400)
+          .json({ error: 'District does not belong to the selected province' });
+      }
+    }
+
     const newArea = await Area.create({
       name,
       latitude,
@@ -196,12 +215,32 @@ exports.updateArea = async (req, res) => {
       return res.status(404).json({ error: 'Area not found.' });
     }
 
-    selectedArea.name = name || area.name;
-    selectedArea.latitude = latitude || area.latitude;
-    selectedArea.longitude = longitude || area.longitude;
-    selectedArea.area = area || area.area;
-    selectedArea.province = province || area.province;
-    selectedArea.district = district || area.district;
+    // If province/district are being updated, validate the relationship
+    if (province) {
+      const provinceObj = await Province.findOne({ where: { id: province } });
+      if (!provinceObj) {
+        return res.status(400).json({ error: 'Province not found' });
+      }
+    }
+    if (district) {
+      const districtObj = await District.findOne({ where: { id: district } });
+      if (!districtObj) {
+        return res.status(400).json({ error: 'District not found' });
+      }
+      const effectiveProvince = province || selectedArea.province;
+      if (effectiveProvince && String(districtObj.province_id) !== String(effectiveProvince)) {
+        return res
+          .status(400)
+          .json({ error: 'District does not belong to the selected province' });
+      }
+    }
+
+    selectedArea.name = name || selectedArea.name;
+    selectedArea.latitude = latitude || selectedArea.latitude;
+    selectedArea.longitude = longitude || selectedArea.longitude;
+    selectedArea.area = area || selectedArea.area;
+    selectedArea.province = province || selectedArea.province;
+    selectedArea.district = district || selectedArea.district;
     selectedArea.area_type = area_type;
 
     console.log('Updating area:', selectedArea.name);

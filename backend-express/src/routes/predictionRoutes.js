@@ -2,6 +2,7 @@ const express = require('express');
 const {
   createPrediction,
   getLatestPrediction,
+  getPredictionHistory,
   getPredictionDetails,
   getPredictionsByUser,
   getAllPredictionsWithFilters,
@@ -33,6 +34,7 @@ router.get(
   getAllPredictionsWithFilters
 );
 router.get('/:areaId/latest', getLatestPrediction);
+router.get('/:areaId/history', getPredictionHistory);
 
 router.get(
   '/:predictionId',
