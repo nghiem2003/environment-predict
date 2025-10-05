@@ -9,14 +9,42 @@ const sequelize = require('./src/config/db.js');
 const cors = require('cors');
 const morgan = require('morgan');
 const helmet = require('helmet');
-
+const cron = require('node-cron');
 const app = express();
-
+require('dotenv').config();
 app.use(helmet());
 app.use(morgan('dev'));
 app.use(cors());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
+const FLASK_API_URL = process.env.FLASK_API_URL;
+const SECRET_KEY = process.env.FETCH_SECRET_KEY;
+const axios = require('axios');
+const TRIGGER_URL = `${FLASK_API_URL}/trigger_fetch`;
+
+const triggerDataFetch = async () => {
+  console.log(`[${new Date().toISOString()}] Cron job triggered: Calling Flask API to fetch data...`);
+  // ... (toàn bộ logic của hàm triggerDataFetch giữ nguyên) ...
+  if (!FLASK_API_URL || !SECRET_KEY) {
+    console.error('ERROR: FLASK_API_URL or FETCH_SECRET_KEY is not defined in .env file.');
+    return;
+  }
+  try {
+    const response = await axios.post(TRIGGER_URL, {}, {
+      headers: { 'X-FETCH-SECRET': SECRET_KEY },
+      timeout: 10000,
+    });
+    console.log('SUCCESS: Request accepted by Flask server. Message:', response.data.message);
+  } catch (error) {
+    console.error('ERROR during cron job execution:', error.message);
+  }
+};
+
+cron.schedule('0 0 * * *', triggerDataFetch, {
+  scheduled: true,
+  timezone: 'Asia/Ho_Chi_Minh',
+});
+
 
 app.use('/api/express/auth', authRoutes);
 app.use('/api/express/predictions', predictionRoutes);

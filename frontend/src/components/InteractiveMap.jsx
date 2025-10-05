@@ -270,6 +270,7 @@ const InteractiveMap = () => {
     const [isDetailView, setIsDetailView] = useState(false);
     const [isFilterCardVisible, setIsFilterCardVisible] = useState(false);
     const [isDetailCardVisible, setIsDetailCardVisible] = useState(true);
+    const [initialQueryHandled, setInitialQueryHandled] = useState(false);
 
     // Data for filters
     const [provinces, setProvinces] = useState([]);
@@ -539,6 +540,65 @@ const InteractiveMap = () => {
         fetchAreas();
         fetchLocationData();
     }, []);
+
+    // Deep-link support: /interactive-map?areaId=ID or ?lat=..&lon=..&zoom=..
+    useEffect(() => {
+
+        console.log('initialQueryHandled', initialQueryHandled);
+
+        if (initialQueryHandled) return;
+        const params = new URLSearchParams(window.location.search);
+        const areaIdParam = params.get('areaId');
+        const latParam = params.get('lat');
+        const lonParam = params.get('lon');
+        const zoomParam = params.get('zoom');
+
+        console.log('areaIdParam', areaIdParam);
+        console.log('latParam', latParam);
+        console.log('lonParam', lonParam);
+        console.log('zoomParam', zoomParam);
+
+        const setZoomIf = (z) => {
+            const n = Number(z);
+            if (!Number.isNaN(n) && n > 0) setMapZoom(n);
+        };
+
+        if (areaIdParam) {
+            console.log('areaIdParam', areaIdParam);
+            (async () => {
+                try {
+                    const res = await axios.get(`/api/express/areas/area/${areaIdParam}`);
+                    const area = res.data;
+                    console.log('area', area);
+                    if (area && area.latitude != null && area.longitude != null) {
+                        handleAreaSelect(area);
+                        setZoomIf(zoomParam || 15);
+                    } else {
+                        // Fallback to search/list view
+                        setIsDetailView(false);
+                    }
+                } catch (e) {
+                    setIsDetailView(false);
+                } finally {
+                    setInitialQueryHandled(true);
+                }
+            })();
+            return;
+        }
+
+        if (latParam && lonParam) {
+            const lat = Number(latParam);
+            const lon = Number(lonParam);
+            if (!Number.isNaN(lat) && !Number.isNaN(lon)) {
+                console.log('lat', lat);
+                console.log('lon', lon);
+                console.log('zoomParam', zoomParam);
+                setMapCenter([lat, lon]);
+                setZoomIf(zoomParam || 10);
+            }
+            setInitialQueryHandled(true);
+        }
+    }, [initialQueryHandled]);
 
     // Apply filters when they change
     useEffect(() => {

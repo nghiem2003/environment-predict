@@ -22,10 +22,13 @@
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.0",
+    "multer": "^2.0.2",
+    "node-cron": "^4.2.1",
     "nodemailer": "^7.0.4",
     "nodemon": "^3.1.9",
     "pg": "^8.13.1",
     "sequelize": "^6.37.7",
-    "sequelize-cli": "^6.6.3"
+    "sequelize-cli": "^6.6.3",
+    "xlsx": "^0.18.5"
   }
 }

@@ -1,3 +1,11 @@
 backend-express/node_modules
 backend-flask/model/
 */.env
+
+backend-flask/venv/
+backend-express/node_modules/
+backend-flask/data/
+backend-flask/export_full_raw.csv
+backend-flask/notebook.ipynb
+backend-flask/copernicus_temp_data/
+**/__pycache__/

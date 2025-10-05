@@ -11,16 +11,21 @@ const { Op } = require('sequelize');
 require('dotenv').config();
 const axios = require('axios');
 const { sendPredictionNotification } = require('./emailController');
+const xlsx = require('xlsx');
 
 exports.createPrediction = async (req, res) => {
   try {
     const { userId, areaId, inputs, modelName } = req.body;
     console.log('Creating prediction with data:', req.body);
 
+    const area = await Area.findByPk(areaId);
+    console.log('modelName:', modelName);
     const parsedInputs = {};
     for (const [key, value] of Object.entries(inputs)) {
       parsedInputs[key] = Number.parseFloat(value);
     }
+    parsedInputs.lat = area.latitude;
+    parsedInputs.lon = area.longitude;
     console.log('parsedInputs:', parsedInputs);
     const endpoint = modelName.includes('oyster')
       ? '/predict/oyster'
@@ -34,12 +39,12 @@ exports.createPrediction = async (req, res) => {
     if (flaskResult.error)
       return res.status(400).json({ error: flaskResult.error });
 
-    const { prediction } = flaskResult;
+    const { prediction_result } = flaskResult;
 
     const predictionRecord = await Prediction.create({
       user_id: userId,
       area_id: areaId,
-      prediction_text: prediction,
+      prediction_text: prediction_result.prediction,
       ...(req.body.createdAt && {
         createdAt: req.body.createdAt,
         updatedAt: req.body.createdAt,
@@ -62,7 +67,7 @@ exports.createPrediction = async (req, res) => {
     // Send email notification to subscribers
     try {
       await sendPredictionNotification(areaId, {
-        result: prediction,
+        result: prediction_result.prediction,
         model: modelName,
         predictionId: predictionRecord.id,
       });
@@ -72,7 +77,7 @@ exports.createPrediction = async (req, res) => {
 
     res.json({
       prediction_id: predictionRecord.id,
-      prediction_text: prediction,
+      prediction_text: prediction_result.prediction,
       model_used: modelName,
     });
   } catch (error) {
@@ -414,12 +419,21 @@ exports.createBatchPrediction = async (req, res) => {
 
     const predictionsResult = [];
 
+    const area = await Area.findByPk(areaId);
     for (const inputs of data) {
       const parsedInputs = {};
       for (const [key, value] of Object.entries(inputs)) {
-        parsedInputs[key] = Number.parseFloat(value);
+        if (key === 'createdAt') {
+          parsedInputs.createdAt = value; // preserve date
+        } else {
+          parsedInputs[key] = Number.parseFloat(value);
+        }
       }
-
+      // attach location for flask
+      if (area) {
+        parsedInputs.lat = area.latitude;
+        parsedInputs.lon = area.longitude;
+      }
       // Tách createdAt từ nature elements nếu có
       const { createdAt, ...natureElements } = parsedInputs;
       console.log(parsedInputs);
@@ -427,13 +441,13 @@ exports.createBatchPrediction = async (req, res) => {
       const flaskResponse = await axios.post(flaskUrl, natureElements, {
         params: { model: modelName },
       });
-      const { prediction } = flaskResponse.data;
+      const { prediction_result } = flaskResponse.data;
 
       // Tạo prediction với timestamp tùy chỉnh nếu có, nếu không thì để Sequelize tự tạo
       const predictionData = {
         user_id: userId,
         area_id: areaId,
-        prediction_text: prediction,
+        prediction_text: prediction_result.prediction,
       };
 
       // Nếu có createdAt từ input, sử dụng nó
@@ -471,7 +485,7 @@ exports.createBatchPrediction = async (req, res) => {
 
       predictionsResult.push({
         prediction_id: predictionRecord.id,
-        prediction_text: prediction,
+        prediction_text: prediction_result.prediction,
         inputs,
       });
     }
@@ -493,6 +507,156 @@ exports.createBatchPrediction = async (req, res) => {
     console.log(error);
 
     res.status(500).json({ error: error.message });
+  }
+};
+
+// New: parse uploaded Excel and forward rows to batch prediction
+exports.createBatchPredictionFromExcel = async (req, res) => {
+  try {
+
+
+    const { userId, areaId, modelName } = req.body;
+    if (!req.file) return res.status(400).json({ error: 'Excel file is required (field name: file)' });
+    if (!userId || !areaId || !modelName) return res.status(400).json({ error: 'userId, areaId, modelName are required' });
+
+    // Parse workbook from buffer
+    const wb = xlsx.read(req.file.buffer, { type: 'buffer' });
+    const sheetName = req.body.sheetName || wb.SheetNames[0];
+    const ws = wb.Sheets[sheetName];
+    if (!ws) return res.status(400).json({ error: `Sheet '${sheetName}' not found` });
+
+    // Convert to JSON (object rows and matrix) for flexible parsing
+    const rowsObjects = xlsx.utils.sheet_to_json(ws, { defval: null, raw: true });
+    const rowsMatrix = xlsx.utils.sheet_to_json(ws, { header: 1, defval: null, raw: true });
+    console.log('[Excel] sheetName:', sheetName);
+    console.log('[Excel] rowsObjects length:', rowsObjects.length);
+    console.log('[Excel] rowsMatrix dims:', rowsMatrix.length, rowsMatrix[0] ? rowsMatrix[0].length : 0);
+    if (!rowsObjects.length && (!rowsMatrix || !rowsMatrix.length)) {
+      return res.status(400).json({ error: 'Sheet is empty' });
+    }
+
+    const required = ['R_PO4', 'O2Sat', 'O2ml_L', 'STheta', 'Salnty', 'R_DYNHT', 'T_degC', 'R_Depth', 'Distance', 'Wind_Spd', 'Wave_Ht', 'Wave_Prd', 'IntChl', 'Dry_T'];
+    const norm = (s) => (s || '').toString().toLowerCase()
+      .normalize('NFD').replace(/\p{Diacritic}/gu, '')
+      .replace(/[^a-z0-9]+/g, ' ').trim();
+    const mapHeaderToFeature = (h) => {
+      const n = norm(h);
+      if (/oxy.*hoa.*tan|dissolved.*oxygen|o2\b/.test(n)) return 'O2ml_L';
+      if (/nhiet.*do.*nuoc.*bien|nhiet.*do(?!\s*khong)|temperature/.test(n)) return 'T_degC';
+      if (/do.*man|salinity/.test(n)) return 'Salnty';
+      if (/wave.*height|vhm0|chieu.*cao/.test(n)) return 'Wave_Ht';
+      if (/wave.*period|vtpk|chu.*ky/.test(n)) return 'Wave_Prd';
+      if (/chlor|chl/.test(n)) return 'IntChl';
+      if (/po4|photphat|phosphate/.test(n)) return 'R_PO4';
+      return null;
+    };
+
+    let normalized = [];
+    // Try wide format mapping
+    if (rowsObjects.length) {
+      const headerMap = {};
+      Object.keys(rowsObjects[0]).forEach(h => headerMap[h] = mapHeaderToFeature(h));
+      if (Object.values(headerMap).some(Boolean)) {
+        console.log('[Excel] Wide header map -> feature:', headerMap);
+        normalized = rowsObjects.map((r) => {
+          const obj = {};
+          for (const [h, v] of Object.entries(r)) {
+            const feat = headerMap[h];
+            if (!feat) continue;
+            let num = v === '' || v === null || v === undefined ? null : Number(v);
+            if (feat === 'O2ml_L') {
+              const unitHint = norm(h);
+              if (/mg\s*\/\s*l/.test(unitHint)) num = num != null ? num / 1.429 : null;
+            }
+            if (num !== null && !isNaN(num)) obj[feat] = num;
+          }
+          const createdAtKey = Object.keys(r).find(k => /created|date|ngay|thoi gian/.test(norm(k)));
+          if (createdAtKey) obj.createdAt = r[createdAtKey];
+          return obj;
+        }).filter(o => Object.keys(o).length > 0);
+      }
+    }
+
+    // Try strict fixed-format like provided: row3 months, row6+ fixed param names in col1, col2 units, col3+ values (hard-coded rows)
+    if (!normalized.length && rowsMatrix && rowsMatrix.length >= 4) {
+      // Fixed per provided sheet: header row is 5 (0-based 4). Still try nearby rows if needed
+      let headerRow = 4;
+      const tryRows = [4, 3, 2, 5];
+      for (const r of tryRows) {
+        const row = rowsMatrix[r] || [];
+        const hasMonth = row.some((cell, i) => i >= 2 && typeof cell === 'string' && /thang\s*\d{1,2}|month\s*\d{1,2}/i.test(cell));
+        if (hasMonth) { headerRow = r; break; }
+      }
+      const startRow = 5;  // data from row 6
+      const nameCol = 1;   // column B: parameter names
+      const unitCol = 2;   // column C: units per parameter
+      const startCol = 3;  // column D onwards: values per month
+
+      const monthsRow = rowsMatrix[headerRow] || [];
+      // Map month columns
+      const monthCols = [];
+      const year = Number(req.body.year) || new Date().getFullYear();
+      for (let c = startCol; c < monthsRow.length; c++) {
+        const label = monthsRow[c];
+        if (!label) continue;
+        const mMatch = norm(label).match(/thang\s*(\d{1,2})|month\s*(\d{1,2})|(\d{1,2})$/);
+        let m = null;
+        if (mMatch) m = Number(mMatch[1] || mMatch[2] || mMatch[3]);
+        if (m && m >= 1 && m <= 12) {
+          const mm = String(m).padStart(2, '0');
+          const createdAt = new Date(`${year}-${mm}-01T12:00:00Z`);
+          monthCols.push({ col: c, createdAt });
+        } else {
+          monthCols.push({ col: c, createdAt: null });
+        }
+      }
+      // Fallback: if header cells are merged/empty and detection failed, assume all columns from startCol are values
+      if (!monthCols.length) {
+        const widest = Math.max(monthsRow.length, ...(rowsMatrix.slice(startRow).map(r => (r || []).length)));
+        for (let c = startCol; c < widest; c++) monthCols.push({ col: c, createdAt: null });
+      }
+      console.log('[Excel] headerRow:', headerRow + 1, '| monthCols parsed:', monthCols);
+      // Hard-code only 4 needed features by absolute row index:
+      // Row numbers are 1-based visually; here we use 0-based indices.
+      const rowIndexByFeature = {
+        O2ml_L: 5,   // row 6: Ôxy hoà tan (DO)
+        T_degC: 6,   // row 7: Nhiệt độ nước biển
+        Salnty: 8,   // row 9: Độ mặn
+        Dry_T: 13,   // row 14: Nhiệt độ không khí
+      };
+      const collected = monthCols.map(mc => ({ createdAt: mc.createdAt }));
+      for (const [feat, r] of Object.entries(rowIndexByFeature)) {
+        const row = rowsMatrix[r] || [];
+        const unitText = row[unitCol] ? norm(row[unitCol]) : '';
+        console.log(`[Excel] row ${r + 1}: feat=${feat} unit='${unitText}' values@cols=${monthCols.map(m => m.col).join(',')}`);
+        for (let i = 0; i < monthCols.length; i++) {
+          const { col } = monthCols[i];
+          const raw = row[col];
+          let num = raw === '' || raw === null || raw === undefined ? null : Number(raw);
+          if (feat === 'O2ml_L' && num != null) {
+            if (/mg\s*\/\s*l/.test(unitText)) num = num / 1.429;
+          }
+          if (num !== null && !isNaN(num)) collected[i][feat] = num;
+        }
+      }
+      normalized = collected.filter(o => Object.keys(o).some(k => k !== 'createdAt'));
+      console.log('[Excel] normalized count (fixed):', normalized.length);
+      if (normalized.length) console.log('[Excel] normalized[0]:', normalized[0]);
+    }
+    if (!normalized.length) {
+      return res.status(400).json({ error: 'Could not detect any usable indicators from Excel', debug: { rowsObjects: rowsObjects.length, rowsMatrix: rowsMatrix.length } });
+    }
+
+    // Reuse existing batch controller logic with parsed data
+    console.log('[Excel] Sending normalized data to batch, size=', normalized.length);
+
+    req.body = { userId, areaId, modelName, data: normalized };
+    console.log(normalized);
+
+    return exports.createBatchPrediction(req, res);
+  } catch (error) {
+    console.error('createBatchPredictionFromExcel error:', error);
+    return res.status(500).json({ error: error.message });
   }
 };
 

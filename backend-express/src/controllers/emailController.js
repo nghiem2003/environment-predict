@@ -2,6 +2,18 @@ const { Email, Area, Otp } = require('../models');
 const nodemailer = require('nodemailer');
 const crypto = require('crypto');
 
+
+const resultConvert = (result) => {
+  if (result === -1) {
+    return 'Không phù hợp';
+  } else if (result === 0) {
+    return 'Phù hợp';
+  } else if (result === 1) {
+    return 'Rất phù hợp';
+  }
+}
+
+
 // Email transporter configuration
 const transporter = nodemailer.createTransport({
   service: 'gmail', // or your email service
@@ -54,6 +66,8 @@ exports.getAllEmailSubscriptions = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+
 
 // Get email subscription by ID
 exports.getEmailSubscriptionById = async (req, res) => {
@@ -477,7 +491,7 @@ exports.sendPredictionNotification = async (areaId, predictionData) => {
         )}</p>
         </div>
         <div style="text-align: center; margin: 30px 0;">
-          <a href="${baseUrl}/prediction/${areaId}" 
+              <a href="${baseUrl}/interactive-map?areaId=${areaId}" 
              style="background-color: #3498db; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
             ${isBatchPrediction ? 'Xem danh sách dự đoán' : 'Xem chi tiết dự đoán'}
           </a>
@@ -648,7 +662,7 @@ exports.sendManualNotification = async (req, res) => {
             <h3 style="margin-top: 0;">Thông tin dự đoán:</h3>
             <p><strong>Khu vực:</strong> ${area.name}</p>
             <p><strong>Loại khu vực:</strong> ${area.area_type}</p>
-            <p><strong>Kết quả dự đoán:</strong> ${predictionData.result || 'Thông tin dự đoán'
+            <p><strong>Kết quả dự đoán:</strong> ${resultConvert(predictionData.result) || 'Thông tin dự đoán'
         }</p>
             <p><strong>Mô hình sử dụng:</strong> ${predictionData.model || 'Không xác định'
         }</p>

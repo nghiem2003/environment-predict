@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 services:
   postgres_db:
@@ -16,12 +16,12 @@ services:
       - postgres_db:/var/lib/postgresql/data
       - ./backup.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U postgres -d ocean']
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ocean"]
       interval: 10s
       timeout: 5s
       retries: 5
     ports:
-      - '5432:5432'
+      - "5432:5432"
 
   express_backend:
     build: ./backend-express
@@ -30,6 +30,7 @@ services:
       - proxy_network
     restart: always
     environment:
+      - FRONTEND_URL=http://dhtbkc4.tbu.edu.vn/quanlytainguyen
       - DB_HOST=postgres_db
       - DB_PORT=5432
       - DB_USER=postgres
@@ -47,14 +48,14 @@ services:
       - proxy_network
     restart: always
     ports:
-      - '5001:5001'
+      - "5001:5001"
   frontend:
     build: ./frontend
     container_name: frontend
     networks:
       - proxy_network
     ports:
-      - '8082:80'
+      - "8082:80"
     restart: always
     environment:
       - REACT_APP_API_URL=http://dhtbkc4.tbu.edu.vn/quanlytainguyen

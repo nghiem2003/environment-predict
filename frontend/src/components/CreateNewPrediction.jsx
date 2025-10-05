@@ -48,6 +48,7 @@ const CreateNewPrediction = () => {
     Dry_T: 0,
   });
   const [csvElements, setCsvElements] = useState([]);
+  const [excelFile, setExcelFile] = useState(null);
   const [activeTab, setActiveTab] = useState('single');
   const [singleForm] = Form.useForm();
   const [batchForm] = Form.useForm();
@@ -118,6 +119,15 @@ const CreateNewPrediction = () => {
     reader.readAsText(file);
   };
 
+  const handleExcelUpload = ({ file }) => {
+    if (file.status === 'removed') {
+      setExcelFile(null);
+      return;
+    }
+    // antd Upload wraps the native File in file.originFileObj when beforeUpload returns false
+    setExcelFile(file.originFileObj || file);
+  };
+
   const handleSubmitBatch = async (values) => {
     setIsBatchLoading(true);
     setBatchProgress(0);
@@ -152,6 +162,40 @@ const CreateNewPrediction = () => {
       message.success(`Đã tạo thành công ${data.length} dự đoán từ file CSV!`);
       batchForm.resetFields();
       setCsvElements([]);
+      navigate('/dashboard');
+    } catch (error) {
+      message.error(`${error}`);
+    } finally {
+      setIsBatchLoading(false);
+      setBatchProgress(0);
+    }
+  };
+
+  const handleSubmitExcel = async (values) => {
+    console.log('values', values);
+
+    setIsBatchLoading(true);
+    setBatchProgress(0);
+    try {
+      const { areaId, modelName } = values;
+      if (!areaId || !modelName) throw new Error('You need to select area and model');
+      if (!excelFile) throw new Error('You need to upload an Excel file');
+
+      const formData = new FormData();
+      formData.append('userId', userId);
+      formData.append('areaId', areaId);
+      formData.append('modelName', modelName);
+      formData.append('file', excelFile);
+
+      setBatchProgress(30);
+      await axios.post('api/express/predictions/excel', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+
+      setBatchProgress(100);
+      message.success('Đã tạo dự đoán từ Excel!');
+      batchForm.resetFields();
+      setExcelFile(null);
       navigate('/dashboard');
     } catch (error) {
       message.error(`${error}`);
@@ -298,7 +342,7 @@ const CreateNewPrediction = () => {
                 <Form
                   form={batchForm}
                   layout="vertical"
-                  onFinish={handleSubmitBatch}
+                  onFinish={activeTab === 'batch' ? handleSubmitBatch : undefined}
                   initialValues={{ userId }}
                   disabled={isBatchLoading}
                 >
@@ -387,6 +431,88 @@ const CreateNewPrediction = () => {
                       disabled={isBatchLoading}
                     >
                       {isBatchLoading ? 'Đang tạo dự đoán hàng loạt...' : t('prediction_form.submit_batch')}
+                    </Button>
+                  </Form.Item>
+                </Form>
+              ),
+            },
+            {
+              key: 'excel',
+              label: 'Batch Excel',
+              children: (
+                <Form
+                  form={batchForm}
+                  layout="vertical"
+                  onFinish={handleSubmitExcel}
+                  initialValues={{ userId }}
+                  disabled={isBatchLoading}
+                >
+                  <Form.Item name="userIdForm" style={{ display: 'none' }}>
+                    <Input type="hidden" value={userId} />
+                  </Form.Item>
+                  <Form.Item
+                    label={t('prediction_form.select_area')}
+                    name="areaId"
+                    rules={[
+                      { required: true, message: t('prediction_form.select_area') },
+                    ]}
+                  >
+                    <Select
+                      placeholder={t('prediction_form.select_area')}
+                      onChange={(val) => {
+                        setSelectedAreaId(val);
+                        const area = areas.find((a) => a.id === +val);
+                        setAreaType(area?.area_type);
+                        batchForm.setFieldsValue({ modelName: undefined });
+                      }}
+                    >
+                      {areas.map((area) => (
+                        <Option key={area.id} value={area.id}>
+                          {area.name}
+                        </Option>
+                      ))}
+                    </Select>
+                  </Form.Item>
+                  <Form.Item
+                    label={t('prediction_form.select_model')}
+                    name="modelName"
+                    rules={[
+                      { required: true, message: t('prediction_form.select_model') },
+                    ]}
+                  >
+                    <Select
+                      placeholder={t('prediction_form.select_model')}
+                      disabled={!areaType}
+                    >
+                      {filteredModels.map((model) => (
+                        <Option key={model.value} value={model.value}>
+                          {model.label}
+                        </Option>
+                      ))}
+                    </Select>
+                  </Form.Item>
+                  <Form.Item
+                    label={'Upload Excel (.xlsx/.xls)'}
+                  >
+                    <Upload
+                      accept=".xlsx,.xls"
+                      beforeUpload={() => false}
+                      onChange={handleExcelUpload}
+                      maxCount={1}
+                      fileList={excelFile ? [{ name: excelFile.name || 'excel.xlsx', status: 'done' }] : []}
+                    >
+                      <Button icon={<UploadOutlined />}>Upload Excel</Button>
+                    </Upload>
+                  </Form.Item>
+                  <Form.Item>
+                    <Button
+                      type="primary"
+                      htmlType="submit"
+                      block
+                      loading={isBatchLoading}
+                      disabled={isBatchLoading}
+                    >
+                      {isBatchLoading ? 'Đang tạo dự đoán từ Excel...' : 'Tạo dự đoán từ Excel'}
                     </Button>
                   </Form.Item>
                 </Form>

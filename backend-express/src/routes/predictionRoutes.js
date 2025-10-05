@@ -9,8 +9,11 @@ const {
   createBatchPrediction,
   getPredictionChartData,
   getAllPredictionChartData,
+  createBatchPredictionFromExcel
 } = require('../controllers/predictionController');
 const { authenticate, authorize } = require('../middlewares/authMiddleware');
+const multer = require('multer');
+const upload = multer({ storage: multer.memoryStorage() });
 
 const router = express.Router();
 
@@ -19,6 +22,15 @@ router.post(
   authenticate,
   authorize(['expert', 'manager']),
   createBatchPrediction
+);
+
+// Upload Excel for batch predictions
+router.post(
+  '/excel',
+  authenticate,
+  authorize(['expert', 'manager']),
+  upload.single('file'),
+  createBatchPredictionFromExcel
 );
 
 router.post(

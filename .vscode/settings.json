@@ -1,3 +1,4 @@
 {
-  "git.ignoreLimitWarning": true
+  "git.ignoreLimitWarning": true,
+  "python.pythonPath": "d:\\DATN-20220819T101500Z-001\\DATN\\complete\\backend-flask\\venv\\Scripts\\python.exe"
 }

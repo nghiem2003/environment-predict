@@ -1,7 +1,17 @@
+# Flask and web server
 flask
+
+# Core ML and data handling libraries
 numpy
-pickle5
 scikit-learn==1.5.2
 mlxtend==0.23.4
 lightgbm==4.6.0
 xgboost==2.1.4
+joblib
+
+# Copernicus API and data processing
+copernicusmarine
+xarray
+netCDF4
+h5netcdf
+gsw
