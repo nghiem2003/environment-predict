@@ -1,43 +1,357 @@
 const express = require('express');
 const { authenticate, authorize } = require('../middlewares/authMiddleware');
-const { getAllAreas, getAreaById,createArea,updateArea,deleteArea } = require('../controllers/areaController');
-const { Province ,Area, District } = require('../models/index.js');
+const { getAllAreas, getAreaById, createArea, updateArea, deleteArea } = require('../controllers/areaController');
+const { Province, Area, District } = require('../models/index.js');
 const router = express.Router();
 
-
-
+/**
+ * @swagger
+ * /areas:
+ *   get:
+ *     summary: Get all areas
+ *     tags: [Areas]
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Number of areas per page
+ *       - in: query
+ *         name: province
+ *         schema:
+ *           type: integer
+ *         description: Filter by province ID
+ *       - in: query
+ *         name: district
+ *         schema:
+ *           type: integer
+ *         description: Filter by district ID
+ *       - in: query
+ *         name: area_type
+ *         schema:
+ *           type: string
+ *           enum: [oyster, shrimp, fish]
+ *         description: Filter by area type
+ *     responses:
+ *       200:
+ *         description: List of areas
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 areas:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Area'
+ *                 total:
+ *                   type: integer
+ *                 page:
+ *                   type: integer
+ *                 limit:
+ *                   type: integer
+ *       500:
+ *         description: Server error
+ */
 router.get('/', getAllAreas);
+
+/**
+ * @swagger
+ * /areas/area/{id}:
+ *   get:
+ *     summary: Get area by ID
+ *     tags: [Areas]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Area ID
+ *     responses:
+ *       200:
+ *         description: Area details
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Area'
+ *       404:
+ *         description: Area not found
+ *       500:
+ *         description: Server error
+ */
 router.get('/area/:id', getAreaById);
-router.get('/provinces', async (req,res) => {return res.status(200).json(await Province.findAll())}); // Get areas by region
-router.get('/districts', async (req,res) => {return res.status(200).json(await District.findAll())});
-router.get('/area-list',authenticate,authorize(['admin']))
-router.get('/district/:id', async (req,res) => { // Get areas by region ID
+
+/**
+ * @swagger
+ * /areas/provinces:
+ *   get:
+ *     summary: Get all provinces
+ *     tags: [Areas]
+ *     responses:
+ *       200:
+ *         description: List of provinces
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: integer
+ *                   name:
+ *                     type: string
+ *       500:
+ *         description: Server error
+ */
+router.get('/provinces', async (req, res) => { return res.status(200).json(await Province.findAll()) });
+
+/**
+ * @swagger
+ * /areas/districts:
+ *   get:
+ *     summary: Get all districts
+ *     tags: [Areas]
+ *     responses:
+ *       200:
+ *         description: List of districts
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: integer
+ *                   name:
+ *                     type: string
+ *                   province_id:
+ *                     type: integer
+ *       500:
+ *         description: Server error
+ */
+router.get('/districts', async (req, res) => { return res.status(200).json(await District.findAll()) });
+
+/**
+ * @swagger
+ * /areas/district/{id}:
+ *   get:
+ *     summary: Get areas by district ID
+ *     tags: [Areas]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: District ID
+ *     responses:
+ *       200:
+ *         description: List of areas in the district
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Area'
+ *       500:
+ *         description: Server error
+ */
+router.get('/district/:id', async (req, res) => {
     const districtId = req.params.id;
     try {
-        const areas = await Area.findAll({ where: { district : districtId } });
+        const areas = await Area.findAll({ where: { district: districtId } });
         return res.status(200).json(areas);
     } catch (error) {
         return res.status(500).json({ error: 'Error fetching areas by region ID' });
     }
-}
-)
-router.get('/province/:id', async (req,res) => { // Get areas by region ID
+});
+
+/**
+ * @swagger
+ * /areas/province/{id}:
+ *   get:
+ *     summary: Get areas by province ID
+ *     tags: [Areas]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Province ID
+ *     responses:
+ *       200:
+ *         description: List of areas in the province
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Area'
+ *       500:
+ *         description: Server error
+ */
+router.get('/province/:id', async (req, res) => {
     const provinceId = req.params.id;
     try {
-        const areas = await Area.findAll({ where: { province : provinceId } });
+        const areas = await Area.findAll({ where: { province: provinceId } });
         return res.status(200).json(areas);
     } catch (error) {
         return res.status(500).json({ error: 'Error fetching areas by region ID' });
     }
-}
-); // Get areas by region ID
+});
 
+/**
+ * @swagger
+ * /areas:
+ *   post:
+ *     summary: Create new area
+ *     tags: [Areas]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *               - latitude
+ *               - longitude
+ *               - province
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 example: "Khu vực nuôi tôm A"
+ *               latitude:
+ *                 type: number
+ *                 format: float
+ *                 example: 10.762622
+ *               longitude:
+ *                 type: number
+ *                 format: float
+ *                 example: 106.660172
+ *               province:
+ *                 type: integer
+ *                 example: 1
+ *               district:
+ *                 type: integer
+ *                 example: 1
+ *               area_type:
+ *                 type: string
+ *                 enum: [oyster, shrimp, fish]
+ *                 example: "shrimp"
+ *     responses:
+ *       201:
+ *         description: Area created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Success'
+ *       400:
+ *         description: Bad request
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ */
+router.post('/', authenticate, authorize(['admin', 'manager']), createArea);
 
-router.post('/', authenticate, authorize(['admin','manager']), createArea);  // Create a new area
+/**
+ * @swagger
+ * /areas/{id}:
+ *   put:
+ *     summary: Update area by ID
+ *     tags: [Areas]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Area ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               latitude:
+ *                 type: number
+ *                 format: float
+ *               longitude:
+ *                 type: number
+ *                 format: float
+ *               province:
+ *                 type: integer
+ *               district:
+ *                 type: integer
+ *               area_type:
+ *                 type: string
+ *                 enum: [oyster, shrimp, fish]
+ *     responses:
+ *       200:
+ *         description: Area updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Success'
+ *       400:
+ *         description: Bad request
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ *       404:
+ *         description: Area not found
+ */
+router.put('/:id', authenticate, authorize(['admin', 'manager']), updateArea);
 
-// PUT route to update an existing area (with authentication and authorization)
-router.put('/:id', authenticate, authorize(['admin','manager']), updateArea);  // Update an existing area by ID
+/**
+ * @swagger
+ * /areas/{id}:
+ *   delete:
+ *     summary: Delete area by ID
+ *     tags: [Areas]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Area ID
+ *     responses:
+ *       200:
+ *         description: Area deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Success'
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ *       404:
+ *         description: Area not found
+ */
+router.delete('/:id', authenticate, authorize(['admin', 'manager']), deleteArea);
 
-// DELETE route to delete an area (with authentication and authorization)
-router.delete('/:id', authenticate, authorize(['admin','manager']), deleteArea); 
 module.exports = router;

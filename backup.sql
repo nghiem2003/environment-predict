@@ -5,7 +5,7 @@
 -- Dumped from database version 17.0
 -- Dumped by pg_dump version 17.0
 
--- Started on 2025-09-28 17:09:14
+-- Started on 2025-10-09 01:56:24
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -497,8 +497,9 @@ COPY public."SequelizeMeta" (name) FROM stdin;
 --
 
 COPY public.diagnose_areas (id, name, latitude, longitude, area, area_type, province, district) FROM stdin;
-49	adasd12121	10.762495303939643	106.66027620776322	1000	cobia	f851f9a1-330b-4d29-98ae-f4092e7e7f70	b246ae91-2e2e-4f29-8a6b-29be23b6e663
-50	Khu vực B	10.763728494588353	106.66367167890975	1000	cobia	fdca33cf-6b24-409b-9d07-46efb37051f5	40ebf59b-c17e-43a6-a2cd-1f8c77daae92
+51	 BỜ HUYỆN THÁI THỤY	20.589080994085194	106.62052141945819	1000	oyster	8830da77-668b-48d0-b2b6-91f2d3d3d136	3de66096-313d-48bb-a7a0-627263a09e92
+52	Bờ biển Vân Đồn	21.050620522816715	107.42779882321213	1000	cobia	f851f9a1-330b-4d29-98ae-f4092e7e7f70	b246ae91-2e2e-4f29-8a6b-29be23b6e663
+53	Bờ biển Cát Bà	20.862621499274244	106.95327187274789	1000	cobia	f851f9a1-330b-4d29-98ae-f4092e7e7f70	b246ae91-2e2e-4f29-8a6b-29be23b6e663
 \.
 
 
@@ -533,90 +534,22 @@ COPY public.diagnose_naturalelements (id, name, description, unit, category) FRO
 --
 
 COPY public.diagnose_prediction_natureelements (id, prediction_id, nature_element_id, value) FROM stdin;
-435	48	8	1
-436	48	9	1
-437	48	10	1
-438	48	11	1
-439	48	12	1
-440	48	13	1
-441	48	14	1
-442	48	15	1
-443	48	16	1
-444	48	17	1
-445	48	18	1
-446	48	19	1
-447	48	20	1
-448	48	21	1
-449	49	8	2
-450	49	9	2
-451	49	10	2
-452	49	11	2
-453	49	12	2
-454	49	13	2
-455	49	14	2
-456	49	15	2
-457	49	16	2
-458	49	17	2
-459	49	18	2
-460	49	19	2
-461	49	20	2
-462	49	21	1
-463	50	8	1
-464	50	9	1
-465	50	10	1
-466	50	11	1
-467	50	12	1
-468	50	13	1
-469	50	14	1
-470	50	15	1
-471	50	16	1
-472	50	17	1
-473	50	18	1
-474	50	19	1
-475	50	20	1
-476	50	21	1
-477	51	8	2
-478	51	9	2
-479	51	10	2
-480	51	11	2
-481	51	12	2
-482	51	13	2
-483	51	14	2
-484	51	15	2
-485	51	16	2
-486	51	17	2
-487	51	18	2
-488	51	19	2
-489	51	20	2
-490	51	21	1
-491	52	8	1
-492	52	9	1
-493	52	10	1
-494	52	11	1
-495	52	12	1
-496	52	13	1
-497	52	14	1
-498	52	15	1
-499	52	16	1
-500	52	17	1
-501	52	18	1
-502	52	19	1
-503	52	20	1
-504	52	21	1
-505	53	8	111
-506	53	9	1
-507	53	10	1
-508	53	11	1
-509	53	12	1
-510	53	13	1
-511	53	14	1
-512	53	15	1
-513	53	16	1
-514	53	17	1
-515	53	18	1
-516	53	19	1
-517	53	20	1
-518	53	21	1
+551	62	10	8.01
+552	62	14	20.3
+553	62	12	28
+554	62	21	18.2
+555	63	10	8.05
+556	63	14	26.7
+557	63	12	28.4
+558	63	21	27.1
+559	64	10	8.23
+560	64	14	28.5
+561	64	12	27.6
+562	64	21	28.3
+563	65	10	8.2
+564	65	14	23.3
+565	65	12	28.2
+566	65	21	22.6
 \.
 
 
@@ -627,12 +560,10 @@ COPY public.diagnose_prediction_natureelements (id, prediction_id, nature_elemen
 --
 
 COPY public.diagnose_predictions (id, user_id, area_id, prediction_text, "createdAt", "updatedAt") FROM stdin;
-48	5	49	0	1970-01-01 07:00:00.001+07	2025-09-21 19:32:43.868+07
-49	5	49	0	1970-01-01 07:00:00.001+07	2025-09-21 19:32:44.321+07
-50	5	49	-1	1970-01-01 07:00:00.001+07	2025-09-21 19:50:57.424+07
-51	5	49	-1	1970-01-01 07:00:00.001+07	2025-09-21 19:50:58.269+07
-52	5	49	6	2025-09-21 20:25:02.255+07	2025-09-21 20:25:02.259+07
-53	5	49	-1	2025-09-21 20:47:28.356+07	2025-09-21 20:47:28.364+07
+62	5	51	-1	2025-02-01 19:00:00+07	2025-10-05 20:44:44.796+07
+63	5	51	0	2025-05-01 19:00:00+07	2025-10-05 20:44:45.922+07
+64	5	51	-1	2025-08-01 19:00:00+07	2025-10-05 20:44:46.803+07
+65	5	51	-1	2025-11-01 19:00:00+07	2025-10-05 20:44:47.89+07
 \.
 
 
@@ -651,7 +582,6 @@ fc3e2551-e45c-4b6b-87a5-183cf2a8bfe0	Ngô Quyền	20.8565	106.6985	fb7e3341-2d65
 e1de6f8d-e46b-4e7a-b0d3-09bb7ae0b7e9	Lê Chân	20.8449	106.6926	fb7e3341-2d65-44ba-868a-1c89c85e36a1
 55d45d30-c370-48e5-9502-3b1fc1af0e2a	Hồng Bàng	20.8665	106.676	fb7e3341-2d65-44ba-868a-1c89c85e36a1
 ce9220ec-91e7-4b2d-9557-d7515ad1ce61	Đồ Sơn	20.7132	106.7769	fb7e3341-2d65-44ba-868a-1c89c85e36a1
-3de66096-313d-48bb-a7a0-627263a09e92	Thái Bình	20.45	106.34	8830da77-668b-48d0-b2b6-91f2d3d3d136
 726456e6-57ea-4a5c-9ab6-0b3c38a98906	Quỳnh Phụ	20.6716	106.3898	8830da77-668b-48d0-b2b6-91f2d3d3d136
 d9a2ae38-9bbf-4440-bfdc-2b931c2d3728	Tiền Hải	20.3216	106.555	8830da77-668b-48d0-b2b6-91f2d3d3d136
 338b586c-6a9e-40b2-bba8-7076f5ef41d8	Hưng Hà	20.6698	106.1782	8830da77-668b-48d0-b2b6-91f2d3d3d136
@@ -677,6 +607,7 @@ ab02b04a-b3fc-4e5f-94e8-f27de6016c50	Sơn Tịnh	15.2124	108.7422	2b708477-89e2-
 5ea9b0d1-5f54-456d-939f-bf7592b51d29	Nha Trang	12.2388	109.1967	0516f5a8-0e1e-4c95-90f7-50e59c99ad20
 6c9e1e03-2d6f-4b17-83f8-c2b3e79dbe81	Cam Ranh	11.9214	109.1597	0516f5a8-0e1e-4c95-90f7-50e59c99ad20
 110b11e2-35e1-41e4-9d0a-14cb23efbd6f	Ninh Hòa	12.5356	109.0912	0516f5a8-0e1e-4c95-90f7-50e59c99ad20
+3de66096-313d-48bb-a7a0-627263a09e92	Thái Thuỵ	20.45	106.34	8830da77-668b-48d0-b2b6-91f2d3d3d136
 \.
 
 
@@ -687,8 +618,7 @@ ab02b04a-b3fc-4e5f-94e8-f27de6016c50	Sơn Tịnh	15.2124	108.7422	2b708477-89e2-
 --
 
 COPY public.email_subscriptions (id, email, area_id, is_active, unsubscribe_token, created_at, updated_at) FROM stdin;
-5	nghiem.ld215102@sis.hust.edu.vn	49	t	a11c44d0229564946b48d540b14c7f161359707d866d40d9dec08a2a16fe4d85	2025-09-17 02:52:25.94+07	2025-09-17 02:52:25.941+07
-6	nghiem.eo.bua.18@gmail.com	49	t	cdb19ffa9592a555a11962d4a2e5add1c220eabc603c1aac177de9f28055bc77	2025-09-21 20:38:50.434+07	2025-09-21 20:38:50.435+07
+7	nghiem.eo.bua.18@gmail.com	51	t	36f27ff7de980c66b4f6e3ba9d0aaf8c0b9184ab7776de1f6362e770887b4d7d	2025-10-05 21:07:07.741+07	2025-10-05 21:07:07.743+07
 \.
 
 
@@ -701,6 +631,7 @@ COPY public.email_subscriptions (id, email, area_id, is_active, unsubscribe_toke
 COPY public.otps (id, email, area_id, otp_code, expires_at, is_used, created_at, updated_at) FROM stdin;
 2	nghiem.ld215102@sis.hust.edu.vn	49	923330	2025-09-17 02:57:01.449+07	t	2025-09-17 02:52:01.495+07	2025-09-17 02:52:25.913+07
 3	nghiem.eo.bua.18@gmail.com	49	858264	2025-09-21 20:43:11.949+07	t	2025-09-21 20:38:11.976+07	2025-09-21 20:38:50.415+07
+4	nghiem.eo.bua.18@gmail.com	51	238198	2025-10-05 21:11:30.067+07	t	2025-10-05 21:06:30.091+07	2025-10-05 21:07:07.691+07
 \.
 
 
@@ -750,7 +681,7 @@ COPY public.users (id, username, password, role, email, address, phone, status, 
 -- Name: diagnose_areas_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.diagnose_areas_id_seq', 50, true);
+SELECT pg_catalog.setval('public.diagnose_areas_id_seq', 53, true);
 
 
 --
@@ -768,7 +699,7 @@ SELECT pg_catalog.setval('public.diagnose_naturalelements_id_seq', 21, true);
 -- Name: diagnose_prediction_natureelements_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.diagnose_prediction_natureelements_id_seq', 518, true);
+SELECT pg_catalog.setval('public.diagnose_prediction_natureelements_id_seq', 566, true);
 
 
 --
@@ -777,7 +708,7 @@ SELECT pg_catalog.setval('public.diagnose_prediction_natureelements_id_seq', 518
 -- Name: diagnose_predictions_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.diagnose_predictions_id_seq', 53, true);
+SELECT pg_catalog.setval('public.diagnose_predictions_id_seq', 65, true);
 
 
 --
@@ -786,7 +717,7 @@ SELECT pg_catalog.setval('public.diagnose_predictions_id_seq', 53, true);
 -- Name: email_subscriptions_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.email_subscriptions_id_seq', 6, true);
+SELECT pg_catalog.setval('public.email_subscriptions_id_seq', 7, true);
 
 
 --
@@ -795,7 +726,7 @@ SELECT pg_catalog.setval('public.email_subscriptions_id_seq', 6, true);
 -- Name: otps_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.otps_id_seq', 3, true);
+SELECT pg_catalog.setval('public.otps_id_seq', 4, true);
 
 
 --
@@ -987,7 +918,7 @@ ALTER TABLE ONLY public.diagnose_areas
     ADD CONSTRAINT fk_province FOREIGN KEY (province) REFERENCES public.provinces(id);
 
 
--- Completed on 2025-09-28 17:09:14
+-- Completed on 2025-10-09 01:56:25
 
 --
 -- PostgreSQL database dump complete

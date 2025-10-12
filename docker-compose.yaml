@@ -30,6 +30,8 @@ services:
       - proxy_network
     restart: always
     environment:
+      - NODE_ENV=production
+      - BACKEND_URL=http://dhtbkc4.tbu.edu.vn/quanlytainguyen/api/express
       - FRONTEND_URL=http://dhtbkc4.tbu.edu.vn/quanlytainguyen
       - DB_HOST=postgres_db
       - DB_PORT=5432

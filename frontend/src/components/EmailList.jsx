@@ -77,6 +77,7 @@ const EmailList = () => {
       setAreas(response.data.areas);
     } catch (error) {
       console.error('Error fetching areas:', error);
+      message.error('Không thể tải danh sách khu vực');
     }
   };
 
@@ -88,19 +89,26 @@ const EmailList = () => {
   // Handle form submit
   const handleSubmit = async (values) => {
     try {
+      // Validate required fields
+      if (!values.email || !values.area_id) {
+        message.error('Vui lòng điền đầy đủ thông tin bắt buộc');
+        return;
+      }
+
       if (editingId) {
         await axios.put(`/api/express/emails/${editingId}`, values);
-        message.success(t('email.updateSuccess'));
+        message.success(t('email.updateSuccess') || 'Cập nhật đăng ký email thành công');
       } else {
         await axios.post('/api/express/emails/subscribe', values);
-        message.success(t('email.createSuccess'));
+        message.success(t('email.createSuccess') || 'Tạo đăng ký email thành công');
       }
       setModalVisible(false);
       form.resetFields();
       setEditingId(null);
       fetchSubscriptions(pagination.current, pagination.pageSize);
     } catch (error) {
-      const errorMsg = error.response?.data?.error || t('email.createFailed');
+      console.error('Error submitting email subscription:', error);
+      const errorMsg = error.response?.data?.error || t('email.createFailed') || 'Có lỗi xảy ra khi lưu đăng ký email';
       message.error(errorMsg);
     }
   };

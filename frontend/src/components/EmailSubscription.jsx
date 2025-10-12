@@ -42,7 +42,8 @@ const EmailSubscription = () => {
         const response = await axios.get(`/api/express/areas/area/${areaId}`);
         setArea(response.data);
       } catch (error) {
-        setError('Không thể tải thông tin khu vực');
+        console.error('Error fetching area:', error);
+        setError('Không thể tải thông tin khu vực. Vui lòng kiểm tra lại ID khu vực.');
       } finally {
         setAreaLoading(false);
       }
@@ -71,10 +72,11 @@ const EmailSubscription = () => {
       setShowOTPForm(true);
       form.resetFields();
     } catch (err) {
+      console.error('Error sending OTP:', err);
       if (err.response?.data?.error) {
         setError(err.response.data.error);
       } else {
-        setError('Không thể gửi mã OTP. Vui lòng thử lại.');
+        setError('Không thể gửi mã OTP. Vui lòng kiểm tra kết nối mạng và thử lại.');
       }
     } finally {
       setOtpLoading(false);
@@ -98,10 +100,11 @@ const EmailSubscription = () => {
       setShowOTPForm(false);
       otpForm.resetFields();
     } catch (err) {
+      console.error('Error verifying OTP:', err);
       if (err.response?.data?.error) {
         setError(err.response.data.error);
       } else {
-        setError('Mã OTP không đúng hoặc đã hết hạn.');
+        setError('Mã OTP không đúng hoặc đã hết hạn. Vui lòng thử lại.');
       }
     } finally {
       setLoading(false);

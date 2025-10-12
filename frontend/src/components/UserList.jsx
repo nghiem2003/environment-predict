@@ -138,15 +138,37 @@ const UserList = () => {
 
   // Submit handler for creating/updating a user
   const handleUserPopupSubmit = async (values) => {
-    // Convert role for backend if needed
-    let submitValues = { ...values };
-    if (
-      values.role === 'province_manager' ||
-      values.role === 'district_manager'
-    ) {
-      submitValues = { ...values, role: 'manager' };
-    }
     try {
+      // Validate required fields
+      if (!values.name || !values.email || !values.address || !values.phone || !values.province) {
+        message.error('Vui lòng điền đầy đủ thông tin bắt buộc');
+        return;
+      }
+
+      // Validate role-specific requirements
+      if (values.role === 'expert' && !values.district) {
+        message.error('Expert role requires district selection');
+        return;
+      }
+
+      // Validate district belongs to province
+      if (values.district) {
+        const selectedDistrict = districtList.find(d => d.id === values.district);
+        if (selectedDistrict && selectedDistrict.province_id !== values.province) {
+          message.error('District does not belong to selected province');
+          return;
+        }
+      }
+
+      // Convert role for backend - keep original role names for clarity
+      let submitValues = { ...values };
+
+      // For new users, ensure password is provided
+      if (!userPopupData.id && !values.password) {
+        message.error('Password is required for new users');
+        return;
+      }
+
       if (userPopupData.id) {
         // Update existing user
         const result = await axios.post(
@@ -192,6 +214,7 @@ const UserList = () => {
       });
     } catch (error) {
       console.error('Error saving user:', error);
+      message.error('Có lỗi xảy ra khi lưu thông tin người dùng');
     }
   };
 
@@ -200,11 +223,13 @@ const UserList = () => {
     const regionName = getRegionNameFromId(user.province);
     console.log(user);
 
+    // Filter districts based on user's province
     setFilteredDistrictList(
       districtList.filter((district) => district.province_id === user.province)
     );
     setSelectedRegionName(regionName);
 
+    // Convert role for display
     let displayRole = user.role;
     if (user.role === 'manager') {
       displayRole = user.district ? 'district_manager' : 'province_manager';
@@ -221,6 +246,9 @@ const UserList = () => {
       district: user.district,
       role: displayRole,
     });
+
+    // Reset form and set values
+    form.resetFields();
     form.setFieldsValue({
       name: user.username,
       email: user.email,
@@ -296,6 +324,8 @@ const UserList = () => {
       district: '',
       role: '',
     });
+
+    // Reset form completely
     form.resetFields();
 
     // Pre-fill province/district for managers (especially district managers)
@@ -605,58 +635,23 @@ const UserList = () => {
                     ]
                 }
                 onChange={(value) => {
-                  // Province and district logic when changing role
-                  if (value === 'province_manager') {
-                    // Must have province, reset district
-                    if (!form.getFieldValue('province')) {
-                      form.setFieldsValue({ province: undefined });
+                  // Simplified role handling
+                  form.setFieldsValue({ role: value });
+
+                  // Reset district when role changes
+                  form.setFieldsValue({ district: undefined });
+
+                  // If current user is manager, lock province to their own
+                  try {
+                    const decoded = jwtDecode(token);
+                    if (decoded.role === 'manager' && decoded.province) {
+                      form.setFieldsValue({ province: decoded.province });
                     }
-                    form.setFieldsValue({
-                      district: undefined,
-                      role: 'province_manager',
-                    });
-                    // If current user is manager, lock province to their own
-                    try {
-                      const decoded = jwtDecode(token);
-                      if (decoded.role === 'manager' && decoded.province) {
-                        form.setFieldsValue({ province: decoded.province });
-                      }
-                    } catch (e) { }
-                  } else if (value === 'district_manager') {
-                    // Must have province, district
-                    if (!form.getFieldValue('province')) {
-                      form.setFieldsValue({
-                        province: undefined,
-                        district: undefined,
-                      });
-                    } else if (!form.getFieldValue('district')) {
-                      form.setFieldsValue({ district: undefined });
-                    }
-                    form.setFieldsValue({
-                      role: 'district_manager',
-                    });
-                    // If current user is manager, lock province to their own
-                    try {
-                      const decoded = jwtDecode(token);
-                      if (decoded.role === 'manager' && decoded.province) {
-                        form.setFieldsValue({ province: decoded.province });
-                      }
-                    } catch (e) { }
-                  } else {
-                    // expert: must have province, district
-                    if (!form.getFieldValue('province')) {
-                      form.setFieldsValue({
-                        province: undefined,
-                        district: undefined,
-                      });
-                    } else if (!form.getFieldValue('district')) {
-                      form.setFieldsValue({ district: undefined });
-                    }
-                    form.setFieldsValue({
-                      role: 'expert',
-                    });
+                  } catch (e) {
+                    // ignore decode issues
                   }
-                  form.validateFields(['province', 'district']);
+
+                  // Filter districts based on current province
                   const currentProvince = form.getFieldValue('province');
                   if (currentProvince) {
                     setFilteredDistrictList(
@@ -665,6 +660,9 @@ const UserList = () => {
                       )
                     );
                   }
+
+                  // Validate required fields based on role
+                  form.validateFields(['province', 'district']);
                 }}
               />
             </Form.Item>

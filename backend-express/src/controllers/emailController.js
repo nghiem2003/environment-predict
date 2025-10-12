@@ -491,7 +491,7 @@ exports.sendPredictionNotification = async (areaId, predictionData) => {
         )}</p>
         </div>
         <div style="text-align: center; margin: 30px 0;">
-              <a href="${baseUrl}/interactive-map?areaId=${areaId}" 
+              <a href="${baseUrl}/interactive-map?areaId=${areaId}&lat=${area.latitude}&lon=${area.longitude}&zoom=15" 
              style="background-color: #3498db; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
             ${isBatchPrediction ? 'Xem danh sách dự đoán' : 'Xem chi tiết dự đoán'}
           </a>
@@ -620,28 +620,34 @@ exports.sendManualNotification = async (req, res) => {
       return res.status(404).json({ error: 'Area not found' });
     }
 
-    let targetEmails = [];
+    let subscriptions = [];
 
     if (sendToAll) {
       // Get all active email subscriptions for this area
-      const subscriptions = await Email.findAll({
+      subscriptions = await Email.findAll({
         where: {
           area_id: areaId,
           is_active: true,
         },
-        attributes: ['email']
+        attributes: ['email', 'unsubscribe_token']
       });
-      targetEmails = subscriptions.map(sub => sub.email);
     } else if (selectedEmails && selectedEmails.length > 0) {
-      // Use selected emails
-      targetEmails = selectedEmails;
+      // Get subscriptions for selected emails
+      subscriptions = await Email.findAll({
+        where: {
+          area_id: areaId,
+          email: selectedEmails,
+          is_active: true,
+        },
+        attributes: ['email', 'unsubscribe_token']
+      });
     } else {
       return res.status(400).json({
         error: 'Either sendToAll must be true or selectedEmails must be provided'
       });
     }
 
-    if (targetEmails.length === 0) {
+    if (subscriptions.length === 0) {
       return res.status(404).json({
         error: 'No email subscriptions found for this area'
       });
@@ -651,7 +657,7 @@ exports.sendManualNotification = async (req, res) => {
     const subject = `Thông báo dự đoán thủ công - Khu vực: ${area.name}`;
 
     // Send emails to all target users
-    const emailPromises = targetEmails.map((email) => {
+    const emailPromises = subscriptions.map((subscription) => {
       const htmlContent = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2 style="color: #2c3e50;">Thông báo dự đoán thủ công</h2>
@@ -671,7 +677,7 @@ exports.sendManualNotification = async (req, res) => {
         )}</p>
           </div>
           <div style="text-align: center; margin: 30px 0;">
-            <a href="${baseUrl}/prediction/${areaId}" 
+            <a href="${baseUrl}/interactive-map?areaId=${areaId}&lat=${area.latitude}&lon=${area.longitude}&zoom=15" 
                style="background-color: #3498db; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
               Xem chi tiết dự đoán
             </a>
@@ -679,7 +685,8 @@ exports.sendManualNotification = async (req, res) => {
           <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
           <p style="font-size: 12px; color: #666;">
             Đây là thông báo dự đoán thủ công được gửi bởi quản trị viên.<br>
-            <a href="${baseUrl}/unsubscribe" 
+            Bạn nhận được email này vì đã đăng ký nhận thông báo dự đoán cho khu vực ${area.name}.<br>
+            <a href="${baseUrl}/unsubscribe/${subscription.unsubscribe_token}" 
                style="color: #e74c3c;">Hủy đăng ký nhận thông báo</a>
           </p>
           <p>Trân trọng,<br>Hệ thống Dự đoán Nuôi trồng Thủy sản</p>
@@ -688,7 +695,7 @@ exports.sendManualNotification = async (req, res) => {
 
       const mailOptions = {
         from: process.env.EMAIL_USER || 'your-email@gmail.com',
-        to: email,
+        to: subscription.email,
         subject: subject,
         html: htmlContent,
       };
@@ -700,8 +707,8 @@ exports.sendManualNotification = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: `Đã gửi thông báo thành công đến ${targetEmails.length} người dùng`,
-      sentTo: targetEmails,
+      message: `Đã gửi thông báo thành công đến ${subscriptions.length} người dùng`,
+      sentTo: subscriptions.map(sub => sub.email),
       area: {
         id: area.id,
         name: area.name,

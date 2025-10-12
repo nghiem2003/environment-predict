@@ -1,5 +1,7 @@
 const express = require('express');
 const bodyParser = require('body-parser');
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpecs = require('./src/config/swagger.js');
 const authRoutes = require('./src/routes/authRoutes.js');
 const predictionRoutes = require('./src/routes/predictionRoutes.js');
 const areaRoutes = require('./src/routes/areaRoutes.js');
@@ -46,6 +48,21 @@ cron.schedule('0 0 * * *', triggerDataFetch, {
 });
 
 
+// Swagger Documentation
+app.use('/api/express/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs, {
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: 'Aquaculture Prediction System API',
+  swaggerOptions: {
+    persistAuthorization: true,
+    displayRequestDuration: true,
+    docExpansion: 'none',
+    filter: true,
+    showRequestHeaders: true,
+    tryItOutEnabled: true
+  }
+}));
+
+// API Routes
 app.use('/api/express/auth', authRoutes);
 app.use('/api/express/predictions', predictionRoutes);
 app.use('/api/express/areas', areaRoutes);
@@ -53,7 +70,8 @@ app.use('/api/express/emails', emailRoutes);
 app.use('/api/express/nature-elements', natureElementRoutes);
 
 sequelize.sync().then(() => {
-  app.listen(5000, () =>
-    console.log('Server running on http://localhost:5000')
-  );
+  app.listen(5000, () => {
+    console.log('🚀 Server running on http://localhost:5000');
+    console.log('📚 API Documentation available at http://localhost:5000/api/express/docs');
+  });
 });

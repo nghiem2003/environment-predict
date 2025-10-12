@@ -141,6 +141,21 @@ const AreaList = () => {
     console.log('id', form.getFieldValue('id'));
 
     try {
+      // Validate required fields
+      if (!values.name || !values.latitude || !values.longitude || !values.province) {
+        console.error('Missing required fields');
+        return;
+      }
+
+      // Validate district belongs to province
+      if (values.district) {
+        const selectedDistrict = districtList.find(d => d.id === values.district);
+        if (selectedDistrict && selectedDistrict.province_id !== values.province) {
+          console.error('District does not belong to selected province');
+          return;
+        }
+      }
+
       if (form.getFieldValue('id')) {
         await axios.put(
           `/api/express/areas/${form.getFieldValue('id')}`,
@@ -152,6 +167,15 @@ const AreaList = () => {
       setIsPopupOpen(false);
       fetchAreas(userFilter.province, userFilter.district, userFilter.role);
       form.resetFields();
+      setNewArea({
+        id: '',
+        name: '',
+        latitude: '',
+        longitude: '',
+        area: '',
+        region: '',
+        area_type: 'oyster',
+      });
     } catch (error) {
       console.error('Error saving area:', error);
     }
@@ -172,11 +196,15 @@ const AreaList = () => {
   const handleUpdate = (id) => {
     const areaToUpdate = areas.find((area) => area.id === id);
     console.log(areaToUpdate);
+
+    // Filter districts based on the area's province, not the current user's province
+    const areaProvince = areaToUpdate.province || jwtDecode(token).province;
     setFilteredDistrictList(
       districtList.filter(
-        (district) => district.province_id === jwtDecode(token).province
+        (district) => district.province_id === areaProvince
       )
     );
+
     form.setFieldsValue({
       id: areaToUpdate.id || '',
       name: areaToUpdate.name || '',
@@ -395,19 +423,31 @@ const AreaList = () => {
               block
               icon={<PlusOutlined />}
               onClick={() => {
-                form.setFieldValue('province', jwtDecode(token).province);
-                console.log(form.getFieldsValue());
+                // Reset form completely
+                form.resetFields();
 
+                // Set default values based on user role
+                const decodedToken = jwtDecode(token);
+                form.setFieldValue('province', decodedToken.province);
+                form.setFieldValue('area_type', 'oyster');
+
+                // Filter districts based on user's province
                 setFilteredDistrictList(
                   districtList.filter(
                     (district) =>
-                      district.province_id === jwtDecode(token).province
+                      district.province_id === decodedToken.province
                   )
                 );
+
                 // If manager has a district in token, prefill it
-                if (jwtDecode(token).district) {
-                  form.setFieldValue('district', jwtDecode(token).district);
+                if (decodedToken.district) {
+                  form.setFieldValue('district', decodedToken.district);
                 }
+
+                // Reset map position
+                setMapCenter([10.762622, 106.660172]);
+                setPosition(null);
+
                 setIsPopupOpen(true);
               }}
             >
@@ -484,11 +524,18 @@ const AreaList = () => {
                 <Form.Item
                   label={t('area_list.popup.select_province')}
                   name="province"
+                  rules={[{ required: true, message: 'Province is required' }]}
                 >
                   <Select
                     disabled={jwtDecode(token).role === 'manager'}
-                    onChange={() => {
+                    onChange={(value) => {
                       form.setFieldsValue({ district: '' });
+                      // Filter districts when province changes
+                      setFilteredDistrictList(
+                        districtList.filter(
+                          (district) => district.province_id === value
+                        )
+                      );
                     }}
                   >
                     {regionList.map((region) => (

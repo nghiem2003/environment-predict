@@ -4,7 +4,14 @@ rsync -avz --progress \
   --exclude='.vscode/' \
   --exclude='.git/' \
   --exclude='.gitignore' \
-  --exclude='backend-flask/' \
+  --exclude='backend-flask/data/' \
+  --exclude='backend-flask/venv/' \
+  --exclude='backend-flask/model/' \
+  --exclude='backend-flask/copernicus_temp_data/' \
+  --exclude='backend-flask/export_full_raw.csv' \
+  --exclude='backend-flask/notebook.ipynb' \
+  --exclude='backend-flask/prediction_module/__pycache__/' \
+  --exclude='backend-flask/__pycache__/' \
   --exclude='*.log' \
   --exclude='.env*' \
   --exclude='dist/' \
