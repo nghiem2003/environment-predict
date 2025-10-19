@@ -1,6 +1,6 @@
 const express = require('express');
 const { authenticate, authorize } = require('../middlewares/authMiddleware');
-const { getAllAreas, getAreaById, createArea, updateArea, deleteArea } = require('../controllers/areaController');
+const { getAllAreas, getAllAreasNoPagination, getAreaById, createArea, updateArea, deleteArea } = require('../controllers/areaController');
 const { Province, Area, District } = require('../models/index.js');
 const router = express.Router();
 
@@ -8,8 +8,10 @@ const router = express.Router();
  * @swagger
  * /areas:
  *   get:
- *     summary: Get all areas
+ *     summary: Get all areas (Admin/Manager/Expert only)
  *     tags: [Areas]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: query
  *         name: page
@@ -38,10 +40,120 @@ const router = express.Router();
  *         schema:
  *           type: string
  *           enum: [oyster, shrimp, fish]
+     *         description: Filter by area type
+     *     responses:
+     *       200:
+     *         description: List of areas
+     *         content:
+     *           application/json:
+     *             schema:
+     *               type: object
+     *               properties:
+     *                 areas:
+     *                   type: array
+     *                   items:
+     *                     type: object
+     *                     properties:
+     *                       id:
+     *                         type: integer
+     *                         description: Area ID
+     *                         example: 1
+     *                       name:
+     *                         type: string
+     *                         description: Area name
+     *                         example: "Khu vực nuôi tôm A"
+     *                       latitude:
+     *                         type: number
+     *                         format: double
+     *                         description: Latitude coordinate
+     *                         example: 10.762622
+     *                       longitude:
+     *                         type: number
+     *                         format: double
+     *                         description: Longitude coordinate
+     *                         example: 106.660172
+     *                       area:
+     *                         type: number
+     *                         format: double
+     *                         description: Area size in square meters
+     *                         example: 1000.5
+     *                       province:
+     *                         type: string
+     *                         format: uuid
+     *                         description: Province ID
+     *                         example: "123e4567-e89b-12d3-a456-426614174000"
+     *                       district:
+     *                         type: string
+     *                         format: uuid
+     *                         description: District ID
+     *                         example: "123e4567-e89b-12d3-a456-426614174001"
+     *                       area_type:
+     *                         type: string
+     *                         enum: [oyster, cobia]
+     *                         description: Type of aquaculture area
+     *                         example: "oyster"
+     *                 total:
+     *                   type: integer
+     *                   description: Total number of areas
+     *                   example: 25
+     *             examples:
+     *               success:
+     *                 summary: Successful response
+     *                 value:
+     *                   areas:
+     *                     - id: 1
+     *                       name: "Khu vực nuôi hàu A"
+     *                       latitude: 10.762622
+     *                       longitude: 106.660172
+     *                       area: 1000.5
+     *                       province: "123e4567-e89b-12d3-a456-426614174000"
+     *                       district: "123e4567-e89b-12d3-a456-426614174001"
+     *                       area_type: "oyster"
+     *                     - id: 2
+     *                       name: "Khu vực nuôi cá cobia B"
+     *                       latitude: 10.800000
+     *                       longitude: 106.700000
+     *                       area: 1500.0
+     *                       province: "123e4567-e89b-12d3-a456-426614174000"
+     *                       district: "123e4567-e89b-12d3-a456-426614174002"
+     *                       area_type: "cobia"
+     *                   total: 25
+     *       500:
+     *         description: Server error
+ */
+router.get('/', authenticate, authorize(['admin', 'manager', 'expert']), getAllAreas);
+/**
+ * @swagger
+ * /areas/all:
+ *   get:
+ *     summary: Get all areas without pagination (Public)
+ *     tags: [Areas]
+ *     security: []
+ *     parameters:
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search by area name
+ *       - in: query
+ *         name: area_type
+ *         schema:
+ *           type: string
+ *           enum: [oyster, shrimp, fish]
  *         description: Filter by area type
+ *       - in: query
+ *         name: province
+ *         schema:
+ *           type: integer
+ *         description: Filter by province ID
+ *       - in: query
+ *         name: district
+ *         schema:
+ *           type: integer
+ *         description: Filter by district ID
  *     responses:
  *       200:
- *         description: List of areas
+ *         description: List of all areas
  *         content:
  *           application/json:
  *             schema:
@@ -50,24 +162,50 @@ const router = express.Router();
  *                 areas:
  *                   type: array
  *                   items:
- *                     $ref: '#/components/schemas/Area'
- *                 total:
- *                   type: integer
- *                 page:
- *                   type: integer
- *                 limit:
- *                   type: integer
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: integer
+ *                         example: 1
+ *                       name:
+ *                         type: string
+ *                         example: "Khu vực nuôi tôm A"
+ *                       latitude:
+ *                         type: number
+ *                         example: 10.762622
+ *                       longitude:
+ *                         type: number
+ *                         example: 106.660172
+ *                       area_type:
+ *                         type: string
+ *                         enum: [oyster, shrimp, fish]
+ *                         example: "shrimp"
+ *                       Province:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: integer
+ *                           name:
+ *                             type: string
+ *                       District:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: integer
+ *                           name:
+ *                             type: string
  *       500:
  *         description: Server error
  */
-router.get('/', getAllAreas);
+router.get('/all', getAllAreasNoPagination);
 
 /**
  * @swagger
  * /areas/area/{id}:
  *   get:
- *     summary: Get area by ID
+ *     summary: Get area by ID (Public)
  *     tags: [Areas]
+ *     security: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -75,17 +213,68 @@ router.get('/', getAllAreas);
  *         schema:
  *           type: integer
  *         description: Area ID
- *     responses:
- *       200:
- *         description: Area details
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Area'
- *       404:
- *         description: Area not found
- *       500:
- *         description: Server error
+     *     responses:
+     *       200:
+     *         description: Area details
+     *         content:
+     *           application/json:
+     *             schema:
+     *               type: object
+     *               properties:
+     *                 id:
+     *                   type: integer
+     *                   description: Area ID
+     *                   example: 1
+     *                 name:
+     *                   type: string
+     *                   description: Area name
+     *                   example: "Khu vực nuôi hàu A"
+     *                 latitude:
+     *                   type: number
+     *                   format: double
+     *                   description: Latitude coordinate
+     *                   example: 10.762622
+     *                 longitude:
+     *                   type: number
+     *                   format: double
+     *                   description: Longitude coordinate
+     *                   example: 106.660172
+     *                 area:
+     *                   type: number
+     *                   format: double
+     *                   description: Area size in square meters
+     *                   example: 1000.5
+     *                 province:
+     *                   type: string
+     *                   format: uuid
+     *                   description: Province ID
+     *                   example: "123e4567-e89b-12d3-a456-426614174000"
+     *                 district:
+     *                   type: string
+     *                   format: uuid
+     *                   description: District ID
+     *                   example: "123e4567-e89b-12d3-a456-426614174001"
+     *                 area_type:
+     *                   type: string
+     *                   enum: [oyster, cobia]
+     *                   description: Type of aquaculture area
+     *                   example: "oyster"
+     *             examples:
+     *               success:
+     *                 summary: Successful response
+     *                 value:
+     *                   id: 1
+     *                   name: "Khu vực nuôi hàu A"
+     *                   latitude: 10.762622
+     *                   longitude: 106.660172
+     *                   area: 1000.5
+     *                   province: "123e4567-e89b-12d3-a456-426614174000"
+     *                   district: "123e4567-e89b-12d3-a456-426614174001"
+     *                   area_type: "oyster"
+     *       404:
+     *         description: Area not found
+     *       500:
+     *         description: Server error
  */
 router.get('/area/:id', getAreaById);
 
@@ -93,8 +282,9 @@ router.get('/area/:id', getAreaById);
  * @swagger
  * /areas/provinces:
  *   get:
- *     summary: Get all provinces
+ *     summary: Get all provinces (Public)
  *     tags: [Areas]
+ *     security: []
  *     responses:
  *       200:
  *         description: List of provinces
@@ -118,8 +308,9 @@ router.get('/provinces', async (req, res) => { return res.status(200).json(await
  * @swagger
  * /areas/districts:
  *   get:
- *     summary: Get all districts
+ *     summary: Get all districts (Public)
  *     tags: [Areas]
+ *     security: []
  *     responses:
  *       200:
  *         description: List of districts
@@ -145,8 +336,9 @@ router.get('/districts', async (req, res) => { return res.status(200).json(await
  * @swagger
  * /areas/district/{id}:
  *   get:
- *     summary: Get areas by district ID
+ *     summary: Get areas by district ID (Public)
  *     tags: [Areas]
+ *     security: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -180,8 +372,9 @@ router.get('/district/:id', async (req, res) => {
  * @swagger
  * /areas/province/{id}:
  *   get:
- *     summary: Get areas by province ID
+ *     summary: Get areas by province ID (Public)
  *     tags: [Areas]
+ *     security: []
  *     parameters:
  *       - in: path
  *         name: id

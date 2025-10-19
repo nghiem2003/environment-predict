@@ -11,8 +11,8 @@ exports.getAllAreas = async (req, res) => {
       lat_max,
       long_min,
       long_max,
-      limit,
-      offset,
+      limit = 10,
+      offset = 0,
       role,
       district,
       province,
@@ -85,6 +85,69 @@ exports.getAllAreas = async (req, res) => {
     res.status(200).json({ areas: areas, total: total });
   } catch (error) {
     console.error('Get All Areas Error:', {
+      message: error.message,
+      stack: error.stack,
+      query: req.query,
+    });
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Get all areas without pagination (for dropdowns, selects, etc.)
+exports.getAllAreasNoPagination = async (req, res) => {
+  try {
+    const { search, area_type, lat_min, lat_max, long_min, long_max, province, district } = req.query;
+    console.log(req.query);
+
+    let query = {};
+    if (search) {
+      query.name = {
+        [Op.iLike]: `%${search}%`,
+      };
+    }
+    if (area_type) {
+      query.area_type = area_type;
+    }
+    if (lat_min && lat_max) {
+      query.latitude = {
+        [Op.between]: [parseFloat(lat_min), parseFloat(lat_max)],
+      };
+    }
+    if (long_min && long_max) {
+      query.longitude = {
+        [Op.between]: [parseFloat(long_min), parseFloat(long_max)],
+      };
+    }
+    if (province) {
+      query.province = province;
+    }
+    if (district) {
+      query.district = district;
+    }
+
+    const options = {
+      where: query,
+      include: [
+        {
+          model: Province,
+          as: 'Province',
+          required: false,
+          attributes: ['id', 'name'],
+        },
+        {
+          model: District,
+          as: 'District',
+          required: false,
+          attributes: ['id', 'name'],
+        },
+      ],
+      order: [['name', 'ASC']],
+    };
+
+    const areas = await Area.findAll(options);
+    res.status(200).json({ areas: areas });
+  } catch (error) {
+    console.error('Get All Areas (No Pagination) Error:', {
       message: error.message,
       stack: error.stack,
       query: req.query,

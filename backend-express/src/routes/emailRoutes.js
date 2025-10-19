@@ -2,6 +2,7 @@ const express = require('express');
 const { authenticate, authorize } = require('../middlewares/authMiddleware');
 const {
   getAllEmailSubscriptions,
+  getAllEmailSubscriptionsNoPagination,
   getEmailSubscriptionById,
   subscribeToPredictions,
   updateEmailSubscription,
@@ -20,7 +21,7 @@ const router = express.Router();
  * @swagger
  * /emails:
  *   get:
- *     summary: Get all email subscriptions (Admin only)
+ *     summary: Get all email subscriptions (Admin/Manager only)
  *     tags: [Emails]
  *     security:
  *       - bearerAuth: []
@@ -50,10 +51,42 @@ const router = express.Router();
  *             schema:
  *               type: object
  *               properties:
- *                 subscriptions:
- *                   type: array
- *                   items:
- *                     $ref: '#/components/schemas/EmailSubscription'
+     *                 subscriptions:
+     *                   type: array
+     *                   items:
+     *                     type: object
+     *                     properties:
+     *                       id:
+     *                         type: integer
+     *                         description: Subscription ID
+     *                         example: 1
+     *                       email:
+     *                         type: string
+     *                         format: email
+     *                         description: Subscriber email address
+     *                         example: "subscriber@example.com"
+     *                       area_id:
+     *                         type: integer
+     *                         description: Area ID for subscription
+     *                         example: 1
+     *                       is_active:
+     *                         type: boolean
+     *                         description: Subscription status
+     *                         example: true
+     *                       unsubscribe_token:
+     *                         type: string
+     *                         description: Unique unsubscribe token
+     *                         example: "abc123def456ghi789"
+     *                       created_at:
+     *                         type: string
+     *                         format: date-time
+     *                         description: Subscription creation time
+     *                         example: "2024-01-01T00:00:00Z"
+     *                       updated_at:
+     *                         type: string
+     *                         format: date-time
+     *                         description: Last update time
+     *                         example: "2024-01-01T00:00:00Z"
  *                 total:
  *                   type: integer
  *       401:
@@ -61,7 +94,8 @@ const router = express.Router();
  *       403:
  *         description: Forbidden
  */
-router.get('/', authenticate, authorize(['admin']), getAllEmailSubscriptions);
+router.get('/', authenticate, authorize(['admin', 'manager']), getAllEmailSubscriptions);
+router.get('/all', authenticate, authorize(['admin', 'manager']), getAllEmailSubscriptionsNoPagination);
 
 /**
  * @swagger
@@ -81,10 +115,42 @@ router.get('/', authenticate, authorize(['admin']), getAllEmailSubscriptions);
  *     responses:
  *       200:
  *         description: Email subscription details
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/EmailSubscription'
+     *         content:
+     *           application/json:
+     *             schema:
+     *               type: object
+     *               properties:
+     *                 id:
+     *                   type: integer
+     *                   description: Subscription ID
+     *                   example: 1
+     *                 email:
+     *                   type: string
+     *                   format: email
+     *                   description: Subscriber email address
+     *                   example: "subscriber@example.com"
+     *                 area_id:
+     *                   type: integer
+     *                   description: Area ID for subscription
+     *                   example: 1
+     *                 is_active:
+     *                   type: boolean
+     *                   description: Subscription status
+     *                   example: true
+     *                 unsubscribe_token:
+     *                   type: string
+     *                   description: Unique unsubscribe token
+     *                   example: "abc123def456ghi789"
+     *                 created_at:
+     *                   type: string
+     *                   format: date-time
+     *                   description: Subscription creation time
+     *                   example: "2024-01-01T00:00:00Z"
+     *                 updated_at:
+     *                   type: string
+     *                   format: date-time
+     *                   description: Last update time
+     *                   example: "2024-01-01T00:00:00Z"
  *       401:
  *         description: Unauthorized
  *       403:
@@ -95,7 +161,7 @@ router.get('/', authenticate, authorize(['admin']), getAllEmailSubscriptions);
 router.get(
   '/:id',
   authenticate,
-  authorize(['admin']),
+  authorize(['admin', 'manager']),
   getEmailSubscriptionById
 );
 
@@ -325,7 +391,7 @@ router.put(
 router.delete(
   '/:id',
   authenticate,
-  authorize(['admin']),
+  authorize(['admin', 'manager']),
   deleteEmailSubscription
 );
 
@@ -372,7 +438,7 @@ router.delete(
  *       403:
  *         description: Forbidden
  */
-router.post('/test', authenticate, authorize(['admin']), testEmail);
+router.post('/test', authenticate, authorize(['admin', 'manager']), testEmail);
 
 /**
  * @swagger

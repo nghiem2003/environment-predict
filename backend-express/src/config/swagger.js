@@ -23,7 +23,7 @@ const options = {
             },
             {
                 url: 'http://dhtbkc4.tbu.edu.vn/quanlytainguyen/api/express',
-                description: 'Production server'
+                description: 'Production server (HTTP)'
             }
         ],
         components: {

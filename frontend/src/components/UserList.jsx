@@ -55,17 +55,33 @@ const UserList = () => {
     role: '',
   });
   const [selectedRegionName, setSelectedRegionName] = useState('');
+  const [pagination, setPagination] = useState({
+    current: 1,
+    pageSize: 10,
+    total: 0,
+  });
 
   // Fetch users from the API
-  const fetchUsers = async () => {
+  const fetchUsers = async (page = 1, pageSize = 10) => {
     try {
       const { role, province } = authData || {};
 
-      const response = await axios.get('/api/express/auth/', {
-        params: { search: searchTerm, role, province },
+      const response = await axios.get('/api/express/auth/paginated', {
+        params: {
+          search: searchTerm,
+          role,
+          province,
+          limit: pageSize,
+          offset: (page - 1) * pageSize
+        },
       });
-      console.log(response.data.data);
-      setUsers(response.data.data || []);
+      console.log(response.data.users);
+      setUsers(response.data.users || []);
+      setPagination({
+        current: page,
+        pageSize: pageSize,
+        total: response.data.total || 0,
+      });
     } catch (error) {
       console.error('Error fetching users:', error);
     }
@@ -533,11 +549,11 @@ const UserList = () => {
         </div>
         <div style={{ margin: '16px 0', textAlign: 'center' }}>
           <Pagination
-            current={1}
-            total={users.length}
-            pageSize={10}
+            current={pagination.current}
+            total={pagination.total}
+            pageSize={pagination.pageSize}
             showSizeChanger={false}
-          // onChange={...} // Add pagination logic if needed
+            onChange={(page, pageSize) => fetchUsers(page, pageSize)}
           />
         </div>
         {/* Modals for add/edit, confirm, etc. can be refactored similarly if needed */}

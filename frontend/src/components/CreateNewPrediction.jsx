@@ -90,7 +90,7 @@ const CreateNewPrediction = () => {
   useEffect(() => {
     const fetchAreas = async () => {
       try {
-        const response = await axios.get('api/express/areas');
+        const response = await axios.get('api/express/areas/all');
         const decodedToken = jwtDecode(token);
         const areaList = response.data.areas.filter(
           (area) => area.region === decodedToken.region

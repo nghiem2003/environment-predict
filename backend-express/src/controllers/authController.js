@@ -133,6 +133,57 @@ exports.getAllUser = async (req, res) => {
   }
 };
 
+// Get users with pagination (for tables, lists)
+exports.getUsersPaginated = async (req, res) => {
+  try {
+    const { role, province, search = null, limit = 10, offset = 0 } = req.query;
+    console.log(req.query);
+
+    let whereCondition = {};
+    if (role === 'manager') {
+      whereCondition = {
+        role: role,
+        province: province,
+        district: {
+          [Op.ne]: null, // Ensure district is not null
+        },
+      };
+    }
+    if (search) {
+      whereCondition.username = {
+        [Op.iLike]: `%${search}%`,
+      };
+    }
+
+    const options = {
+      where: whereCondition,
+      order: [['id', 'ASC']],
+    };
+
+    // Add pagination
+    if (limit) {
+      options.limit = parseInt(limit, 10);
+    }
+    if (offset) {
+      options.offset = parseInt(offset, 10);
+    }
+
+    const userList = await User.findAll(options);
+    const total = await User.count({ where: whereCondition });
+
+    return res.status(200).json({
+      users: userList,
+      total: total
+    });
+  } catch (error) {
+    console.error('Get Users Paginated Error:', {
+      message: error.message,
+      stack: error.stack,
+    });
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
 exports.deactiveUser = async (req, res) => {
   try {
     const { id } = req.params;

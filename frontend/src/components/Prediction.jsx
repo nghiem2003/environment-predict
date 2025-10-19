@@ -5,6 +5,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import './Prediction.css';
 import { useTranslation } from 'react-i18next';
 import { Card, Typography, Space, Button, Result, Spin } from 'antd';
+import PredictionBadge from './PredictionBadge';
 import {
   ArrowLeftOutlined,
   CheckCircleOutlined,
@@ -173,9 +174,7 @@ const Prediction = () => {
         <Space direction="vertical" size="large" style={{ width: '100%' }}>
           <Space align="center">
             {predictionInfo.icon}
-            <Text strong style={{ fontSize: 18, color: predictionInfo.color }}>
-              {predictionInfo.text}
-            </Text>
+            <PredictionBadge prediction={prediction} />
           </Space>
           {prediction.createdAt && (
             <div style={{

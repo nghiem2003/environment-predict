@@ -73,7 +73,7 @@ const EmailList = () => {
   // Fetch areas for select
   const fetchAreas = async () => {
     try {
-      const response = await axios.get('/api/express/areas');
+      const response = await axios.get('/api/express/areas/all');
       setAreas(response.data.areas);
     } catch (error) {
       console.error('Error fetching areas:', error);

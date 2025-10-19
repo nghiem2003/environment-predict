@@ -206,28 +206,88 @@ router.post(
  *           type: string
  *           format: date
  *         description: Filter by end date
- *     responses:
- *       200:
- *         description: List of predictions with filters
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 predictions:
- *                   type: array
- *                   items:
- *                     $ref: '#/components/schemas/Prediction'
- *                 total:
- *                   type: integer
- *                 page:
- *                   type: integer
- *                 limit:
- *                   type: integer
- *       401:
- *         description: Unauthorized
- *       403:
- *         description: Forbidden
+     *     responses:
+     *       200:
+     *         description: List of predictions with filters
+     *         content:
+     *           application/json:
+     *             schema:
+     *               type: object
+     *               properties:
+     *                 rows:
+     *                   type: array
+     *                   description: Array of prediction objects
+     *                   items:
+     *                     type: object
+     *                     properties:
+     *                       id:
+     *                         type: integer
+     *                         description: Prediction ID
+     *                         example: 1
+     *                       user_id:
+     *                         type: integer
+     *                         description: User ID who made the prediction
+     *                         example: 1
+     *                       area_id:
+     *                         type: integer
+     *                         description: Area ID for the prediction
+     *                         example: 1
+     *                       prediction_text:
+     *                         type: string
+     *                         description: Prediction result text
+     *                         example: "Good conditions for aquaculture"
+     *                       createdAt:
+     *                         type: string
+     *                         format: date-time
+     *                         description: Creation timestamp
+     *                         example: "2024-01-01T00:00:00Z"
+     *                       updatedAt:
+     *                         type: string
+     *                         format: date-time
+     *                         description: Last update timestamp
+     *                         example: "2024-01-01T00:00:00Z"
+     *                       Area:
+     *                         type: object
+     *                         description: Associated area information
+     *                         properties:
+     *                           id:
+     *                             type: integer
+     *                             example: 1
+     *                           name:
+     *                             type: string
+     *                             example: "Khu vực nuôi hàu A"
+     *                 count:
+     *                   type: integer
+     *                   description: Total number of predictions
+     *                   example: 15
+     *             examples:
+     *               success:
+     *                 summary: Successful response
+     *                 value:
+     *                   rows:
+     *                     - id: 1
+     *                       area_id: 1
+     *                       user_id: 1
+     *                       prediction_text: "Good conditions for oyster farming. Water quality parameters are within optimal ranges."
+     *                       createdAt: "2024-01-01T00:00:00Z"
+     *                       updatedAt: "2024-01-01T00:00:00Z"
+     *                       Area:
+     *                         id: 1
+     *                         name: "Khu vực nuôi hàu A"
+     *                     - id: 2
+     *                       area_id: 2
+     *                       user_id: 1
+     *                       prediction_text: "Moderate conditions for cobia farming. Monitor water temperature closely."
+     *                       createdAt: "2024-01-01T00:00:00Z"
+     *                       updatedAt: "2024-01-01T00:00:00Z"
+     *                       Area:
+     *                         id: 2
+     *                         name: "Khu vực nuôi cá cobia B"
+     *                   count: 15
+     *       401:
+     *         description: Unauthorized
+     *       403:
+     *         description: Forbidden
  */
 router.get(
   '/admin',
@@ -240,8 +300,9 @@ router.get(
  * @swagger
  * /predictions/{areaId}/latest:
  *   get:
- *     summary: Get latest prediction for an area
+ *     summary: Get latest prediction for an area (Public)
  *     tags: [Predictions]
+ *     security: []
  *     parameters:
  *       - in: path
  *         name: areaId
@@ -267,8 +328,9 @@ router.get('/:areaId/latest', getLatestPrediction);
  * @swagger
  * /predictions/{areaId}/history:
  *   get:
- *     summary: Get prediction history for an area
+ *     summary: Get prediction history for an area (Public)
  *     tags: [Predictions]
+ *     security: []
  *     parameters:
  *       - in: path
  *         name: areaId

@@ -22,6 +22,7 @@ import {
   message,
 } from 'antd';
 import { MailOutlined } from '@ant-design/icons';
+import PredictionBadge from './PredictionBadge';
 
 const { Title } = Typography;
 
@@ -235,6 +236,14 @@ const Dashboard = () => {
               key: 'area',
             },
             {
+              title: 'Kết quả',
+              dataIndex: 'prediction_text',
+              key: 'result',
+              render: (_, record) => (
+                <PredictionBadge prediction={record} />
+              ),
+            },
+            {
               title: 'Ngày tạo',
               dataIndex: 'createdAt',
               key: 'createdAt',
@@ -252,16 +261,14 @@ const Dashboard = () => {
             ...(userRole === 'admin' || userRole === 'manager'
               ? [
                 {
-                  title: t('dashboard.province'),
-                  dataIndex: ['Area', 'Province', 'name'],
-                  key: 'province',
-                  render: (text) => text || '-',
-                },
-                {
-                  title: t('dashboard.district'),
-                  dataIndex: ['Area', 'District', 'name'],
-                  key: 'district',
-                  render: (text) => text || '-',
+                  title: 'Địa điểm',
+                  key: 'location',
+                  render: (_, record) => {
+                    const province = record.Area?.Province?.name || '';
+                    const district = record.Area?.District?.name || '';
+                    if (!province && !district) return '-';
+                    return `${province}${province && district ? ', ' : ''}${district}`;
+                  },
                 },
               ]
               : []),

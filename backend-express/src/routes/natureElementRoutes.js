@@ -17,8 +17,10 @@ const router = express.Router();
  * @swagger
  * /nature-elements:
  *   get:
- *     summary: Get all natural elements
+ *     summary: Get all natural elements (Admin/Manager/Expert only)
  *     tags: [Nature Elements]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: query
  *         name: page
@@ -50,10 +52,31 @@ const router = express.Router();
  *             schema:
  *               type: object
  *               properties:
- *                 elements:
- *                   type: array
- *                   items:
- *                     $ref: '#/components/schemas/NatureElement'
+     *                 elements:
+     *                   type: array
+     *                   items:
+     *                     type: object
+     *                     properties:
+     *                       id:
+     *                         type: integer
+     *                         description: Natural element ID
+     *                         example: 1
+     *                       name:
+     *                         type: string
+     *                         description: Element name
+     *                         example: "Water Temperature"
+     *                       description:
+     *                         type: string
+     *                         description: Element description
+     *                         example: "Temperature of water in the aquaculture area"
+     *                       unit:
+     *                         type: string
+     *                         description: Measurement unit
+     *                         example: "°C"
+     *                       category:
+     *                         type: string
+     *                         description: Element category
+     *                         example: "temperature"
  *                 total:
  *                   type: integer
  *                 page:
@@ -69,8 +92,10 @@ router.get('/', getAllNaturalElements);
  * @swagger
  * /nature-elements/categories:
  *   get:
- *     summary: Get all categories of natural elements
+ *     summary: Get all categories of natural elements (Admin/Manager/Expert only)
  *     tags: [Nature Elements]
+ *     security:
+ *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: List of categories
@@ -96,8 +121,10 @@ router.get('/categories', getCategories);
  * @swagger
  * /nature-elements/category/{category}:
  *   get:
- *     summary: Get natural elements by category
+ *     summary: Get natural elements by category (Admin/Manager/Expert only)
  *     tags: [Nature Elements]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: category
@@ -125,8 +152,10 @@ router.get('/category/:category', getNaturalElementsByCategory);
  * @swagger
  * /nature-elements/{id}:
  *   get:
- *     summary: Get natural element by ID
+ *     summary: Get natural element by ID (Admin/Manager/Expert only)
  *     tags: [Nature Elements]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id

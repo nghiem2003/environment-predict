@@ -67,6 +67,40 @@ exports.getAllEmailSubscriptions = async (req, res) => {
   }
 };
 
+// Get all email subscriptions without pagination (for dropdowns, selects, etc.)
+exports.getAllEmailSubscriptionsNoPagination = async (req, res) => {
+  try {
+    const { area_id, is_active } = req.query;
+    console.log(req.query);
+
+    let query = {};
+    if (area_id) {
+      query.area_id = area_id;
+    }
+    if (is_active !== undefined) {
+      query.is_active = is_active === 'true';
+    }
+
+    const options = {
+      where: query,
+      include: [
+        {
+          model: Area,
+          as: 'area',
+          attributes: ['id', 'name', 'area_type'],
+        },
+      ],
+      order: [['created_at', 'DESC']],
+    };
+
+    const subscriptions = await Email.findAll(options);
+    res.status(200).json({ subscriptions });
+  } catch (error) {
+    console.error('Get All Email Subscriptions (No Pagination) Error:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
 
 
 // Get email subscription by ID

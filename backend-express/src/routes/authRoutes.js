@@ -3,6 +3,7 @@ const {
   login,
   updateUserById,
   getAllUser,
+  getUsersPaginated,
   deactiveUser,
   createManagerUser,
   activateUser,
@@ -20,6 +21,7 @@ const router = express.Router();
  *   post:
  *     summary: User login
  *     tags: [Authentication]
+ *     security: []
  *     requestBody:
  *       required: true
  *       content:
@@ -52,8 +54,50 @@ const router = express.Router();
  *                 role:
  *                   type: string
  *                   enum: [admin, manager, expert]
- *                 user:
- *                   $ref: '#/components/schemas/User'
+     *                 user:
+     *                   type: object
+     *                   properties:
+     *                     id:
+     *                       type: integer
+     *                       description: User ID
+     *                       example: 1
+     *                     username:
+     *                       type: string
+     *                       description: Username
+     *                       example: "john_doe"
+     *                     email:
+     *                       type: string
+     *                       format: email
+     *                       description: User email
+     *                       example: "user@example.com"
+     *                     province:
+     *                       type: string
+     *                       format: uuid
+     *                       description: Province ID
+     *                       example: "123e4567-e89b-12d3-a456-426614174000"
+     *                     district:
+     *                       type: string
+     *                       format: uuid
+     *                       description: District ID
+     *                       example: "123e4567-e89b-12d3-a456-426614174001"
+     *                     address:
+     *                       type: string
+     *                       description: User address
+     *                       example: "123 Main Street, Ho Chi Minh City"
+     *                     phone:
+     *                       type: string
+     *                       description: User phone number
+     *                       example: "+84901234567"
+     *                     role:
+     *                       type: string
+     *                       enum: [expert, admin, manager]
+     *                       description: User role
+     *                       example: "expert"
+     *                     status:
+     *                       type: string
+     *                       enum: [active, inactive]
+     *                       description: User status
+     *                       example: "active"
  *       401:
  *         description: Invalid credentials
  *         content:
@@ -180,6 +224,65 @@ router.post('/update/:id', authenticate, authorize(['admin', 'manager']), update
  *         description: Forbidden
  */
 router.get('/', authenticate, authorize(['admin', 'manager']), getAllUser);
+
+/**
+ * @swagger
+ * /auth/paginated:
+ *   get:
+ *     summary: Get users with pagination
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: role
+ *         schema:
+ *           type: string
+ *           enum: [admin, manager, expert]
+ *         description: Filter by user role
+ *       - in: query
+ *         name: province
+ *         schema:
+ *           type: integer
+ *         description: Filter by province ID
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search by username
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Number of users per page
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *         description: Number of users to skip
+ *     responses:
+ *       200:
+ *         description: Users retrieved successfully with pagination
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 users:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/User'
+ *                 total:
+ *                   type: integer
+ *                   description: Total number of users
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ */
+router.get('/paginated', authenticate, authorize(['admin', 'manager']), getUsersPaginated);
 
 /**
  * @swagger

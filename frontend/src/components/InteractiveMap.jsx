@@ -20,6 +20,7 @@ import {
     Row,
     Col,
     Tag,
+    Badge,
     Spin,
     message,
     Tooltip,
@@ -34,6 +35,7 @@ import {
     ArrowRightOutlined,
     ArrowLeftOutlined,
 } from '@ant-design/icons';
+import PredictionBadge from './PredictionBadge';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -189,10 +191,7 @@ function AreaMarker({ area, prediction, onAreaClick, onViewDetails }) {
                             <div>
                                 <Text strong>Dự báo: </Text>
                                 <Space direction="vertical" size="small">
-                                    <Tag color={predictionInfo.color}>
-                                        {predictionInfo.label}
-                                    </Tag>
-                                    {/* No score display since prediction_text is categorical */}
+                                    <PredictionBadge prediction={prediction} />
                                 </Space>
                             </div>
                             {prediction && (
@@ -281,13 +280,12 @@ const InteractiveMap = () => {
     const fetchAreas = async () => {
         try {
             setLoading(true);
-            const response = await axios.get('/api/express/areas', {
+            const response = await axios.get('/api/express/areas/all', {
                 params: {
                     search: searchTerm,
                     area_type: areaType,
                     province: provinceFilter,
                     district: districtFilter,
-                    limit: 1000, // Get all areas for map display
                 },
             });
 
@@ -709,22 +707,12 @@ const InteractiveMap = () => {
                                                             <Text strong style={{ fontSize: '14px' }}>
                                                                 {area.name}
                                                             </Text>
-                                                            {predictions[area.id] && (() => {
-                                                                const value = Number.parseInt(predictions[area.id].prediction_text, 10);
-                                                                let color = 'blue';
-                                                                let label = t('detail.noPrediction');
-                                                                if (value === 1) { color = 'green'; label = t('detail.good'); }
-                                                                else if (value === 0) { color = 'orange'; label = t('detail.average'); }
-                                                                else if (value === -1) { color = 'red'; label = t('detail.poor'); }
-
-                                                                return (
-                                                                    <Space direction="vertical" size="small">
-                                                                        <Tag color={color} size="small">
-                                                                            {label}
-                                                                        </Tag>
-                                                                    </Space>
-                                                                );
-                                                            })()}
+                                                            {predictions[area.id] && (
+                                                                <PredictionBadge
+                                                                    prediction={predictions[area.id]}
+                                                                    size="small"
+                                                                />
+                                                            )}
                                                         </Space>
                                                     }
                                                     description={
@@ -794,39 +782,9 @@ const InteractiveMap = () => {
                                         </div>
                                         <div>
                                             <Text strong>{t('detail.predictionLabel')}: </Text>
-                                            {predictions[selectedArea.id] ? (() => {
-                                                const score = parseFloat(predictions[selectedArea.id].prediction_text);
-                                                const isScoreValid = !isNaN(score);
-
-                                                let result, color, label;
-                                                if (!isScoreValid) {
-                                                    result = -2;
-                                                    color = 'blue';
-                                                    label = t('detail.noPrediction');
-                                                } else if (score >= 0.7) {
-                                                    result = 1;
-                                                    color = 'green';
-                                                    label = t('detail.good');
-                                                } else if (score >= 0.4) {
-                                                    result = 0;
-                                                    color = 'orange';
-                                                    label = t('detail.average');
-                                                } else {
-                                                    result = -1;
-                                                    color = 'red';
-                                                    label = t('detail.poor');
-                                                }
-
-                                                return (
-                                                    <Space direction="vertical" size="small">
-                                                        <Tag color={color}>
-                                                            {label}
-                                                        </Tag>
-                                                    </Space>
-                                                );
-                                            })() : (
-                                                <Tag color="blue">{t('detail.noPrediction')}</Tag>
-                                            )}
+                                            <PredictionBadge
+                                                prediction={predictions[selectedArea.id]}
+                                            />
                                         </div>
                                         {predictions[selectedArea.id] && (
                                             <div>

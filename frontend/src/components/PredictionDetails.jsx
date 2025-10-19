@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from '../axios';
 import { useTranslation } from 'react-i18next';
 import { Typography, Descriptions, Table, Spin } from 'antd';
+import PredictionBadge from './PredictionBadge';
 
 const { Title, Text } = Typography;
 
@@ -27,24 +28,6 @@ const PredictionDetails = ({ predictionId }) => {
       />
     );
 
-  const getPredictionText = (prediction) => {
-    if (prediction.prediction_text == -1) {
-      return (
-        t('predictionDetails.unsuitable') ||
-        'The environment is unsuitable or dangerous for growth'
-      );
-    } else if (prediction.prediction_text == 1) {
-      return (
-        t('predictionDetails.excellent') ||
-        'The environment is excellent for oyster growth'
-      );
-    } else {
-      return (
-        t('predictionDetails.suitable') ||
-        'The environment is suitable for growth'
-      );
-    }
-  };
 
   const columns = [
     {
@@ -81,7 +64,7 @@ const PredictionDetails = ({ predictionId }) => {
           {prediction.Area.area_type}
         </Descriptions.Item>
         <Descriptions.Item label={t('predictionDetails.predictionText')}>
-          {getPredictionText(prediction)}
+          <PredictionBadge prediction={prediction} />
         </Descriptions.Item>
         <Descriptions.Item label={t('predictionDetails.expertId')}>
           {prediction.user_id}

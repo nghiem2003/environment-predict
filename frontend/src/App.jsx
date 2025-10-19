@@ -26,6 +26,7 @@ import UserProfile from './components/UserProfile';
 import EmailList from './components/EmailList';
 import EmailSubscription from './components/EmailSubscription';
 import UnsubscribePage from './components/UnsubscribePage';
+import SwaggerViewer from './components/SwaggerViewer';
 import { useTranslation } from 'react-i18next';
 import LanguageSwitch from './components/LanguageSwitch';
 import {
@@ -55,6 +56,7 @@ import {
   ProfileOutlined,
   MailOutlined,
   EnvironmentOutlined,
+  ApiOutlined,
 } from '@ant-design/icons';
 
 const { Header, Sider, Content } = Layout;
@@ -83,11 +85,16 @@ const App = () => {
     navigate('/');
   };
 
-  const isSidebarVisible = location.pathname !== '/interactive-map' && (role === 'admin' || role === 'expert' || role === 'manager');
+  const isSidebarVisible = location.pathname !== '/interactive-map' && (role === 'admin' || role === 'expert' || role === 'manager' || location.pathname === '/swagger');
 
   const getMenuItems = () => {
     // Common menu items for all users (including non-logged in)
     const commonItems = [
+      {
+        key: '/swagger',
+        icon: <ApiOutlined />,
+        label: 'API Documentation',
+      },
     ];
 
     if (role === 'admin') {
@@ -403,7 +410,7 @@ const App = () => {
           transition: 'all 0.2s',
         }}
       >
-        {location.pathname !== '/Login' && renderHeader()}
+        {(location.pathname !== '/Login' && location.pathname !== '/swagger') && renderHeader()}
         <Content
           style={{
             margin: location.pathname === '/interactive-map' ? 0 : (screens.xs ? '12px 8px' : '24px 16px'),
@@ -503,6 +510,7 @@ const App = () => {
               element={<EmailSubscription />}
             />
             <Route path="/unsubscribe/:token" element={<UnsubscribePage />} />
+            <Route path="/swagger" element={<SwaggerViewer />} />
           </Routes>
         </Content>
       </Layout>

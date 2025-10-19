@@ -7,6 +7,7 @@ const predictionRoutes = require('./src/routes/predictionRoutes.js');
 const areaRoutes = require('./src/routes/areaRoutes.js');
 const emailRoutes = require('./src/routes/emailRoutes.js');
 const natureElementRoutes = require('./src/routes/natureElementRoutes.js');
+const swaggerRoutes = require('./src/routes/swaggerRoutes.js');
 const sequelize = require('./src/config/db.js');
 const cors = require('cors');
 const morgan = require('morgan');
@@ -47,12 +48,16 @@ cron.schedule('0 0 * * *', triggerDataFetch, {
   timezone: 'Asia/Ho_Chi_Minh',
 });
 
+app.get('/api/express/doc-specs', (req, res) => {
+  res.json(swaggerSpecs);
+});
 
 // Swagger Documentation
-app.use('/api/express/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs, {
+app.use('/api/express/docs', swaggerUi.serve, swaggerUi.setup(null, {
   customCss: '.swagger-ui .topbar { display: none }',
   customSiteTitle: 'Aquaculture Prediction System API',
   swaggerOptions: {
+    url: "http://dhtbkc4.tbu.edu.vn/quanlytainguyen/api/express/doc-specs",
     persistAuthorization: true,
     displayRequestDuration: true,
     docExpansion: 'none',
@@ -68,6 +73,7 @@ app.use('/api/express/predictions', predictionRoutes);
 app.use('/api/express/areas', areaRoutes);
 app.use('/api/express/emails', emailRoutes);
 app.use('/api/express/nature-elements', natureElementRoutes);
+app.use('/api/express', swaggerRoutes);
 
 sequelize.sync().then(() => {
   app.listen(5000, () => {
