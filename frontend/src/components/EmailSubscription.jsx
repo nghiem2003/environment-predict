@@ -10,6 +10,7 @@ import {
   Typography,
   Space,
   Spin,
+  Tooltip,
 } from 'antd';
 import {
   MailOutlined,

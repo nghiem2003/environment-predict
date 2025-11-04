@@ -52,7 +52,7 @@ exports.getAllNaturalElements = async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Get All Natural Elements Error:', error);
+        logger.error('Get All Natural Elements Error:', error);
         res.status(500).json({ error: error.message });
     }
 };
@@ -73,7 +73,7 @@ exports.getNaturalElementById = async (req, res) => {
             data: element
         });
     } catch (error) {
-        console.error('Get Natural Element Error:', error);
+        logger.error('Get Natural Element Error:', error);
         res.status(500).json({ error: error.message });
     }
 };
@@ -109,7 +109,7 @@ exports.createNaturalElement = async (req, res) => {
             data: element
         });
     } catch (error) {
-        console.error('Create Natural Element Error:', error);
+        logger.error('Create Natural Element Error:', error);
         res.status(500).json({ error: error.message });
     }
 };
@@ -150,7 +150,7 @@ exports.updateNaturalElement = async (req, res) => {
             data: element
         });
     } catch (error) {
-        console.error('Update Natural Element Error:', error);
+        logger.error('Update Natural Element Error:', error);
         res.status(500).json({ error: error.message });
     }
 };
@@ -173,7 +173,7 @@ exports.deleteNaturalElement = async (req, res) => {
             message: 'Natural element deleted successfully'
         });
     } catch (error) {
-        console.error('Delete Natural Element Error:', error);
+        logger.error('Delete Natural Element Error:', error);
         res.status(500).json({ error: error.message });
     }
 };
@@ -193,7 +193,7 @@ exports.getNaturalElementsByCategory = async (req, res) => {
             data: elements
         });
     } catch (error) {
-        console.error('Get Natural Elements By Category Error:', error);
+        logger.error('Get Natural Elements By Category Error:', error);
         res.status(500).json({ error: error.message });
     }
 };
@@ -212,7 +212,7 @@ exports.getCategories = async (req, res) => {
             data: categories.map(c => c.category).filter(Boolean)
         });
     } catch (error) {
-        console.error('Get Categories Error:', error);
+        logger.error('Get Categories Error:', error);
         res.status(500).json({ error: error.message });
     }
 };
@@ -257,7 +257,7 @@ exports.bulkUpdateNaturalElements = async (req, res) => {
             data: results
         });
     } catch (error) {
-        console.error('Bulk Update Natural Elements Error:', error);
+        logger.error('Bulk Update Natural Elements Error:', error);
         res.status(500).json({ error: error.message });
     }
 };

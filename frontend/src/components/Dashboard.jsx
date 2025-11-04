@@ -20,8 +20,9 @@ import {
   List,
   Spin,
   message,
+  Tooltip,
 } from 'antd';
-import { MailOutlined } from '@ant-design/icons';
+import { MailOutlined, EyeOutlined, CloseOutlined, SendOutlined } from '@ant-design/icons';
 import PredictionBadge from './PredictionBadge';
 
 const { Title } = Typography;
@@ -210,7 +211,7 @@ const Dashboard = () => {
         }}
         bodyStyle={{ padding: 24 }}
       >
-        <Title level={3} style={{ marginBottom: 24, zIndex: 1000 }}>
+        <Title level={3} style={{ marginBottom: 24 }}>
           {t('dashboard.title')}
         </Title>
         <Table
@@ -275,22 +276,28 @@ const Dashboard = () => {
             {
               title: t('dashboard.actions'),
               key: 'actions',
+              fixed: 'right',
+              width: 'min-content',
+              align: 'center',
               render: (_, item) => (
                 <Space>
-                  <Button
-                    type="link"
-                    onClick={() => handleViewDetails(item.id)}
-                  >
-                    {t('dashboard.viewDetails')}
-                  </Button>
-                  {(userRole === 'admin' || userRole === 'manager') && (
+                  <Tooltip title={t('dashboard.viewDetails')}>
                     <Button
-                      type="link"
-                      icon={<MailOutlined />}
-                      onClick={() => showManualNotificationModal(item)}
-                    >
-                      Gửi thông báo
-                    </Button>
+                      type="primary"
+                      icon={<EyeOutlined />}
+                      size="middle"
+                      onClick={() => handleViewDetails(item.id)}
+                    />
+                  </Tooltip>
+                  {(userRole === 'admin' || userRole === 'manager') && (
+                    <Tooltip title="Gửi thông báo">
+                      <Button
+                        type="default"
+                        icon={<MailOutlined />}
+                        size="middle"
+                        onClick={() => showManualNotificationModal(item)}
+                      />
+                    </Tooltip>
                   )}
                 </Space>
               ),
@@ -338,43 +345,55 @@ const Dashboard = () => {
             setSelectedEmails([]);
           }}
           width={700}
-          style={{ top: 20 }}
+          style={{
+            top: '5vh',
+            bottom: '5vh',
+            margin: '0 auto',
+            maxHeight: '90vh'
+          }}
+          styles={{
+            body: {
+              maxHeight: 'calc(90vh - 120px)',
+              overflowY: 'auto',
+              padding: '16px 24px'
+            }
+          }}
           footer={[
-            <Button
-              key="cancel"
-              onClick={() => {
-                setIsManualModalVisible(false);
-                setSelectedEmails([]);
-              }}
-              size="large"
-            >
-              Hủy
-            </Button>,
-            <Button
-              key="send-all"
-              type="primary"
-              loading={isSendingManual}
-              onClick={() => sendManualNotification(true)}
-              disabled={subscribers.length === 0}
-              size="large"
-              style={{ marginLeft: '8px' }}
-            >
-              Gửi cho tất cả ({subscribers.length})
-            </Button>,
-            <Button
-              key="send-selected"
-              type="primary"
-              loading={isSendingManual}
-              onClick={() => sendManualNotification(false)}
-              disabled={selectedEmails.length === 0}
-              size="large"
-              style={{ marginLeft: '8px' }}
-            >
-              Gửi cho đã chọn ({selectedEmails.length})
-            </Button>
+            <Tooltip title="Hủy" key="cancel">
+              <Button
+                onClick={() => {
+                  setIsManualModalVisible(false);
+                  setSelectedEmails([]);
+                }}
+                size="large"
+                icon={<CloseOutlined />}
+              />
+            </Tooltip>,
+            <Tooltip title={`Gửi cho tất cả (${subscribers.length})`} key="send-all">
+              <Button
+                type="primary"
+                loading={isSendingManual}
+                onClick={() => sendManualNotification(true)}
+                disabled={subscribers.length === 0}
+                size="large"
+                style={{ marginLeft: '8px' }}
+                icon={<SendOutlined />}
+              />
+            </Tooltip>,
+            <Tooltip title={`Gửi cho đã chọn (${selectedEmails.length})`} key="send-selected">
+              <Button
+                type="primary"
+                loading={isSendingManual}
+                onClick={() => sendManualNotification(false)}
+                disabled={selectedEmails.length === 0}
+                size="large"
+                style={{ marginLeft: '8px' }}
+                icon={<SendOutlined />}
+              />
+            </Tooltip>
           ]}
         >
-          <div style={{ padding: '8px 0' }}>
+          <div style={{ padding: '8px 0', width: '100%' }}>
             {selectedPrediction && (
               <div style={{
                 marginBottom: '20px',
@@ -427,7 +446,7 @@ const Dashboard = () => {
                 <Spin size="large" tip="Đang tải danh sách người đăng ký..." />
               </div>
             ) : subscribers.length > 0 ? (
-              <div>
+              <div style={{ width: '100%' }}>
                 <div style={{
                   marginBottom: '16px',
                   display: 'flex',
@@ -460,48 +479,56 @@ const Dashboard = () => {
                   </span>
                 </div>
 
-                <List
-                  dataSource={subscribers}
-                  renderItem={(subscriber) => (
-                    <List.Item
-                      style={{
-                        padding: '8px 0',
-                        cursor: 'pointer',
-                        borderRadius: '4px',
-                        margin: '2px 0',
-                        transition: 'background-color 0.2s',
-                      }}
-                      onClick={() => handleEmailSelection(subscriber.email, !selectedEmails.includes(subscriber.email))}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = '#f5f5f5';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = 'transparent';
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                        <Checkbox
-                          checked={selectedEmails.includes(subscriber.email)}
-                          onChange={(e) => {
-                            e.stopPropagation();
-                            handleEmailSelection(subscriber.email, e.target.checked);
-                          }}
-                          style={{ marginRight: '12px' }}
-                        />
-                        <span style={{ flex: 1, fontSize: '14px' }}>
-                          {subscriber.email}
-                        </span>
-                      </div>
-                    </List.Item>
-                  )}
-                  style={{
-                    maxHeight: '300px',
-                    overflowY: 'auto',
-                    border: '1px solid #d9d9d9',
-                    borderRadius: '6px',
-                    padding: '8px 0'
-                  }}
-                />
+                <div style={{ width: '100%' }}>
+                  <List
+                    dataSource={subscribers}
+                    renderItem={(subscriber) => (
+                      <List.Item
+                        style={{
+                          padding: '8px 16px',
+                          cursor: 'pointer',
+                          borderRadius: '4px',
+                          margin: '2px 0',
+                          transition: 'background-color 0.2s',
+                          width: '100% !important',
+                          display: 'block !important',
+                          maxWidth: 'none !important'
+                        }}
+                        onClick={() => handleEmailSelection(subscriber.email, !selectedEmails.includes(subscriber.email))}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = '#f5f5f5';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = 'transparent';
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', width: '100% !important', maxWidth: 'none !important' }}>
+                          <Checkbox
+                            checked={selectedEmails.includes(subscriber.email)}
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              handleEmailSelection(subscriber.email, e.target.checked);
+                            }}
+                            style={{ marginRight: '12px' }}
+                          />
+                          <span style={{ flex: 1, fontSize: '14px', wordBreak: 'break-all', width: '100% !important', maxWidth: 'none !important' }}>
+                            {subscriber.email}
+                          </span>
+                        </div>
+                      </List.Item>
+                    )}
+                    style={{
+                      maxHeight: 'calc(90vh - 400px)',
+                      minHeight: '200px',
+                      overflowY: 'auto',
+                      border: '1px solid #d9d9d9',
+                      borderRadius: '6px',
+                      padding: '8px 0',
+                      width: '100% !important',
+                      maxWidth: 'none !important'
+                    }}
+                  />
+                </div>
               </div>
             ) : (
               <div style={{

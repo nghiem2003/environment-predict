@@ -120,7 +120,7 @@ const response = await axios.get('http://localhost:5000/api/express/swagger');
 
 ### 3. Data không hiển thị
 - Kiểm tra response từ API
-- Kiểm tra console để xem lỗi
+- Kiểm tra logger để xem lỗi
 
 ## Dependencies
 

@@ -11,7 +11,8 @@ import {
   Divider,
   Row,
   Col,
-  Spin
+  Spin,
+  Tooltip
 } from 'antd';
 import {
   UserOutlined,
@@ -21,7 +22,8 @@ import {
   EyeInvisibleOutlined,
   EyeTwoTone,
   MailOutlined,
-  KeyOutlined
+  KeyOutlined,
+  CloseOutlined
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
@@ -155,7 +157,7 @@ const Login = () => {
     <div
       style={{
         minHeight: '100vh',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        background: 'transparent',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -166,36 +168,17 @@ const Login = () => {
         <Col xs={24} sm={20} md={16} lg={12} xl={10}>
           <Card
             style={{
-              borderRadius: '16px',
-              boxShadow: '0 20px 40px rgba(0, 0, 0, 0.1)',
-              border: 'none',
-              overflow: 'hidden',
+              borderRadius: '12px',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+              border: 'none'
             }}
             bodyStyle={{ padding: 0 }}
           >
-            <div
-              style={{
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                padding: '40px 40px 20px 40px',
-                textAlign: 'center',
-                color: 'white',
-              }}
-            >
+            <div style={{ padding: '28px' }}>
               <Space direction="vertical" size="large" style={{ width: '100%' }}>
-                <div>
-                  <LoginOutlined style={{ fontSize: '48px', marginBottom: '16px' }} />
-                  <Title level={2} style={{ color: 'white', margin: 0 }}>
-                    {t('login.title') || 'Đăng nhập'}
-                  </Title>
-                  <p style={{ color: 'rgba(255, 255, 255, 0.8)', margin: '8px 0 0 0' }}>
-                    {t('login.subtitle') || 'Chào mừng bạn quay trở lại'}
-                  </p>
-                </div>
-              </Space>
-            </div>
-
-            <div style={{ padding: '40px' }}>
-              <Space direction="vertical" size="large" style={{ width: '100%' }}>
+                <Title level={3} style={{ margin: 0, textAlign: 'center', color: '#222' }}>
+                  {t('login.title') || 'Đăng nhập'}
+                </Title>
                 {/* Back Button */}
                 <Button
                   type="text"
@@ -254,7 +237,7 @@ const Login = () => {
                     ]}
                   >
                     <Input
-                      prefix={<MailOutlined style={{ color: '#667eea' }} />}
+                      prefix={<MailOutlined style={{ color: '#007bff' }} />}
                       placeholder={t('login.email') || 'Nhập email của bạn'}
                       autoComplete="username"
                       style={{
@@ -280,7 +263,7 @@ const Login = () => {
                     ]}
                   >
                     <Input.Password
-                      prefix={<LockOutlined style={{ color: '#667eea' }} />}
+                      prefix={<LockOutlined style={{ color: '#007bff' }} />}
                       placeholder={t('login.password') || 'Nhập mật khẩu của bạn'}
                       autoComplete="current-password"
                       iconRender={(visible) => (visible ? <EyeTwoTone /> : <EyeInvisibleOutlined />)}
@@ -305,9 +288,9 @@ const Login = () => {
                         borderRadius: '8px',
                         fontSize: '16px',
                         fontWeight: 500,
-                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                        background: '#007bff',
                         border: 'none',
-                        boxShadow: '0 4px 12px rgba(102, 126, 234, 0.4)',
+                        boxShadow: '0 4px 12px rgba(0, 123, 255, 0.35)'
                       }}
                     >
                       {loading ? (
@@ -322,17 +305,7 @@ const Login = () => {
                   </Form.Item>
                 </Form>
 
-                <Divider style={{ margin: '24px 0' }}>
-                  <span style={{ color: '#999', fontSize: '14px' }}>
-                    Hệ thống Dự đoán Nuôi trồng Thủy sản
-                  </span>
-                </Divider>
-
-                <div style={{ textAlign: 'center', color: '#666', fontSize: '14px' }}>
-                  <p style={{ margin: 0 }}>
-                    Nếu bạn gặp vấn đề khi đăng nhập, vui lòng liên hệ quản trị viên.
-                  </p>
-                </div>
+                {/* simplified, remove extra copy */}
               </Space>
             </div>
           </Card>

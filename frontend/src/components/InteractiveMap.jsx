@@ -3,6 +3,8 @@ import { MapContainer, TileLayer, Marker, Popup, useMap, Circle } from 'react-le
 import { LatLng } from 'leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import proj4 from 'proj4';
+import 'proj4leaflet';
 import './InteractiveMap.css';
 import axios from '../axios';
 import { useSelector } from 'react-redux';
@@ -34,6 +36,10 @@ import {
     InfoCircleOutlined,
     ArrowRightOutlined,
     ArrowLeftOutlined,
+    EyeOutlined,
+    EyeInvisibleOutlined,
+    BugOutlined,
+    MailOutlined,
 } from '@ant-design/icons';
 import PredictionBadge from './PredictionBadge';
 
@@ -89,6 +95,31 @@ const createCustomIcon = (color) => {
 
 const oysterIcon = createCustomIcon('#1890ff');
 const cobiaIcon = createCustomIcon('#52c41a');
+
+// VN2000 projection builder (TM lon0°, k0=0.9999)
+const getVN2000Proj4 = (lon0) => `+proj=tmerc +lat_0=0 +lon_0=${lon0} +k=0.9999 +x_0=500000 +y_0=0 +ellps=WGS84 +towgs84=-191.904,-39.303,-111.450,0,0,0,0 +units=m +no_defs`;
+const WGS84 = 'EPSG:4326';
+
+// Helper: pick nearest VN2000 zone and convert WGS84 -> VN2000
+const chooseVNZoneByLon = (lon) => {
+    const zones = [105, 107, 109];
+    let best = zones[0];
+    let bestDiff = Infinity;
+    for (const z of zones) {
+        const d = Math.abs((lon || 0) - z);
+        if (d < bestDiff) { best = z; bestDiff = d; }
+    }
+    return best;
+};
+const convertWGS84ToVN2000 = (lat, lon, zone) => {
+    try {
+        const z = zone || chooseVNZoneByLon(lon);
+        const [x, y] = proj4(getVN2000Proj4(z), [lon, lat]);
+        return { x, y, zone: z };
+    } catch (_) {
+        return null;
+    }
+};
 
 // Component to update map view when area is selected
 function MapUpdater({ center, zoom }) {
@@ -270,11 +301,41 @@ const InteractiveMap = () => {
     const [isFilterCardVisible, setIsFilterCardVisible] = useState(false);
     const [isDetailCardVisible, setIsDetailCardVisible] = useState(true);
     const [initialQueryHandled, setInitialQueryHandled] = useState(false);
+    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
     // Data for filters
     const [provinces, setProvinces] = useState([]);
     const [districts, setDistricts] = useState([]);
     const [filteredDistricts, setFilteredDistricts] = useState([]);
+
+    // VN2000 input states
+    const [vn2000X, setVn2000X] = useState('');
+    const [vn2000Y, setVn2000Y] = useState('');
+    const [vnMarker, setVnMarker] = useState(null);
+    const [vnZone, setVnZone] = useState('auto'); // 'auto' | 105 | 107 | 109
+
+    const isWithinVietnam = (lat, lon) => lat >= 8 && lat <= 24 && lon >= 102 && lon <= 110;
+    const convertVN2000ToWGS84 = (x, y, zone) => {
+        try {
+            if (zone === 'auto') {
+                const zones = [105, 107, 109];
+                for (const z of zones) {
+                    const [lon, lat] = proj4(getVN2000Proj4(z), WGS84, [x, y]);
+                    if (Number.isFinite(lat) && Number.isFinite(lon) && isWithinVietnam(lat, lon)) {
+                        return { lat, lon, usedZone: z };
+                    }
+                }
+                // fallback: use 105 if none in bounds
+                const [lon, lat] = proj4(getVN2000Proj4(105), WGS84, [x, y]);
+                return { lat, lon, usedZone: 105 };
+            } else {
+                const [lon, lat] = proj4(getVN2000Proj4(zone), WGS84, [x, y]);
+                return { lat, lon, usedZone: zone };
+            }
+        } catch (e) {
+            return null;
+        }
+    };
 
     // Fetch areas data
     const fetchAreas = async () => {
@@ -539,7 +600,7 @@ const InteractiveMap = () => {
         fetchLocationData();
     }, []);
 
-    // Deep-link support: /interactive-map?areaId=ID or ?lat=..&lon=..&zoom=..
+    // Deep-link support: /interactive-map?areaId=ID or ?lat=..&lon=..&zoom=.. or VN2000: ?type=vn2000&x=..&y=..
     useEffect(() => {
 
         console.log('initialQueryHandled', initialQueryHandled);
@@ -549,6 +610,10 @@ const InteractiveMap = () => {
         const areaIdParam = params.get('areaId');
         const latParam = params.get('lat');
         const lonParam = params.get('lon');
+        const xParam = params.get('x');
+        const yParam = params.get('y');
+        const typeParam = (params.get('type') || 'wgs84').toLowerCase();
+        const zoneParam = Number(params.get('zone') || params.get('lon0') || 105);
         const zoomParam = params.get('zoom');
 
         console.log('areaIdParam', areaIdParam);
@@ -581,6 +646,17 @@ const InteractiveMap = () => {
                     setInitialQueryHandled(true);
                 }
             })();
+            return;
+        }
+
+        if (typeParam === 'vn2000') {
+            const x = xParam != null ? Number(xParam) : (lonParam != null ? Number(lonParam) : NaN);
+            const y = yParam != null ? Number(yParam) : (latParam != null ? Number(latParam) : NaN);
+            if (!Number.isNaN(x) && !Number.isNaN(y)) {
+                const res = convertVN2000ToWGS84(x, y, zoneParam || 'auto');
+                if (res) { setMapCenter([res.lat, res.lon]); setZoomIf(zoomParam || 12); setVnMarker({ lat: res.lat, lon: res.lon }); }
+            }
+            setInitialQueryHandled(true);
             return;
         }
 
@@ -635,13 +711,32 @@ const InteractiveMap = () => {
 
     return (
         <div className="map-with-sidebar-container">
+            {isSidebarCollapsed && (
+                <Tooltip placement="right" title={t('common.showSidebar') || 'Mở thanh bên'}>
+                    <div
+                        className="sidebar-handle"
+                        onClick={() => setIsSidebarCollapsed(false)}
+                        role="button"
+                        aria-label="Expand sidebar"
+                    >
+                        <ArrowRightOutlined style={{ fontSize: 16 }} />
+                    </div>
+                </Tooltip>
+            )}
             {/* Left Sidebar */}
-            <div className="left-sidebar">
+            <div className={`left-sidebar${isSidebarCollapsed ? ' collapsed' : ''}`}>
                 <Card className="sidebar-card">
                     {!isDetailView ? (
                         // Search and List View
                         <>
-                            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '8px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                <Button
+                                    size="small"
+                                    onClick={() => setIsSidebarCollapsed(true)}
+                                    icon={<ArrowLeftOutlined />}
+                                >
+                                    {t('common.hide') || 'Thu gọn'}
+                                </Button>
                                 <Button
                                     size="small"
                                     onClick={() => setIsFilterCardVisible(!isFilterCardVisible)}
@@ -651,6 +746,7 @@ const InteractiveMap = () => {
                                     {t('common.filter')}
                                 </Button>
                             </div>
+
 
                             {/* Search */}
                             <Space direction="vertical" style={{ width: '100%', marginBottom: '16px' }}>
@@ -794,7 +890,14 @@ const InteractiveMap = () => {
                                         )}
                                         <div>
                                             <Text strong>{t('detail.location')}: </Text>
-                                            <Text>{selectedArea.latitude}, {selectedArea.longitude}</Text>
+                                            <Space size="small" wrap style={{ width: '100%', marginTop: '4px' }}>
+                                                <Tag color="geekblue">WGS84: Lat {Number(selectedArea.latitude).toFixed(6)}°, Lon {Number(selectedArea.longitude).toFixed(6)}°</Tag>
+                                                {(() => {
+                                                    const res = convertWGS84ToVN2000(selectedArea.latitude, selectedArea.longitude);
+                                                    if (!res) return null;
+                                                    return <Tag color="purple">VN2000: X (E) {Math.round(res.x)} m, Y (N) {Math.round(res.y)} m (zone {res.zone}°)</Tag>;
+                                                })()}
+                                            </Space>
                                         </div>
                                         {selectedArea.area && (
                                             <div>
@@ -917,6 +1020,7 @@ const InteractiveMap = () => {
                     zoom={mapZoom}
                     style={{ height: '100%', width: '100%' }}
                     ref={mapRef}
+                    crs={L.CRS.EPSG3857}
                 >
                     <TileLayer
                         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -941,6 +1045,18 @@ const InteractiveMap = () => {
                             area={selectedArea}
                             prediction={predictions[selectedArea.id]}
                         />
+                    )}
+
+                    {/* VN2000 converted marker */}
+                    {vnMarker && (
+                        <Marker position={[vnMarker.lat, vnMarker.lon]}>
+                            <Popup>
+                                <div>
+                                    <Text strong>VN2000 → WGS84</Text>
+                                    <div>{vnMarker.lat.toFixed(6)}, {vnMarker.lon.toFixed(6)}</div>
+                                </div>
+                            </Popup>
+                        </Marker>
                     )}
                 </MapContainer>
             </div>
@@ -1001,6 +1117,41 @@ const InteractiveMap = () => {
                                         </Option>
                                     ))}
                                 </Select>
+                            </div>
+
+                            {/* VN2000 input */}
+                            <div>
+                                <Text strong style={{ fontSize: '12px', color: '#666' }}>Nhập tọa độ VN2000 (m) - TM kinh tuyến</Text>
+                                <Space style={{ width: '100%', marginTop: '4px' }}>
+                                    <Select size="small" value={vnZone} onChange={setVnZone} style={{ width: 110 }}>
+                                        <Option value={'auto'}>Auto</Option>
+                                        <Option value={105}>105°</Option>
+                                        <Option value={107}>107°</Option>
+                                        <Option value={109}>109°</Option>
+                                    </Select>
+                                    <Input
+                                        placeholder="X (Easting)"
+                                        value={vn2000X}
+                                        onChange={(e) => setVn2000X(e.target.value)}
+                                        size="small"
+                                    />
+                                    <Input
+                                        placeholder="Y (Northing)"
+                                        value={vn2000Y}
+                                        onChange={(e) => setVn2000Y(e.target.value)}
+                                        size="small"
+                                    />
+                                    <Button size="small" type="primary" onClick={() => {
+                                        const xStr = (vn2000X ?? '').toString().trim();
+                                        const yStr = (vn2000Y ?? '').toString().trim();
+                                        if (!xStr || !yStr) { message.error('Vui lòng nhập đủ X và Y (VN2000)'); return; }
+                                        const x = Number(xStr); const y = Number(yStr);
+                                        if (!Number.isFinite(x) || !Number.isFinite(y)) { message.error('Tọa độ VN2000 không hợp lệ'); return; }
+                                        const res = convertVN2000ToWGS84(x, y, vnZone);
+                                        if (!res) { message.error('Không thể chuyển đổi VN2000 → WGS84'); return; }
+                                        setMapCenter([res.lat, res.lon]); setMapZoom(15); setVnMarker({ lat: res.lat, lon: res.lon });
+                                    }}>Đi</Button>
+                                </Space>
                             </div>
 
                             <Button

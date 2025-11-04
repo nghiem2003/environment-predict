@@ -12,32 +12,86 @@ require('dotenv').config();
 const axios = require('axios');
 const { sendPredictionNotification } = require('./emailController');
 const xlsx = require('xlsx');
+const { parseExcel2 } = require('../services/importService');
+const logger = require('../config/logger');
+const pLimit = require('p-limit');
+
+// Required fields for prediction model - only these should be saved to database
+const REQUIRED_FIELDS = [
+  'R_PO4', 'O2Sat', 'O2ml_L', 'STheta', 'Salnty', 'R_DYNHT', 'T_degC',
+  'R_Depth', 'Distance', 'Wind_Spd', 'Wave_Ht', 'Wave_Prd', 'IntChl', 'Dry_T'
+];
 
 exports.createPrediction = async (req, res) => {
   try {
-    const { userId, areaId, inputs, modelName } = req.body;
-    console.log('Creating prediction with data:', req.body);
+    const userId = req.user?.id || req.body.userId;
+    const { areaId, inputs, modelName } = req.body;
 
     const area = await Area.findByPk(areaId);
-    console.log('modelName:', modelName);
-    const parsedInputs = {};
+    logger.debug('modelName', { modelName });
+
+    // Filter inputs to only include required fields for the model
+    const filteredInputs = {};
+    const skippedFields = [];
     for (const [key, value] of Object.entries(inputs)) {
-      parsedInputs[key] = Number.parseFloat(value);
+      if (REQUIRED_FIELDS.includes(key)) {
+        filteredInputs[key] = Number.parseFloat(value);
+      } else {
+        skippedFields.push(key);
+      }
     }
-    parsedInputs.lat = area.latitude;
-    parsedInputs.lon = area.longitude;
-    console.log('parsedInputs:', parsedInputs);
+
+    if (skippedFields.length > 0) {
+      logger.debug(`[Prediction] Filtered out non-required fields: ${skippedFields.join(', ')}`);
+    }
+    logger.debug(`[Prediction] Filtered inputs (${Object.keys(filteredInputs).length} fields)`, filteredInputs);
+
+    // Prepare request data for Flask API - only include REQUIRED_FIELDS + lat/lon
+    const flaskRequestData = {};
+    REQUIRED_FIELDS.forEach(field => {
+      if (filteredInputs[field] != null) {
+        flaskRequestData[field] = filteredInputs[field];
+      }
+    });
+    flaskRequestData.lat = area.latitude;
+    flaskRequestData.lon = area.longitude;
+    logger.debug('[Prediction] Flask request data (REQUIRED_FIELDS + lat/lon)', flaskRequestData);
+
     const endpoint = modelName.includes('oyster')
       ? '/predict/oyster'
       : '/predict/cobia';
     const flaskUrl = `${process.env.FLASK_API_URL}${endpoint}`;
-    const flaskResponse = await axios.post(flaskUrl, parsedInputs, {
-      params: { model: modelName },
-    });
+
+    let flaskResponse;
+    try {
+      flaskResponse = await axios.post(flaskUrl, flaskRequestData, {
+        params: { model: modelName },
+      });
+    } catch (axiosError) {
+      logger.error('[Prediction] Flask API error', {
+        message: axiosError.message,
+        status: axiosError.response?.status,
+        data: axiosError.response?.data,
+        url: flaskUrl
+      });
+      return res.status(axiosError.response?.status || 500).json({
+        error: axiosError.response?.data?.error || axiosError.message || 'Flask API error'
+      });
+    }
+
+    // Check HTTP status code
+    if (flaskResponse.status >= 400) {
+      logger.error('[Prediction] Flask returned error status', { status: flaskResponse.status, data: flaskResponse.data });
+      return res.status(flaskResponse.status).json({
+        error: flaskResponse.data?.error || 'Flask API returned error status'
+      });
+    }
 
     const flaskResult = flaskResponse.data;
-    if (flaskResult.error)
+    if (flaskResult.error) {
+      logger.error('[Prediction] Flask response contains error', { error: flaskResult.error });
       return res.status(400).json({ error: flaskResult.error });
+    }
 
     const { prediction_result } = flaskResult;
 
@@ -51,10 +105,16 @@ exports.createPrediction = async (req, res) => {
       }),
     });
 
-    for (const [elementName, value] of Object.entries(inputs)) {
+    // Save filtered inputs (already filtered above)
+    for (const [elementName, value] of Object.entries(filteredInputs)) {
       const entry = await NatureElement.findOne({
         where: { name: elementName },
       });
+
+      if (!entry) {
+        logger.warn(`[Prediction] NatureElement not found: ${elementName}`);
+        continue;
+      }
 
       await PredictionNatureElement.create({
         prediction_id: predictionRecord.id,
@@ -62,7 +122,8 @@ exports.createPrediction = async (req, res) => {
         value,
       });
     }
-    console.log('Prediction created successfully:', predictionRecord.id);
+    logger.info(`[Prediction] Saved ${Object.keys(filteredInputs).length} nature elements to database`);
+    logger.info('Prediction created successfully', { predictionId: predictionRecord.id });
 
     // Send email notification to subscribers
     try {
@@ -72,7 +133,7 @@ exports.createPrediction = async (req, res) => {
         predictionId: predictionRecord.id,
       });
     } catch (emailError) {
-      console.error('Failed to send prediction notification:', emailError);
+      logger.error('Failed to send prediction notification', { error: emailError.message });
     }
 
     res.json({
@@ -81,7 +142,7 @@ exports.createPrediction = async (req, res) => {
       model_used: modelName,
     });
   } catch (error) {
-    console.error('Create Prediction Error:', {
+    logger.error('Create Prediction Error', {
       message: error.message,
       stack: error.stack,
       requestData: req.body,
@@ -94,7 +155,7 @@ exports.createPrediction = async (req, res) => {
 exports.getLatestPrediction = async (req, res) => {
   try {
     const { areaId } = req.params;
-    console.log('Fetching latest prediction for area:', areaId);
+    logger.debug('Fetching latest prediction for area', { areaId });
 
     const prediction = await Prediction.findOne({
       where: { area_id: areaId },
@@ -116,7 +177,7 @@ exports.getLatestPrediction = async (req, res) => {
 
     res.json(prediction);
   } catch (error) {
-    console.error('Get Latest Prediction Error:', {
+    logger.error('Get Latest Prediction Error', {
       message: error.message,
       stack: error.stack,
       areaId: req.params.areaId,
@@ -150,7 +211,7 @@ exports.getPredictionHistory = async (req, res) => {
 
     res.json({ areaId, days, predictions });
   } catch (error) {
-    console.error('Get Prediction History Error:', {
+    logger.error('Get Prediction History Error', {
       message: error.message,
       stack: error.stack,
       areaId: req.params.areaId,
@@ -162,7 +223,7 @@ exports.getPredictionHistory = async (req, res) => {
 exports.getPredictionDetails = async (req, res) => {
   try {
     const { predictionId } = req.params;
-    console.log('Fetching prediction details for ID:', predictionId);
+    logger.debug('Fetching prediction details for ID', { predictionId });
 
     const prediction = await Prediction.findOne({
       where: { id: predictionId },
@@ -236,7 +297,7 @@ exports.getPredictionDetails = async (req, res) => {
 
     res.json(prediction);
   } catch (error) {
-    console.error('Get Prediction Details Error:', {
+    logger.error('Get Prediction Details Error', {
       message: error.message,
       stack: error.stack,
       predictionId: req.params.predictionId,
@@ -247,7 +308,7 @@ exports.getPredictionDetails = async (req, res) => {
 
 exports.getAllPredictionsWithFilters = async (req, res) => {
   try {
-    console.log('Fetching all predictions with filters:', req.query);
+    logger.debug('Fetching all predictions with filters', req.query);
 
     if (req.user.role !== 'admin' && req.user.role !== 'manager') {
       return res
@@ -330,14 +391,14 @@ exports.getAllPredictionsWithFilters = async (req, res) => {
     const predictions = await Prediction.findAndCountAll(options);
 
     if (predictions.rows.length === 0) {
-      console.log('No predictions found with filters:', req.query);
+      logger.debug('No predictions found with filters', req.query);
       return res
         .status(404)
         .json({ error: 'No predictions found for this user' });
     }
     res.json(predictions);
   } catch (error) {
-    console.error('Get All Predictions With Filters Error:', {
+    logger.error('Get All Predictions With Filters Error:', {
       message: error.message,
       stack: error.stack,
       query: req.query,
@@ -352,10 +413,7 @@ exports.getPredictionsByUser = async (req, res) => {
     const { userId } = req.params;
     const { limit = 10, offset = 0 } = req.query;
 
-    console.log('Fetching predictions for user:', userId, 'with pagination:', {
-      limit,
-      offset,
-    });
+    logger.debug('Fetching predictions for user', { userId, pagination: { limit, offset } });
 
     const options = {
       where: { user_id: userId },
@@ -390,14 +448,14 @@ exports.getPredictionsByUser = async (req, res) => {
     const predictions = await Prediction.findAll(options);
 
     if (predictions.length === 0) {
-      console.log('No predictions found for user:', userId);
+      logger.debug('No predictions found for user', { userId });
       return res
         .status(404)
         .json({ error: 'No predictions found for this user' });
     }
     res.json(predictions);
   } catch (error) {
-    console.error('Get Predictions By User Error:', {
+    logger.error('Get Predictions By User Error', {
       message: error.message,
       stack: error.stack,
       userId: req.params.userId,
@@ -408,9 +466,10 @@ exports.getPredictionsByUser = async (req, res) => {
 };
 
 exports.createBatchPrediction = async (req, res) => {
-  console.log('Batch Processing');
+  logger.info('Batch Processing');
 
-  const { userId, areaId, modelName, data } = req.body;
+  const userId = req.user?.id || req.body.userId;
+  const { areaId, modelName, data } = req.body;
   try {
     const endpoint = modelName.includes('oyster')
       ? '/predict/oyster'
@@ -421,27 +480,68 @@ exports.createBatchPrediction = async (req, res) => {
 
     const area = await Area.findByPk(areaId);
     for (const inputs of data) {
-      const parsedInputs = {};
+      // Filter inputs to only include required fields for the model
+      const filteredInputs = {};
+      const skippedFields = [];
+      let createdAt = null;
+
       for (const [key, value] of Object.entries(inputs)) {
         if (key === 'createdAt') {
-          parsedInputs.createdAt = value; // preserve date
+          createdAt = value; // preserve date separately
+        } else if (REQUIRED_FIELDS.includes(key)) {
+          filteredInputs[key] = Number.parseFloat(value);
         } else {
-          parsedInputs[key] = Number.parseFloat(value);
+          skippedFields.push(key);
         }
       }
-      // attach location for flask
-      if (area) {
-        parsedInputs.lat = area.latitude;
-        parsedInputs.lon = area.longitude;
-      }
-      // Tách createdAt từ nature elements nếu có
-      const { createdAt, ...natureElements } = parsedInputs;
-      console.log(parsedInputs);
 
-      const flaskResponse = await axios.post(flaskUrl, natureElements, {
-        params: { model: modelName },
+      if (skippedFields.length > 0) {
+        logger.debug(`[BatchPrediction] Filtered out non-required fields: ${skippedFields.join(', ')}`);
+      }
+      logger.debug(`[BatchPrediction] Filtered inputs (${Object.keys(filteredInputs).length} fields)`, filteredInputs);
+
+      // Prepare request data for Flask API - only include REQUIRED_FIELDS + lat/lon
+      const flaskRequestData = {};
+      REQUIRED_FIELDS.forEach(field => {
+        if (filteredInputs[field] != null) {
+          flaskRequestData[field] = filteredInputs[field];
+        }
       });
-      const { prediction_result } = flaskResponse.data;
+      if (area) {
+        flaskRequestData.lat = area.latitude;
+        flaskRequestData.lon = area.longitude;
+      }
+      logger.debug('[BatchPrediction] Flask request data (REQUIRED_FIELDS + lat/lon)', flaskRequestData);
+
+      let flaskResponse;
+      try {
+        flaskResponse = await axios.post(flaskUrl, flaskRequestData, {
+          params: { model: modelName },
+        });
+      } catch (axiosError) {
+        logger.error('[BatchPrediction] Flask API error', {
+          message: axiosError.message,
+          status: axiosError.response?.status,
+          data: axiosError.response?.data,
+          url: flaskUrl,
+          recordIndex: data.indexOf(inputs)
+        });
+        throw new Error(`Flask API error: ${axiosError.response?.data?.error || axiosError.message || 'Unknown error'}`);
+      }
+
+      // Check HTTP status code
+      if (flaskResponse.status >= 400) {
+        logger.error('[BatchPrediction] Flask returned error status', { status: flaskResponse.status, data: flaskResponse.data });
+        throw new Error(`Flask API returned error status ${flaskResponse.status}: ${JSON.stringify(flaskResponse.data?.error || flaskResponse.data)}`);
+      }
+
+      const flaskResult = flaskResponse.data;
+      if (flaskResult.error) {
+        logger.error('[BatchPrediction] Flask response contains error', { error: flaskResult.error });
+        throw new Error(`Flask API error: ${flaskResult.error}`);
+      }
+
+      const { prediction_result } = flaskResult;
 
       // Tạo prediction với timestamp tùy chỉnh nếu có, nếu không thì để Sequelize tự tạo
       const predictionData = {
@@ -455,25 +555,24 @@ exports.createBatchPrediction = async (req, res) => {
         const customDate = new Date(createdAt);
         predictionData.createdAt = customDate;
         predictionData.updatedAt = customDate;
-        console.log('Using custom timestamp:', customDate);
+        logger.debug('Using custom timestamp', { customDate });
       } else {
-        console.log('Using current timestamp (Sequelize auto)');
+        logger.debug('Using current timestamp (Sequelize auto)');
       }
 
       const predictionRecord = await Prediction.create(predictionData);
-      console.log('new prediction created', predictionRecord.id);
+      logger.debug('New prediction created', { predictionId: predictionRecord.id });
 
-      for (const [elementName, value] of Object.entries(inputs)) {
-        // Bỏ qua createdAt vì nó không phải là nature element
-        if (elementName === 'createdAt') continue;
-
-        console.log(elementName);
-        console.log(value);
-
+      // Save filtered inputs (already filtered above)
+      for (const [elementName, value] of Object.entries(filteredInputs)) {
         const entry = await NatureElement.findOne({
           where: { name: elementName },
         });
-        console.log(JSON.stringify(entry));
+
+        if (!entry) {
+          logger.warn(`[BatchPrediction] NatureElement not found: ${elementName}`);
+          continue;
+        }
 
         await PredictionNatureElement.create({
           prediction_id: predictionRecord.id,
@@ -481,7 +580,8 @@ exports.createBatchPrediction = async (req, res) => {
           value: value,
         });
       }
-      console.log('done added');
+      logger.info(`[BatchPrediction] Saved ${Object.keys(filteredInputs).length} nature elements to database`);
+      logger.debug('Batch prediction processing completed');
 
       predictionsResult.push({
         prediction_id: predictionRecord.id,
@@ -499,12 +599,12 @@ exports.createBatchPrediction = async (req, res) => {
         batchPrediction: true
       });
     } catch (emailError) {
-      console.error('Failed to send batch prediction notification:', emailError);
+      logger.error('Failed to send batch prediction notification', { error: emailError.message });
     }
 
     res.json({ predictions: predictionsResult, model_used: modelName });
   } catch (error) {
-    console.log(error);
+    logger.error('Batch prediction error', { error: error.message, stack: error.stack });
 
     res.status(500).json({ error: error.message });
   }
@@ -528,9 +628,9 @@ exports.createBatchPredictionFromExcel = async (req, res) => {
     // Convert to JSON (object rows and matrix) for flexible parsing
     const rowsObjects = xlsx.utils.sheet_to_json(ws, { defval: null, raw: true });
     const rowsMatrix = xlsx.utils.sheet_to_json(ws, { header: 1, defval: null, raw: true });
-    console.log('[Excel] sheetName:', sheetName);
-    console.log('[Excel] rowsObjects length:', rowsObjects.length);
-    console.log('[Excel] rowsMatrix dims:', rowsMatrix.length, rowsMatrix[0] ? rowsMatrix[0].length : 0);
+    logger.log('[Excel] sheetName:', sheetName);
+    logger.log('[Excel] rowsObjects length:', rowsObjects.length);
+    logger.log('[Excel] rowsMatrix dims:', rowsMatrix.length, rowsMatrix[0] ? rowsMatrix[0].length : 0);
     if (!rowsObjects.length && (!rowsMatrix || !rowsMatrix.length)) {
       return res.status(400).json({ error: 'Sheet is empty' });
     }
@@ -557,7 +657,7 @@ exports.createBatchPredictionFromExcel = async (req, res) => {
       const headerMap = {};
       Object.keys(rowsObjects[0]).forEach(h => headerMap[h] = mapHeaderToFeature(h));
       if (Object.values(headerMap).some(Boolean)) {
-        console.log('[Excel] Wide header map -> feature:', headerMap);
+        logger.log('[Excel] Wide header map -> feature:', headerMap);
         normalized = rowsObjects.map((r) => {
           const obj = {};
           for (const [h, v] of Object.entries(r)) {
@@ -615,7 +715,7 @@ exports.createBatchPredictionFromExcel = async (req, res) => {
         const widest = Math.max(monthsRow.length, ...(rowsMatrix.slice(startRow).map(r => (r || []).length)));
         for (let c = startCol; c < widest; c++) monthCols.push({ col: c, createdAt: null });
       }
-      console.log('[Excel] headerRow:', headerRow + 1, '| monthCols parsed:', monthCols);
+      logger.log('[Excel] headerRow:', headerRow + 1, '| monthCols parsed:', monthCols);
       // Hard-code only 4 needed features by absolute row index:
       // Row numbers are 1-based visually; here we use 0-based indices.
       const rowIndexByFeature = {
@@ -628,7 +728,7 @@ exports.createBatchPredictionFromExcel = async (req, res) => {
       for (const [feat, r] of Object.entries(rowIndexByFeature)) {
         const row = rowsMatrix[r] || [];
         const unitText = row[unitCol] ? norm(row[unitCol]) : '';
-        console.log(`[Excel] row ${r + 1}: feat=${feat} unit='${unitText}' values@cols=${monthCols.map(m => m.col).join(',')}`);
+        logger.log(`[Excel] row ${r + 1}: feat=${feat} unit='${unitText}' values@cols=${monthCols.map(m => m.col).join(',')}`);
         for (let i = 0; i < monthCols.length; i++) {
           const { col } = monthCols[i];
           const raw = row[col];
@@ -640,23 +740,107 @@ exports.createBatchPredictionFromExcel = async (req, res) => {
         }
       }
       normalized = collected.filter(o => Object.keys(o).some(k => k !== 'createdAt'));
-      console.log('[Excel] normalized count (fixed):', normalized.length);
-      if (normalized.length) console.log('[Excel] normalized[0]:', normalized[0]);
+      logger.log('[Excel] normalized count (fixed):', normalized.length);
+      if (normalized.length) logger.log('[Excel] normalized[0]:', normalized[0]);
     }
     if (!normalized.length) {
       return res.status(400).json({ error: 'Could not detect any usable indicators from Excel', debug: { rowsObjects: rowsObjects.length, rowsMatrix: rowsMatrix.length } });
     }
 
     // Reuse existing batch controller logic with parsed data
-    console.log('[Excel] Sending normalized data to batch, size=', normalized.length);
+    logger.log('[Excel] Sending normalized data to batch, size=', normalized.length);
 
     req.body = { userId, areaId, modelName, data: normalized };
-    console.log(normalized);
+    logger.log(normalized);
 
     return exports.createBatchPrediction(req, res);
   } catch (error) {
-    console.error('createBatchPredictionFromExcel error:', error);
+    logger.error('createBatchPredictionFromExcel error:', error);
     return res.status(500).json({ error: error.message });
+  }
+};
+
+// New: Excel2 template - rows start at row 4, first col is station name (merged over 4 quarter rows), col 3 is time "Quý X Năm YYYY"
+// Header row is row 2 (index 1), modelName comes from request body
+exports.createBatchPredictionFromExcel2 = async (req, res) => {
+  try {
+    if (!req.file || !req.file.buffer) return res.status(400).json({ error: 'Excel file is required (field name: file)' });
+    const userId = req.user?.id || req.body.userId;
+    const modelName = req.body.modelName; // Get modelName from request body
+    if (!userId) return res.status(400).json({ error: 'userId is required (from token)' });
+    if (!modelName) return res.status(400).json({ error: 'modelName is required' });
+
+    logger.log('[Excel2] Processing with modelName:', modelName, 'userId:', userId);
+    const parsed = await parseExcel2(req.file.buffer);
+    logger.log('[Excel2] Parsed rows:', parsed.length);
+
+    // Create p-limit instance with concurrency of 5
+    const limit = pLimit(5);
+
+    // Process rows with concurrent limit of 5
+    const processRow = async (row, index) => {
+      if (!row.areaId) {
+        logger.warn(`[Excel2] Skipping row ${index + 1}/${parsed.length} without areaId:`, row.areaName);
+        return { success: false, skipped: true };
+      }
+
+      const inputs = row.metrics;
+      const fakeReq = { body: { userId, areaId: row.areaId, inputs, modelName } };
+
+      return new Promise((resolve, reject) => {
+        let statusCode = 200;
+        let resolved = false;
+        const r = {
+          status(c) {
+            statusCode = c;
+            return this;
+          },
+          json(data) {
+            if (resolved) return; // Prevent multiple resolves
+            resolved = true;
+            // Check status code and reject if error
+            if (statusCode >= 400) {
+              const error = new Error(data?.error || `createPrediction returned status ${statusCode}`);
+              error.statusCode = statusCode;
+              error.data = data;
+              reject(error);
+            } else {
+              resolve({ success: true, status: statusCode, data });
+            }
+          }
+        };
+        Promise.resolve(exports.createPrediction(fakeReq, r))
+          .catch(error => {
+            if (!resolved) {
+              resolved = true;
+              reject(error);
+            }
+          });
+      });
+    };
+
+    // Create array of promises with p-limit
+    const promises = parsed.map((row, index) =>
+      limit(() => processRow(row, index).catch(error => {
+        logger.error(`[Excel2] Error processing row ${index + 1}/${parsed.length} (area: ${row.areaName}):`, {
+          error: error.message,
+          statusCode: error.statusCode,
+          data: error.data
+        });
+        // Re-throw to stop processing and let worker mark job as failed
+        throw new Error(`Failed at row ${index + 1}/${parsed.length} (area: ${row.areaName}): ${error.message}`);
+      }))
+    );
+
+    // Wait for all promises to complete
+    const results = await Promise.all(promises);
+    const created = results.filter(r => r && r.success && !r.skipped).length;
+
+    logger.log('[Excel2] Created predictions:', created, 'out of', parsed.length, 'parsed rows');
+    return res.json({ parsed: parsed.length, created });
+  } catch (e) {
+    logger.error('createBatchPredictionFromExcel2 error:', e);
+    return res.status(500).json({ error: e.message });
   }
 };
 
@@ -664,7 +848,7 @@ exports.createBatchPredictionFromExcel = async (req, res) => {
 exports.getPredictionChartData = async (req, res) => {
   try {
     const { areaId, limit = 10 } = req.query;
-    console.log('Fetching prediction chart data for area:', areaId);
+    logger.log('Fetching prediction chart data for area:', areaId);
 
     if (!areaId) {
       return res.status(400).json({ error: 'areaId is required' });
@@ -773,7 +957,7 @@ exports.getPredictionChartData = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Get Prediction Chart Data Error:', {
+    logger.error('Get Prediction Chart Data Error:', {
       message: error.message,
       stack: error.stack,
       areaId: req.query.areaId,
@@ -786,7 +970,7 @@ exports.getPredictionChartData = async (req, res) => {
 exports.getAllPredictionChartData = async (req, res) => {
   try {
     const { limit = 5 } = req.query;
-    console.log('Fetching all prediction chart data with limit:', limit);
+    logger.log('Fetching all prediction chart data with limit:', limit);
 
     // Get latest predictions for all areas
     const predictions = await Prediction.findAll({
@@ -921,7 +1105,7 @@ exports.getAllPredictionChartData = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Get All Prediction Chart Data Error:', {
+    logger.error('Get All Prediction Chart Data Error:', {
       message: error.message,
       stack: error.stack,
     });

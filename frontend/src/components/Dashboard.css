@@ -24,8 +24,8 @@ table {
   border-collapse: collapse;
   margin-top: 20px;
   table-layout: fixed;
-  display: block;
-  overflow: hidden;
+  position: relative;
+  z-index: 1;
 }
 
 table th,
@@ -46,9 +46,10 @@ table th {
 }
 
 tbody {
-  max-height: 50vh; /* Limits height to prevent overflow */
-  overflow-y: scroll; /* Enables scrolling */
+  max-height: 50vh; /* Limits height to prevent overflow */ /* Enables scrolling */
   width: 100%;
+  position: relative;
+  z-index: 1;
 }
 
 .view-details-btn {

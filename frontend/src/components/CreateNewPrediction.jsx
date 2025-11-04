@@ -49,6 +49,7 @@ const CreateNewPrediction = () => {
   });
   const [csvElements, setCsvElements] = useState([]);
   const [excelFile, setExcelFile] = useState(null);
+  const [excelFile2, setExcelFile2] = useState(null);
   const [activeTab, setActiveTab] = useState('single');
   const [singleForm] = Form.useForm();
   const [batchForm] = Form.useForm();
@@ -128,6 +129,14 @@ const CreateNewPrediction = () => {
     setExcelFile(file.originFileObj || file);
   };
 
+  const handleExcelUpload2 = ({ file }) => {
+    if (file.status === 'removed') {
+      setExcelFile2(null);
+      return;
+    }
+    setExcelFile2(file.originFileObj || file);
+  };
+
   const handleSubmitBatch = async (values) => {
     setIsBatchLoading(true);
     setBatchProgress(0);
@@ -188,15 +197,52 @@ const CreateNewPrediction = () => {
       formData.append('file', excelFile);
 
       setBatchProgress(30);
-      await axios.post('api/express/predictions/excel', formData, {
+      const response = await axios.post('api/express/predictions/excel', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
 
       setBatchProgress(100);
-      message.success('Đã tạo dự đoán từ Excel!');
+      const { message: responseMessage, redirect } = response.data || {};
+      message.success(responseMessage || 'Vui lòng đợi trong khi hệ thống đang xử lý và tạo dự đoán mới.');
       batchForm.resetFields();
       setExcelFile(null);
-      navigate('/dashboard');
+      setTimeout(() => {
+        navigate(redirect || '/jobs');
+      }, 1500);
+    } catch (error) {
+      message.error(`${error}`);
+    } finally {
+      setIsBatchLoading(false);
+      setBatchProgress(0);
+    }
+  };
+
+  const handleSubmitExcel2 = async (values) => {
+    setIsBatchLoading(true);
+    setBatchProgress(0);
+    try {
+      const { modelName } = values;
+      if (!modelName) throw new Error('You need to select model');
+      if (!excelFile2) throw new Error('You need to upload an Excel file');
+
+      const formData = new FormData();
+      formData.append('userId', userId);
+      formData.append('modelName', modelName);
+      formData.append('file', excelFile2);
+
+      setBatchProgress(30);
+      const response = await axios.post('api/express/predictions/excel2', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+
+      setBatchProgress(100);
+      const { message: responseMessage, redirect } = response.data || {};
+      message.success(responseMessage || 'Vui lòng đợi trong khi hệ thống đang xử lý và tạo dự đoán mới.');
+      batchForm.resetFields();
+      setExcelFile2(null);
+      setTimeout(() => {
+        navigate(redirect || '/jobs');
+      }, 1500);
     } catch (error) {
       message.error(`${error}`);
     } finally {
@@ -437,8 +483,8 @@ const CreateNewPrediction = () => {
               ),
             },
             {
-              key: 'excel',
-              label: 'Batch Excel',
+              key: 'excel1',
+              label: 'Mẫu 1',
               children: (
                 <Form
                   form={batchForm}
@@ -512,7 +558,65 @@ const CreateNewPrediction = () => {
                       loading={isBatchLoading}
                       disabled={isBatchLoading}
                     >
-                      {isBatchLoading ? 'Đang tạo dự đoán từ Excel...' : 'Tạo dự đoán từ Excel'}
+                      {isBatchLoading ? 'Đang tạo dự đoán từ Excel (Mẫu 1)...' : 'Tạo dự đoán từ Excel (Mẫu 1)'}
+                    </Button>
+                  </Form.Item>
+                </Form>
+              ),
+            },
+            {
+              key: 'excel2',
+              label: 'Mẫu 2',
+              children: (
+                <Form
+                  form={batchForm}
+                  layout="vertical"
+                  onFinish={handleSubmitExcel2}
+                  initialValues={{ userId }}
+                  disabled={isBatchLoading}
+                >
+                  <Form.Item name="userIdForm" style={{ display: 'none' }}>
+                    <Input type="hidden" value={userId} />
+                  </Form.Item>
+                  <Form.Item
+                    label={t('prediction_form.select_model')}
+                    name="modelName"
+                    rules={[
+                      { required: true, message: t('prediction_form.select_model') },
+                    ]}
+                  >
+                    <Select
+                      placeholder={t('prediction_form.select_model')}
+                    >
+                      {allModels.map((model) => (
+                        <Option key={model.value} value={model.value}>
+                          {model.label}
+                        </Option>
+                      ))}
+                    </Select>
+                  </Form.Item>
+                  <Form.Item
+                    label={'Upload Excel (.xlsx/.xls)'}
+                  >
+                    <Upload
+                      accept=".xlsx,.xls"
+                      beforeUpload={() => false}
+                      onChange={handleExcelUpload2}
+                      maxCount={1}
+                      fileList={excelFile2 ? [{ name: excelFile2.name || 'excel.xlsx', status: 'done' }] : []}
+                    >
+                      <Button icon={<UploadOutlined />}>Upload Excel</Button>
+                    </Upload>
+                  </Form.Item>
+                  <Form.Item>
+                    <Button
+                      type="primary"
+                      htmlType="submit"
+                      block
+                      loading={isBatchLoading}
+                      disabled={isBatchLoading}
+                    >
+                      {isBatchLoading ? 'Đang tạo dự đoán từ Excel (Mẫu 2)...' : 'Tạo dự đoán từ Excel (Mẫu 2)'}
                     </Button>
                   </Form.Item>
                 </Form>

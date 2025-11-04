@@ -1,5 +1,5 @@
 const { Op } = require('sequelize');
-const { Area, Province, District } = require('../models');
+const { Area, Province, District, Prediction, PredictionNatureElement } = require('../models');
 const { sendPredictionNotification } = require('./emailController');
 
 exports.getAllAreas = async (req, res) => {
@@ -17,7 +17,7 @@ exports.getAllAreas = async (req, res) => {
       district,
       province,
     } = req.query;
-    console.log(req.query);
+    logger.log(req.query);
 
     // Start with an empty query object
     let query = {};
@@ -46,14 +46,14 @@ exports.getAllAreas = async (req, res) => {
       if (long_max) query.longitude[Op.lte] = long_max; // Less than or equal to long_max
     }
     if (role === 'manager') {
-      console.log('Manager role detected, applying district filter');
+      logger.log('Manager role detected, applying district filter');
       if (district) {
         query.district = district; // lọc theo district
       } else if (province) {
         query.province = province; // lọc theo province nếu không có district
       }
     }
-    console.log('Query for Areas:', query);
+    logger.log('Query for Areas:', query);
     const options = {
       where: query,
       include: [
@@ -84,7 +84,7 @@ exports.getAllAreas = async (req, res) => {
     const total = await Area.count(options);
     res.status(200).json({ areas: areas, total: total });
   } catch (error) {
-    console.error('Get All Areas Error:', {
+    logger.error('Get All Areas Error:', {
       message: error.message,
       stack: error.stack,
       query: req.query,
@@ -97,7 +97,7 @@ exports.getAllAreas = async (req, res) => {
 exports.getAllAreasNoPagination = async (req, res) => {
   try {
     const { search, area_type, lat_min, lat_max, long_min, long_max, province, district } = req.query;
-    console.log(req.query);
+    logger.log(req.query);
 
     let query = {};
     if (search) {
@@ -147,7 +147,7 @@ exports.getAllAreasNoPagination = async (req, res) => {
     const areas = await Area.findAll(options);
     res.status(200).json({ areas: areas });
   } catch (error) {
-    console.error('Get All Areas (No Pagination) Error:', {
+    logger.error('Get All Areas (No Pagination) Error:', {
       message: error.message,
       stack: error.stack,
       query: req.query,
@@ -170,7 +170,7 @@ exports.getAreaById = async (req, res) => {
     });
     res.status(200).json(area);
   } catch (error) {
-    console.error('Get Area By ID Error:', {
+    logger.error('Get Area By ID Error:', {
       message: error.message,
       stack: error.stack,
       areaId: req.params.id,
@@ -223,7 +223,7 @@ exports.createArea = async (req, res) => {
 
     res.status(201).json(newArea);
   } catch (error) {
-    console.error('Create Area Error:', {
+    logger.error('Create Area Error:', {
       message: error.message,
       stack: error.stack,
       areaData: req.body,
@@ -241,15 +241,50 @@ exports.deleteArea = async (req, res) => {
       return res.status(404).json({ error: 'Area not found.' });
     }
 
-    console.log('Deleting area:', area.name);
+    logger.log('Deleting area:', area.name);
 
-    // Note: Email notifications are now sent when predictions are created, not when areas are deleted
+    // Start a transaction to ensure all deletions succeed or fail together
+    const transaction = await Area.sequelize.transaction();
 
-    await area.destroy();
+    try {
+      // First, delete all prediction-nature element relationships for this area's predictions
+      const predictions = await Prediction.findAll({
+        where: { area_id: id },
+        transaction
+      });
 
-    res.status(200).json({ message: 'Area deleted successfully.' });
+      for (const prediction of predictions) {
+        await PredictionNatureElement.destroy({
+          where: { prediction_id: prediction.id },
+          transaction
+        });
+      }
+
+      // Then delete all predictions for this area
+      await Prediction.destroy({
+        where: { area_id: id },
+        transaction
+      });
+
+      // Finally delete the area itself
+      await area.destroy({ transaction });
+
+      // Commit the transaction
+      await transaction.commit();
+
+      logger.log(`Successfully deleted area ${area.name} and all related predictions`);
+      res.status(200).json({
+        message: 'Area and all related predictions deleted successfully.',
+        deletedArea: area.name,
+        deletedPredictions: predictions.length
+      });
+    } catch (error) {
+      // Rollback the transaction if anything fails
+      await transaction.rollback();
+      throw error;
+    }
   } catch (error) {
-    console.error('Delete Area Error:', {
+    logger.error('Delete Area Error:', {
       message: error.message,
       stack: error.stack,
       areaId: req.params.id,
@@ -260,7 +295,7 @@ exports.deleteArea = async (req, res) => {
 
 exports.updateArea = async (req, res) => {
   try {
-    console.log(req.body);
+    logger.log(req.body);
 
     const { id } = req.params;
     const { name, latitude, longitude, province, district, area, area_type } =
@@ -306,14 +341,14 @@ exports.updateArea = async (req, res) => {
     selectedArea.district = district || selectedArea.district;
     selectedArea.area_type = area_type;
 
-    console.log('Updating area:', selectedArea.name);
+    logger.log('Updating area:', selectedArea.name);
     await selectedArea.save();
 
     // Note: Email notifications are now sent when predictions are created, not when areas are updated
 
     res.status(200).json(selectedArea);
   } catch (error) {
-    console.error('Update Area Error:', {
+    logger.error('Update Area Error:', {
       message: error.message,
       stack: error.stack,
       areaId: req.params.id,

@@ -1,5 +1,6 @@
 const { Sequelize, DataTypes } = require('sequelize');
 const sequelize = require('../config/db');
+const logger = require('../config/logger');
 
 const Area = sequelize.define(
   'Area',
@@ -17,7 +18,7 @@ const Area = sequelize.define(
 );
 
 Area.associate = (models) => {
-  console.log(models);
+  logger.debug('Area.associate', { models });
 
   Area.belongsTo(models.Province, {
     foreignKey: 'province',
@@ -30,6 +31,10 @@ Area.associate = (models) => {
   Area.hasMany(models.Email, {
     foreignKey: 'area_id',
     as: 'emailSubscriptions',
+  });
+  Area.hasMany(models.Prediction, {
+    foreignKey: 'area_id',
+    as: 'predictions'
   });
 };
 

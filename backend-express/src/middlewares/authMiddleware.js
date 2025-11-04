@@ -14,17 +14,17 @@ const authenticate = (req, res, next) => {
 };
 
 const authorize = (roles) => (req, res, next) => {
-  
-  try{
-  if (!roles.includes(req.user.role)) {
-    return res.status(403).json({ error: 'Forbidden' });
+
+  try {
+    if (!roles.includes(req.user.role)) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+    logger.log('passed authorize')
+
+    next();
+  } catch (e) {
+    return res.status(500).json(e.error)
   }
-  console.log('passed authorize')
-  
-  next();
-}catch(e){
-  return res.status(500).json(e.error)
-}
 };
 
 module.exports = { authenticate, authorize };

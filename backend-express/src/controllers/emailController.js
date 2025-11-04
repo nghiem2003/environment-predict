@@ -62,7 +62,7 @@ exports.getAllEmailSubscriptions = async (req, res) => {
 
     res.status(200).json({ subscriptions, total });
   } catch (error) {
-    console.error('Get All Email Subscriptions Error:', error);
+    logger.error('Get All Email Subscriptions Error:', error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -71,7 +71,7 @@ exports.getAllEmailSubscriptions = async (req, res) => {
 exports.getAllEmailSubscriptionsNoPagination = async (req, res) => {
   try {
     const { area_id, is_active } = req.query;
-    console.log(req.query);
+    logger.log(req.query);
 
     let query = {};
     if (area_id) {
@@ -96,7 +96,7 @@ exports.getAllEmailSubscriptionsNoPagination = async (req, res) => {
     const subscriptions = await Email.findAll(options);
     res.status(200).json({ subscriptions });
   } catch (error) {
-    console.error('Get All Email Subscriptions (No Pagination) Error:', error);
+    logger.error('Get All Email Subscriptions (No Pagination) Error:', error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -125,7 +125,7 @@ exports.getEmailSubscriptionById = async (req, res) => {
 
     res.status(200).json(subscription);
   } catch (error) {
-    console.error('Get Email Subscription Error:', error);
+    logger.error('Get Email Subscription Error:', error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -220,7 +220,7 @@ exports.sendOTP = async (req, res) => {
       area_id: area_id,
     });
   } catch (error) {
-    console.error('Send OTP Error:', error);
+    logger.error('Send OTP Error:', error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -301,7 +301,7 @@ exports.verifyOTPAndSubscribe = async (req, res) => {
       subscription: subscriptionWithArea,
     });
   } catch (error) {
-    console.error('Verify OTP and Subscribe Error:', error);
+    logger.error('Verify OTP and Subscribe Error:', error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -383,7 +383,7 @@ exports.subscribeToPredictions = async (req, res) => {
       subscription: subscriptionWithArea,
     });
   } catch (error) {
-    console.error('Subscribe to Predictions Error:', error);
+    logger.error('Subscribe to Predictions Error:', error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -444,7 +444,7 @@ exports.updateEmailSubscription = async (req, res) => {
 
     res.status(200).json(updatedSubscription);
   } catch (error) {
-    console.error('Update Email Subscription Error:', error);
+    logger.error('Update Email Subscription Error:', error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -464,7 +464,7 @@ exports.deleteEmailSubscription = async (req, res) => {
       .status(200)
       .json({ message: 'Email subscription deleted successfully' });
   } catch (error) {
-    console.error('Delete Email Subscription Error:', error);
+    logger.error('Delete Email Subscription Error:', error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -488,7 +488,7 @@ exports.sendPredictionNotification = async (areaId, predictionData) => {
     });
 
     if (subscriptions.length === 0) {
-      console.log('No active email subscriptions found for area:', areaId);
+      logger.log('No active email subscriptions found for area:', areaId);
       return;
     }
 
@@ -552,11 +552,11 @@ exports.sendPredictionNotification = async (areaId, predictionData) => {
     });
 
     await Promise.all(emailPromises);
-    console.log(
+    logger.log(
       `Sent ${subscriptions.length} prediction notification emails for area ${areaId}`
     );
   } catch (error) {
-    console.error('Send Prediction Notification Error:', error);
+    logger.error('Send Prediction Notification Error:', error);
     throw error;
   }
 };
@@ -601,7 +601,7 @@ exports.unsubscribeFromPredictions = async (req, res) => {
       area: subscription.area,
     });
   } catch (error) {
-    console.error('Unsubscribe Error:', error);
+    logger.error('Unsubscribe Error:', error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -632,7 +632,7 @@ exports.testEmail = async (req, res) => {
     await transporter.sendMail(mailOptions);
     res.status(200).json({ message: 'Test email sent successfully' });
   } catch (error) {
-    console.error('Test Email Error:', error);
+    logger.error('Test Email Error:', error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -751,7 +751,7 @@ exports.sendManualNotification = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Send Manual Notification Error:', error);
+    logger.error('Send Manual Notification Error:', error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -795,7 +795,7 @@ exports.getAreaSubscribers = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Get Area Subscribers Error:', error);
+    logger.error('Get Area Subscribers Error:', error);
     res.status(500).json({ error: error.message });
   }
 };

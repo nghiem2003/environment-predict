@@ -12,6 +12,7 @@ import {
   message,
 } from 'antd';
 import { useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import axios from '../axios';
 import { jwtDecode } from 'jwt-decode';
@@ -20,7 +21,8 @@ const { Title } = Typography;
 
 const UserProfile = () => {
   const { t } = useTranslation();
-  const { token } = useSelector((state) => state.auth);
+  const { token, role } = useSelector((state) => state.auth);
+  const navigate = useNavigate();
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -123,7 +125,7 @@ const UserProfile = () => {
       ) {
         message.error(
           t('profile.please-fill-all-information') ||
-            'Vui lòng nhập đầy đủ thông tin'
+          'Vui lòng nhập đầy đủ thông tin'
         );
         setLoadingPassword(false);
         return;
@@ -131,7 +133,7 @@ const UserProfile = () => {
       if (values.newPassword !== values.confirmPassword) {
         message.error(
           t('profile.incorrect-confirm-password') ||
-            'Mật khẩu xác nhận không khớp'
+          'Mật khẩu xác nhận không khớp'
         );
         setLoadingPassword(false);
         return;
@@ -171,7 +173,7 @@ const UserProfile = () => {
     <div style={{ padding: '24px' }}>
       <Card>
         <Title level={2}>{t('profile.title')}</Title>
-        <div style={{ marginBottom: 24 }}>
+        <div style={{ marginBottom: 24, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
           <Button
             type="primary"
             style={{ marginRight: 12 }}
@@ -182,6 +184,11 @@ const UserProfile = () => {
           <Button onClick={() => setIsPasswordModalOpen(true)}>
             {t('profile.password-change')}
           </Button>
+          {(userData?.role === 'admin' || userData?.role === 'expert') && (
+            <Button onClick={() => navigate('/jobs')}>
+              Xem danh sách Job
+            </Button>
+          )}
         </div>
         <div style={{ maxWidth: 600, margin: '0 auto' }}>
           <div style={{ display: 'flex', marginBottom: 16 }}>

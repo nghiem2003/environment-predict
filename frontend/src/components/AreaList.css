@@ -62,13 +62,17 @@
 /* Table styles */
 .table-container {
   margin-top: 30px;
+  position: relative;
+  z-index: 1;
 }
 
 .area-table {
   width: 100%;
-  overflow-x: scroll;
+  overflow-x: auto;
   border-collapse: collapse;
   margin-top: 20px;
+  position: relative;
+  z-index: 1;
 }
 
 .area-table th, .area-table td {
@@ -121,7 +125,7 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 9999;
+  z-index: 1001;
 }
 
 .popup-content {
@@ -184,7 +188,7 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 9999;
+  z-index: 1001;
 }
 
 .confirm-delete-popup .popup-content {

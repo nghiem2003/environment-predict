@@ -186,6 +186,10 @@
     "logout": "Đăng xuất"
   },
   "common": {
+    "showSidebar": "Hiện thanh bên",
+    "hideSidebar": "Ẩn thanh bên",
+    "hide":"Ẩn",
+    "show":"Hiện",
     "back": "Trở về",
     "filter": "Bộ lọc",
     "oyster": "Hàu",

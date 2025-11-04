@@ -18,6 +18,7 @@ import {
   Form,
   Select,
   message,
+  Tooltip
 } from 'antd';
 import {
   EditOutlined,
@@ -25,6 +26,8 @@ import {
   StopOutlined,
   CheckOutlined,
   UserAddOutlined,
+  SaveOutlined,
+  CloseOutlined,
 } from '@ant-design/icons';
 const { Title } = Typography;
 
@@ -421,31 +424,36 @@ const UserList = () => {
                 title: t('userList.fullName'),
                 dataIndex: 'username',
                 key: 'username',
-                width: 50,
+                width: 'max-content',
+                minWidth: 150,
               },
               {
                 title: t('userList.email'),
                 dataIndex: 'email',
                 key: 'email',
-                width: 200,
+                width: 'max-content',
+                minWidth: 200,
               },
               {
                 title: t('userList.address'),
                 dataIndex: 'address',
                 key: 'address',
-                width: 200,
+                width: 'max-content',
+                minWidth: 200,
               },
               {
                 title: t('userList.phone'),
                 dataIndex: 'phone',
                 key: 'phone',
-                width: 150,
+                width: 'max-content',
+                minWidth: 120,
               },
               {
                 title: t('userList.role'),
                 dataIndex: 'role',
                 key: 'role',
-                width: 120,
+                width: 'max-content',
+                minWidth: 100,
                 render: (role, record) => {
                   if (
                     role === 'manager' ||
@@ -467,7 +475,8 @@ const UserList = () => {
                 title: t('userList.status'),
                 dataIndex: 'status',
                 key: 'status',
-                width: 120,
+                width: 'max-content',
+                minWidth: 100,
                 render: (status) =>
                   status === 'active'
                     ? t('userList.activeAccount')
@@ -476,64 +485,61 @@ const UserList = () => {
               {
                 title: t('userList.actions'),
                 key: 'actions',
-                width: 300,
+                width: 'min-content',
                 align: 'center',
+                fixed: 'right',
                 onCell: () => ({
                   style: { whiteSpace: 'nowrap' },
                 }),
                 render: (_, user) => (
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'nowrap', alignItems: 'center', justifyContent: 'center' }}>
-                    <Button
-                      type="primary"
-                      size="small"
-                      icon={<EditOutlined />}
-                      onClick={() => handleModifyUser(user)}
-                      style={{ whiteSpace: 'nowrap' }}
-                    >
-                      {t('userList.editUser')}
-                    </Button>
+                    <Tooltip title={t('userList.editUser')}>
+                      <Button
+                        type="primary"
+                        icon={<EditOutlined />}
+                        size="middle"
+                        onClick={() => handleModifyUser(user)}
+                      />
+                    </Tooltip>
                     {user.role !== 'admin' ? (
                       user.status === 'active' ? (
-                        <Button
-                          danger
-                          type="primary"
-                          size="small"
-                          icon={<StopOutlined />}
-                          onClick={() => {
-                            setSelectedUser(user);
-                            setIsConfirmPopupOpen(true);
-                          }}
-                          style={{ whiteSpace: 'nowrap' }}
-                        >
-                          {t('userList.deactivateUser')}
-                        </Button>
+                        <Tooltip title={t('userList.deactivateUser')}>
+                          <Button
+                            danger
+                            type="primary"
+                            icon={<StopOutlined />}
+                            size="middle"
+                            onClick={() => {
+                              setSelectedUser(user);
+                              setIsConfirmPopupOpen(true);
+                            }}
+                          />
+                        </Tooltip>
                       ) : (
-                        <Button
-                          type="primary"
-                          size="small"
-                          icon={<CheckOutlined />}
-                          onClick={() => handleActivateUser(user.id)}
-                          style={{ whiteSpace: 'nowrap' }}
-                        >
-                          {t('userList.activateUser')}
-                        </Button>
+                        <Tooltip title={t('userList.activateUser')}>
+                          <Button
+                            type="primary"
+                            icon={<CheckOutlined />}
+                            size="middle"
+                            onClick={() => handleActivateUser(user.id)}
+                          />
+                        </Tooltip>
                       )
                     ) : null}
                     {jwtDecode(token).role === 'admin' &&
                       user.role !== 'admin' && (
-                        <Button
-                          danger
-                          type="default"
-                          size="small"
-                          icon={<DeleteOutlined />}
-                          onClick={() => {
-                            setSelectedUser(user);
-                            setIsDeleteConfirmOpen(true);
-                          }}
-                          style={{ whiteSpace: 'nowrap' }}
-                        >
-                          {t('userList.deleteUser') || 'Xoá'}
-                        </Button>
+                        <Tooltip title={t('userList.deleteUser') || 'Xoá'}>
+                          <Button
+                            danger
+                            type="default"
+                            icon={<DeleteOutlined />}
+                            size="middle"
+                            onClick={() => {
+                              setSelectedUser(user);
+                              setIsDeleteConfirmOpen(true);
+                            }}
+                          />
+                        </Tooltip>
                       )}
                   </div>
                 ),
@@ -542,7 +548,7 @@ const UserList = () => {
             dataSource={users}
             rowKey="id"
             pagination={false}
-            scroll={{ x: 1200 }}
+            scroll={{ x: 'max-content' }}
             style={{ width: '100%' }}
             locale={{ emptyText: t('userList.noData') }}
           />

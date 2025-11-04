@@ -114,7 +114,7 @@ Component được thiết kế responsive:
 
 ### Lỗi markers không hiển thị
 - Kiểm tra xem đã import CSS của Leaflet chưa
-- Kiểm tra console để xem có lỗi JavaScript nào không
+- Kiểm tra logger để xem có lỗi JavaScript nào không
 
 ### Lỗi không load được dữ liệu vùng
 - Kiểm tra kết nối API

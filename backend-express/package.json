@@ -26,11 +26,15 @@
     "node-cron": "^4.2.1",
     "nodemailer": "^7.0.4",
     "nodemon": "^3.1.9",
+    "p-limit": "^3.1.0",
     "pg": "^8.13.1",
+    "pg-boss": "^9.0.3",
     "sequelize": "^6.37.7",
     "sequelize-cli": "^6.6.3",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.0",
+    "winston": "^3.11.0",
+    "winston-daily-rotate-file": "^4.7.1",
     "xlsx": "^0.18.5"
   }
 }

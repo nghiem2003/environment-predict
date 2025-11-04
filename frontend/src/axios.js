@@ -9,7 +9,7 @@ console.log(process.env.REACT_APP_API_URL); // Debugging line to check the API U
 
 // Create an Axios instance with default headers
 const axiosInstance = axios.create({
-  baseURL: 'http://dhtbkc4.tbu.edu.vn/quanlytainguyen', // Replace with your API base URL
+  baseURL: 'http://localhost:5000', // Replace with your API base URL
 });
 
 // Add a request interceptor to add the token to headers before each request

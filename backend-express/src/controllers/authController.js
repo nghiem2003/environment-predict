@@ -28,7 +28,7 @@ exports.login = async (req, res) => {
 
     res.status(200).json({ token, role: user.role });
   } catch (error) {
-    console.error('Login Error:', {
+    logger.error('Login Error:', {
       message: error.message,
       stack: error.stack,
       email: req.body.email,
@@ -91,7 +91,7 @@ exports.createManagerUser = async (req, res) => {
     });
     return res.status(200).json({ message: 'Register successful' });
   } catch (error) {
-    console.error('Create Manager User Error:', {
+    logger.error('Create Manager User Error:', {
       message: error.message,
       stack: error.stack,
     });
@@ -102,7 +102,7 @@ exports.createManagerUser = async (req, res) => {
 exports.getAllUser = async (req, res) => {
   try {
     const { role, province, search = null } = req.query;
-    console.log(req.query);
+    logger.log(req.query);
 
     let whereCondition = {};
     if (role === 'manager') {
@@ -125,7 +125,7 @@ exports.getAllUser = async (req, res) => {
     });
     return res.status(200).json({ data: userList });
   } catch (error) {
-    console.error('Get All Users Error:', {
+    logger.error('Get All Users Error:', {
       message: error.message,
       stack: error.stack,
     });
@@ -137,7 +137,7 @@ exports.getAllUser = async (req, res) => {
 exports.getUsersPaginated = async (req, res) => {
   try {
     const { role, province, search = null, limit = 10, offset = 0 } = req.query;
-    console.log(req.query);
+    logger.log(req.query);
 
     let whereCondition = {};
     if (role === 'manager') {
@@ -176,7 +176,7 @@ exports.getUsersPaginated = async (req, res) => {
       total: total
     });
   } catch (error) {
-    console.error('Get Users Paginated Error:', {
+    logger.error('Get Users Paginated Error:', {
       message: error.message,
       stack: error.stack,
     });
@@ -187,7 +187,7 @@ exports.getUsersPaginated = async (req, res) => {
 exports.deactiveUser = async (req, res) => {
   try {
     const { id } = req.params;
-    console.log('Deactivating user with ID:', id);
+    logger.log('Deactivating user with ID:', id);
 
     const user = await User.findOne({ where: { id: id } });
     if (!user) return res.status(404).json({ error: 'User not found' });
@@ -208,7 +208,7 @@ exports.deactiveUser = async (req, res) => {
       .status(200)
       .json({ message: `User ${user.username} is deactivated` });
   } catch (error) {
-    console.error('Deactivate User Error:', {
+    logger.error('Deactivate User Error:', {
       message: error.message,
       stack: error.stack,
       userId: req.params.id,
@@ -238,7 +238,7 @@ exports.activateUser = async (req, res) => {
       .status(200)
       .json({ message: `User ${user.username} is activated` });
   } catch (error) {
-    console.error('Activate User Error:', {
+    logger.error('Activate User Error:', {
       message: error.message,
       stack: error.stack,
       userId: req.params.id,
@@ -250,7 +250,7 @@ exports.activateUser = async (req, res) => {
 exports.updateUserById = async (req, res) => {
   try {
     const { id } = req.params;
-    console.log('Updating user with ID:', id, 'Data:', req.body);
+    logger.log('Updating user with ID:', id, 'Data:', req.body);
 
     const {
       name = null,
@@ -303,7 +303,7 @@ exports.updateUserById = async (req, res) => {
     await user.save();
     return res.status(200).json({ message: 'Update successful' });
   } catch (error) {
-    console.error('Update User Error:', {
+    logger.error('Update User Error:', {
       message: error.message,
       stack: error.stack,
       userId: req.params.id,
@@ -316,7 +316,7 @@ exports.updateUserById = async (req, res) => {
 exports.deleteUser = async (req, res) => {
   try {
     const { id } = req.params;
-    console.log('Deleting user with ID:', id);
+    logger.log('Deleting user with ID:', id);
 
     // Tìm xem user có tồn tại không
     const user = await User.findOne({ where: { id } });
@@ -331,7 +331,7 @@ exports.deleteUser = async (req, res) => {
       .status(200)
       .json({ message: `User ${user.username} has been deleted` });
   } catch (error) {
-    console.error('Delete User Error:', {
+    logger.error('Delete User Error:', {
       message: error.message,
       stack: error.stack,
       userId: req.params.id,
@@ -364,7 +364,7 @@ exports.getUserById = async (req, res) => {
 
     return res.status(200).json(userData);
   } catch (error) {
-    console.error('Get User Error:', {
+    logger.error('Get User Error:', {
       message: error.message,
       stack: error.stack,
       userId: req.params.id,
@@ -396,7 +396,7 @@ exports.changePassword = async (req, res) => {
 
     return res.status(200).json({ message: 'Đổi mật khẩu thành công' });
   } catch (error) {
-    console.error('Change Password Error:', {
+    logger.error('Change Password Error:', {
       message: error.message,
       stack: error.stack,
       userId: req.params.id,

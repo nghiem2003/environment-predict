@@ -74,4 +74,78 @@ input[type='text'] {
   box-shadow: none !important;
 }
 
+/* Ensure header always stays on top */
+.ant-layout-header {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 1000 !important;
+}
+
+/* Ensure tables don't overlap with header */
+.ant-table-wrapper {
+  position: relative !important;
+  z-index: 1 !important;
+  background: white !important;
+}
+
+.ant-table {
+  position: relative !important;
+  z-index: 1 !important;
+  background: white !important;
+}
+
+.ant-table-thead > tr > th {
+  background: #fafafa !important;
+}
+
+.ant-table-tbody > tr > td {
+  background: white !important;
+}
+
+/* Fix UserList table transparency issues */
+.user-actions-table .ant-table-tbody > tr > td {
+  background: white !important;
+  opacity: 1 !important;
+}
+
+.user-actions-table .ant-table-thead > tr > th {
+  background: #fafafa !important;
+  opacity: 1 !important;
+}
+
+/* Fix List width issues in modals */
+.ant-list-items {
+  width: 100% !important;
+  max-width: none !important;
+}
+
+.ant-list-item {
+  width: 100% !important;
+  max-width: none !important;
+}
+
+/* Fix sticky behavior for all tables */
+.ant-table-thead > tr > th:last-child {
+  position: sticky !important;
+  right: 0 !important;
+  top: 0 !important;
+  z-index: 25 !important;
+  background: #fafafa !important;
+}
+
+.ant-table-tbody > tr > td:last-child {
+  position: sticky !important;
+  right: 0 !important;
+  background: white !important;
+  z-index: 10 !important;
+}
+
+/* Ensure all table headers are sticky */
+.ant-table-thead > tr > th {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 15 !important;
+  background: #fafafa !important;
+}
+
 

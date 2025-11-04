@@ -77,15 +77,15 @@ const naturalElementsData = {
 
 async function updateNaturalElements() {
     try {
-        console.log('🚀 Bắt đầu cập nhật Natural Elements...\n');
+        logger.log('🚀 Bắt đầu cập nhật Natural Elements...\n');
 
         // Kết nối database
         await sequelize.authenticate();
-        console.log('✅ Kết nối database thành công');
+        logger.log('✅ Kết nối database thành công');
 
         // Lấy tất cả natural elements hiện có
         const existingElements = await NatureElement.findAll();
-        console.log(`📊 Tìm thấy ${existingElements.length} natural elements trong database`);
+        logger.log(`📊 Tìm thấy ${existingElements.length} natural elements trong database`);
 
         let updatedCount = 0;
         let addedCount = 0;
@@ -101,10 +101,10 @@ async function updateNaturalElements() {
                     category: elementData.category
                 });
 
-                console.log(`✅ Cập nhật: ${element.name} - ${elementData.description.substring(0, 50)}...`);
+                logger.log(`✅ Cập nhật: ${element.name} - ${elementData.description.substring(0, 50)}...`);
                 updatedCount++;
             } else {
-                console.log(`⚠️  Không tìm thấy thông tin cho: ${element.name}`);
+                logger.log(`⚠️  Không tìm thấy thông tin cho: ${element.name}`);
             }
         }
 
@@ -120,33 +120,33 @@ async function updateNaturalElements() {
                     category: data.category
                 });
 
-                console.log(`➕ Thêm mới: ${name} - ${data.description.substring(0, 50)}...`);
+                logger.log(`➕ Thêm mới: ${name} - ${data.description.substring(0, 50)}...`);
                 addedCount++;
             }
         }
 
-        console.log('\n📈 Kết quả:');
-        console.log(`- Đã cập nhật: ${updatedCount} elements`);
-        console.log(`- Đã thêm mới: ${addedCount} elements`);
-        console.log(`- Tổng cộng: ${updatedCount + addedCount} elements được xử lý`);
+        logger.log('\n📈 Kết quả:');
+        logger.log(`- Đã cập nhật: ${updatedCount} elements`);
+        logger.log(`- Đã thêm mới: ${addedCount} elements`);
+        logger.log(`- Tổng cộng: ${updatedCount + addedCount} elements được xử lý`);
 
         // Hiển thị danh sách tất cả elements sau khi cập nhật
-        console.log('\n📋 Danh sách Natural Elements sau khi cập nhật:');
+        logger.log('\n📋 Danh sách Natural Elements sau khi cập nhật:');
         const allElements = await NatureElement.findAll({
             order: [['category', 'ASC'], ['name', 'ASC']]
         });
 
         allElements.forEach(element => {
-            console.log(`\n🔹 ${element.name} (${element.category})`);
-            console.log(`   Mô tả: ${element.description}`);
-            console.log(`   Đơn vị: ${element.unit}`);
+            logger.log(`\n🔹 ${element.name} (${element.category})`);
+            logger.log(`   Mô tả: ${element.description}`);
+            logger.log(`   Đơn vị: ${element.unit}`);
         });
 
     } catch (error) {
-        console.error('❌ Lỗi khi cập nhật Natural Elements:', error);
+        logger.error('❌ Lỗi khi cập nhật Natural Elements:', error);
     } finally {
         await sequelize.close();
-        console.log('\n🔌 Đã đóng kết nối database');
+        logger.log('\n🔌 Đã đóng kết nối database');
     }
 }
 

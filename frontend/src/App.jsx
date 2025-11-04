@@ -23,6 +23,7 @@ import AreaList from './components/AreaList';
 import InteractiveMap from './components/InteractiveMap';
 import UserList from './components/UserList';
 import UserProfile from './components/UserProfile';
+import Jobs from './components/Jobs';
 import EmailList from './components/EmailList';
 import EmailSubscription from './components/EmailSubscription';
 import UnsubscribePage from './components/UnsubscribePage';
@@ -165,6 +166,14 @@ const App = () => {
   };
 
   const userMenuItems = [
+    ...(role === 'admin' || role === 'expert'
+      ? [{
+        key: 'jobs',
+        icon: <ApiOutlined />,
+        label: 'Jobs',
+        onClick: () => navigate('/jobs'),
+      }]
+      : []),
     {
       key: 'profile',
       icon: <ProfileOutlined />,
@@ -187,7 +196,7 @@ const App = () => {
         padding: screens.xs ? '0 12px' : '0 24px',
         position: 'sticky',
         top: 0,
-        zIndex: 1,
+        zIndex: 1000,
         width: '100%',
       }}
     >
@@ -494,6 +503,14 @@ const App = () => {
               element={
                 <ProtectedRoute roles={['admin', 'expert', 'manager']}>
                   <UserProfile />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/jobs"
+              element={
+                <ProtectedRoute roles={['admin', 'expert']}>
+                  <Jobs />
                 </ProtectedRoute>
               }
             />

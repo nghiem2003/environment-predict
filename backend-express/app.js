@@ -8,28 +8,104 @@ const areaRoutes = require('./src/routes/areaRoutes.js');
 const emailRoutes = require('./src/routes/emailRoutes.js');
 const natureElementRoutes = require('./src/routes/natureElementRoutes.js');
 const swaggerRoutes = require('./src/routes/swaggerRoutes.js');
+const dbConfig = require('./src/config/config.js').development;
+const jobRoutes = require('./src/routes/jobRoutes.js');
 const sequelize = require('./src/config/db.js');
 const cors = require('cors');
-const morgan = require('morgan');
 const helmet = require('helmet');
 const cron = require('node-cron');
+const logger = require('./src/config/logger');
 const app = express();
 require('dotenv').config();
 app.use(helmet());
-app.use(morgan('dev'));
 app.use(cors());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
+// Init pg-boss for background jobs
+const PgBoss = require('pg-boss');
+const DB_USER = dbConfig.username || process.env.DB_USER || 'postgres';
+const DB_PASSWORD = dbConfig.password || process.env.DB_PASSWORD || '';
+const DB_HOST = dbConfig.host || process.env.DB_HOST || 'localhost';
+const DB_PORT = dbConfig.port || process.env.DB_PORT || 5432;
+const DB_NAME = dbConfig.database || process.env.DB_NAME || 'postgres';
+const DATABASE_URL = process.env.DATABASE_URL || `postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}`;
+const boss = new PgBoss({
+  connectionString: DATABASE_URL,
+  schema: process.env.PGBOSS_SCHEMA || 'pgboss',
+  ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
+});
+(async () => {
+  try {
+    logger.info('Starting PgBoss...', {
+      schema: process.env.PGBOSS_SCHEMA || 'pgboss',
+      database: DB_NAME,
+      host: DB_HOST
+    });
+
+    await boss.start();
+
+    // Check if schema exists
+    const sequelize = require('./src/config/db.js');
+    const { QueryTypes } = require('sequelize');
+    try {
+      const schemaName = process.env.PGBOSS_SCHEMA || 'pgboss';
+      const results = await sequelize.query(`
+        SELECT schema_name 
+        FROM information_schema.schemata 
+        WHERE schema_name = :schemaName
+      `, {
+        replacements: { schemaName },
+        type: QueryTypes.SELECT
+      });
+
+      if (results && results.length > 0) {
+        logger.info(`Schema '${schemaName}' exists`);
+      } else {
+        logger.warn(`Schema '${schemaName}' not found in database`);
+      }
+
+      // Check job table
+      const jobTable = await sequelize.query(`
+        SELECT table_name 
+        FROM information_schema.tables 
+        WHERE table_schema = :schemaName AND table_name = 'job'
+      `, {
+        replacements: { schemaName },
+        type: QueryTypes.SELECT
+      });
+
+      if (jobTable && jobTable.length > 0) {
+        logger.info(`Job table exists in schema '${schemaName}'`);
+      } else {
+        logger.warn(`Job table not found in schema '${schemaName}'`);
+      }
+    } catch (schemaError) {
+      logger.error('Error checking schema', {
+        message: schemaError.message,
+        stack: schemaError.stack
+      });
+    }
+
+    logger.info('PgBoss started successfully');
+    app.set('boss', boss);
+    require('./src/workers/importBoss')(boss);
+    logger.info('Job workers registered');
+  } catch (e) {
+    logger.error('PgBoss start failed', {
+      message: e.message,
+      stack: e.stack
+    });
+  }
+})();
 const FLASK_API_URL = process.env.FLASK_API_URL;
 const SECRET_KEY = process.env.FETCH_SECRET_KEY;
 const axios = require('axios');
 const TRIGGER_URL = `${FLASK_API_URL}/trigger_fetch`;
 
 const triggerDataFetch = async () => {
-  console.log(`[${new Date().toISOString()}] Cron job triggered: Calling Flask API to fetch data...`);
-  // ... (toàn bộ logic của hàm triggerDataFetch giữ nguyên) ...
+  logger.info('Cron job triggered: Calling Flask API to fetch data...');
   if (!FLASK_API_URL || !SECRET_KEY) {
-    console.error('ERROR: FLASK_API_URL or FETCH_SECRET_KEY is not defined in .env file.');
+    logger.error('FLASK_API_URL or FETCH_SECRET_KEY is not defined in .env file.');
     return;
   }
   try {
@@ -37,9 +113,9 @@ const triggerDataFetch = async () => {
       headers: { 'X-FETCH-SECRET': SECRET_KEY },
       timeout: 10000,
     });
-    console.log('SUCCESS: Request accepted by Flask server. Message:', response.data.message);
+    logger.info('Request accepted by Flask server', { message: response.data.message });
   } catch (error) {
-    console.error('ERROR during cron job execution:', error.message);
+    logger.error('Error during cron job execution', { message: error.message });
   }
 };
 
@@ -74,10 +150,11 @@ app.use('/api/express/areas', areaRoutes);
 app.use('/api/express/emails', emailRoutes);
 app.use('/api/express/nature-elements', natureElementRoutes);
 app.use('/api/express', swaggerRoutes);
+app.use('/api/express/jobs', jobRoutes);
 
 sequelize.sync().then(() => {
   app.listen(5000, () => {
-    console.log('🚀 Server running on http://localhost:5000');
-    console.log('📚 API Documentation available at http://localhost:5000/api/express/docs');
+    logger.info('🚀 Server running on http://localhost:5000');
+    logger.info('📚 API Documentation available at http://localhost:5000/api/express/docs');
   });
 });

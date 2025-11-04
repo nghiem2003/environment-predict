@@ -28,6 +28,8 @@ import {
   CheckCircleOutlined,
   CloseCircleOutlined,
   SendOutlined,
+  SaveOutlined,
+  CloseOutlined,
 } from '@ant-design/icons';
 import axios from '../axios';
 
@@ -200,6 +202,10 @@ const EmailList = () => {
     {
       title: 'Thao tác',
       key: 'actions',
+      fixed: 'right',
+      width: 'max-content',
+      minWidth: 200,
+      align: 'center',
       render: (_, record) => (
         <Space>
           <Tooltip title="Sửa">

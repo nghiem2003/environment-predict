@@ -191,7 +191,7 @@ FRONTEND_URL=http://localhost:3000
 ### Email không được gửi
 1. Kiểm tra cấu hình email trong `.env`
 2. Kiểm tra có email subscription cho area ID không
-3. Kiểm tra logs trong console
+3. Kiểm tra logs trong logger
 
 ### Email template không đúng
 1. Kiểm tra `predictionData.batchPrediction` flag

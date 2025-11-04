@@ -12,10 +12,42 @@
   position: absolute;
   top: 80px; /* Below header */
   left: 20px;
-  width: 350px;
+  width: 420px;
   max-height: calc(100vh - 120px); /* Limit height */
   z-index: 1000;
   pointer-events: none;
+  transition: transform 0.3s ease-in-out;
+}
+
+.left-sidebar.collapsed {
+  transform: translateX(-440px); /* width + margins */
+}
+
+/* Semi-circular sidebar handle (middle-left) */
+.sidebar-handle {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 72px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-left: none;
+  border-top-right-radius: 36px;
+  border-bottom-right-radius: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+  z-index: 1100;
+  cursor: pointer;
+  color: #1890ff;
+}
+
+.sidebar-handle:hover {
+  color: #40a9ff;
 }
 
 .sidebar-card {
@@ -36,34 +68,16 @@
   padding: 16px;
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: hidden;
 }
 
 /* Areas List */
 .areas-list {
   flex: 1;
-  overflow: auto;
-  margin-bottom: 16px;
+  overflow: visible;
+  margin: 8px 0 16px;
 }
 
-.areas-list::-webkit-scrollbar {
-  width: 6px;
-}
-
-.areas-list::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 3px;
-}
-
-.areas-list::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
-  border-radius: 3px;
-}
-
-.areas-list::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
-}
 
 /* Map Container */
 .map-container {
@@ -98,7 +112,7 @@
 .right-filter {
   position: absolute;
   top: 80px;
-  left: 390px; /* Position next to main card (350px + 20px + 20px margin) */
+  left: 460px; /* Position next to main card (420px + 20px + 20px margin) */
   width: 280px;
   max-height: calc(100vh - 120px);
   z-index: 1000;
@@ -194,6 +208,15 @@
   border: 1px solid transparent;
 }
 
+/* Disable shadow for Ant List items */
+.sidebar-card .ant-list-item,
+.ant-list-items,
+.sidebar-card .ant-list-item:hover,
+.area-list-item,
+.area-list-item:hover {
+  box-shadow: none !important;
+}
+
 .area-list-item:hover {
   background-color: #f5f5f5;
   border-color: #d9d9d9;
@@ -252,6 +275,7 @@
   .sidebar-card .ant-card-body {
     max-height: calc(50vh - 90px);
     padding: 12px;
+    overflow: hidden;
   }
 
   .right-filter {
@@ -284,6 +308,7 @@
   .sidebar-card .ant-card-body {
     max-height: calc(45vh - 80px);
     padding: 8px;
+    overflow: hidden;
   }
   
   .area-list-item {

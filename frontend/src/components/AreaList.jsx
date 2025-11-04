@@ -14,6 +14,7 @@ import {
 } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
+import proj4 from 'proj4';
 import {
   Input,
   Select,
@@ -27,6 +28,7 @@ import {
   Card,
   Row,
   Col,
+  Tooltip,
 } from 'antd';
 
 import {
@@ -34,10 +36,15 @@ import {
   DeleteOutlined,
   PlusOutlined,
   MailOutlined,
+  SaveOutlined,
+  CloseOutlined,
 } from '@ant-design/icons';
 
 const { Option } = Select;
 const { Title } = Typography;
+
+// Build VN2000 proj4 string with selected central meridian (lon_0)
+const getVN2000Proj4 = (lon0) => `+proj=tmerc +lat_0=0 +lon_0=${lon0} +k=0.9999 +x_0=500000 +y_0=0 +ellps=WGS84 +towgs84=-191.904,-39.303,-111.450,0,0,0,0 +units=m +no_defs`;
 
 // delete L.Icon.Default.prototype._getIconUrl;
 // L.Icon.Default.mergeOptions({
@@ -77,6 +84,30 @@ const AreaList = () => {
     region: '',
     area_type: 'oyster',
   });
+  const [coordinateType, setCoordinateType] = useState('wgs84');
+  const [vnZone, setVnZone] = useState('auto'); // 'auto' | 105 | 107 | 109
+
+  const isWithinVietnam = (lat, lon) => lat >= 8 && lat <= 24 && lon >= 102 && lon <= 110;
+  const convertVN2000ToWGS84 = (x, y, zone) => {
+    try {
+      if (zone === 'auto') {
+        const zones = [105, 107, 109];
+        for (const z of zones) {
+          const [lon, lat] = proj4(getVN2000Proj4(z), 'EPSG:4326', [x, y]);
+          if (Number.isFinite(lat) && Number.isFinite(lon) && isWithinVietnam(lat, lon)) {
+            return { lat, lon, usedZone: z };
+          }
+        }
+        const [lon, lat] = proj4(getVN2000Proj4(105), 'EPSG:4326', [x, y]);
+        return { lat, lon, usedZone: 105 };
+      } else {
+        const [lon, lat] = proj4(getVN2000Proj4(zone), 'EPSG:4326', [x, y]);
+        return { lat, lon, usedZone: zone };
+      }
+    } catch (e) {
+      return null;
+    }
+  };
   const [userFilter, setUserFilter] = useState({
     province: '',
     district: '',
@@ -141,6 +172,19 @@ const AreaList = () => {
     console.log('id', form.getFieldValue('id'));
 
     try {
+      // Convert VN2000 to WGS84 if needed
+      if (coordinateType === 'vn2000') {
+        const xStr = (values.vn2000_x ?? '').toString().trim();
+        const yStr = (values.vn2000_y ?? '').toString().trim();
+        if (!xStr || !yStr) { console.error('VN2000 coordinates are required'); return; }
+        const x = Number(xStr); const y = Number(yStr);
+        if (!Number.isFinite(x) || !Number.isFinite(y)) { console.error('VN2000 coordinates are invalid'); return; }
+        const res = convertVN2000ToWGS84(x, y, vnZone);
+        if (!res) { console.error('VN2000 convert failed'); return; }
+        values.latitude = res.lat;
+        values.longitude = res.lon;
+      }
+
       // Validate required fields
       if (!values.name || !values.latitude || !values.longitude || !values.province) {
         console.error('Missing required fields');
@@ -176,6 +220,7 @@ const AreaList = () => {
         region: '',
         area_type: 'oyster',
       });
+      setCoordinateType('wgs84');
     } catch (error) {
       console.error('Error saving area:', error);
     }
@@ -297,34 +342,40 @@ const AreaList = () => {
     {
       title: t('area_list.table.actions'),
       key: 'actions',
+      fixed: 'right',
+      width: 'min-content',
+      align: 'center',
       render: (_, area) => (
         <Space>
-          <Button
-            size="middle"
-            icon={<EditOutlined />}
-            onClick={() => handleUpdate(area.id)}
-          >
-            {t('area_list.popup.update')}
-          </Button>
-          <Button
-            size="middle"
-            icon={<MailOutlined />}
-            onClick={() => navigate(`/email-subscription/${area.id}`)}
-          >
-            {t('userList.email')}
-          </Button>
-          <Button
-            size="middle"
-            danger
-            icon={<DeleteOutlined />}
-            onClick={() => {
-              setIsDeleteConfirmOpen(true);
-              console.log(area);
-              setSelectedArea(area);
-            }}
-          >
-            {t('area_list.popup.delete')}
-          </Button>
+          <Tooltip title={t('area_list.popup.update')}>
+            <Button
+              type="primary"
+              icon={<EditOutlined />}
+              size="middle"
+              onClick={() => handleUpdate(area.id)}
+            />
+          </Tooltip>
+          <Tooltip title={t('userList.email')}>
+            <Button
+              type="default"
+              icon={<MailOutlined />}
+              size="middle"
+              onClick={() => navigate(`/email-subscription/${area.id}`)}
+            />
+          </Tooltip>
+          <Tooltip title={t('area_list.popup.delete')}>
+            <Button
+              type="primary"
+              danger
+              icon={<DeleteOutlined />}
+              size="middle"
+              onClick={() => {
+                setIsDeleteConfirmOpen(true);
+                console.log(area);
+                setSelectedArea(area);
+              }}
+            />
+          </Tooltip>
         </Space>
       ),
     },
@@ -343,8 +394,9 @@ const AreaList = () => {
         <Title level={3} style={{ marginBottom: 24 }}>
           {t('area_list.title') || 'Danh sách khu vực'}
         </Title>
+        {/* Hàng đầu: Tìm kiếm, loại khu vực và nút thêm */}
         <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-          <Col xs={24} sm={12} md={6}>
+          <Col xs={24} sm={12} md={14}>
             <Input
               size="large"
               placeholder={
@@ -356,7 +408,7 @@ const AreaList = () => {
               allowClear
             />
           </Col>
-          <Col xs={24} sm={12} md={2}>
+          <Col xs={24} sm={12} md={6}>
             <Select
               size="large"
               value={areaType}
@@ -369,52 +421,6 @@ const AreaList = () => {
               <Option value="oyster">Oyster</Option>
               <Option value="cobia">Cobia</Option>
             </Select>
-          </Col>
-          <Col xs={24} sm={12} md={3}>
-            <Input
-              size="large"
-              placeholder={t('area_list.filter.min_lat') || 'Vĩ độ tối thiểu'}
-              value={latRange.min}
-              onChange={(e) =>
-                setLatRange({ ...latRange, min: e.target.value })
-              }
-              type="number"
-            />
-          </Col>
-          <Col xs={24} sm={12} md={3}>
-            <Input
-              size="large"
-              placeholder={t('area_list.filter.max_lat') || 'Vĩ độ tối đa'}
-              value={latRange.max}
-              onChange={(e) =>
-                setLatRange({ ...latRange, max: e.target.value })
-              }
-              type="number"
-            />
-          </Col>
-          <Col xs={24} sm={12} md={3}>
-            <Input
-              size="large"
-              placeholder={
-                t('area_list.filter.min_long') || 'Kinh độ tối thiểu'
-              }
-              value={longRange.min}
-              onChange={(e) =>
-                setLongRange({ ...longRange, min: e.target.value })
-              }
-              type="number"
-            />
-          </Col>
-          <Col xs={24} sm={12} md={3}>
-            <Input
-              size="large"
-              placeholder={t('area_list.filter.max_long') || 'Kinh độ tối đa'}
-              value={longRange.max}
-              onChange={(e) =>
-                setLongRange({ ...longRange, max: e.target.value })
-              }
-              type="number"
-            />
           </Col>
           <Col xs={24} sm={12} md={4}>
             <Button
@@ -453,6 +459,62 @@ const AreaList = () => {
             >
               {t('area_list.add_button') || 'Thêm khu vực mới'}
             </Button>
+          </Col>
+        </Row>
+
+        {/* Hàng thứ hai: Filter theo tọa độ với dấu gạch ngang */}
+        <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+          <Col xs={24} sm={12} md={12}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Input
+                size="large"
+                placeholder={t('area_list.filter.min_lat') || 'Vĩ độ tối thiểu'}
+                value={latRange.min}
+                onChange={(e) =>
+                  setLatRange({ ...latRange, min: e.target.value })
+                }
+                type="number"
+                style={{ flex: 1 }}
+              />
+              <span style={{ color: '#999', fontSize: '16px', fontWeight: 'bold' }}>—</span>
+              <Input
+                size="large"
+                placeholder={t('area_list.filter.max_lat') || 'Vĩ độ tối đa'}
+                value={latRange.max}
+                onChange={(e) =>
+                  setLatRange({ ...latRange, max: e.target.value })
+                }
+                type="number"
+                style={{ flex: 1 }}
+              />
+            </div>
+          </Col>
+          <Col xs={24} sm={12} md={12}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Input
+                size="large"
+                placeholder={
+                  t('area_list.filter.min_long') || 'Kinh độ tối thiểu'
+                }
+                value={longRange.min}
+                onChange={(e) =>
+                  setLongRange({ ...longRange, min: e.target.value })
+                }
+                type="number"
+                style={{ flex: 1 }}
+              />
+              <span style={{ color: '#999', fontSize: '16px', fontWeight: 'bold' }}>—</span>
+              <Input
+                size="large"
+                placeholder={t('area_list.filter.max_long') || 'Kinh độ tối đa'}
+                value={longRange.max}
+                onChange={(e) =>
+                  setLongRange({ ...longRange, max: e.target.value })
+                }
+                type="number"
+                style={{ flex: 1 }}
+              />
+            </div>
           </Col>
         </Row>
         <Table
@@ -497,6 +559,12 @@ const AreaList = () => {
                 style={{ overflowY: 'auto' }}
                 onFinish={handleAddArea}
               >
+                <Form.Item label="Coordinate Type">
+                  <Select value={coordinateType} onChange={setCoordinateType}>
+                    <Option value="wgs84">WGS84 (lat/lon)</Option>
+                    <Option value="vn2000">VN2000 (TM 105°)</Option>
+                  </Select>
+                </Form.Item>
                 <Form.Item
                   label="Area Name"
                   name="name"
@@ -504,19 +572,36 @@ const AreaList = () => {
                 >
                   <Input />
                 </Form.Item>
+                {coordinateType === 'vn2000' && (
+                  <>
+                    <Form.Item label="VN2000 TM kinh tuyến">
+                      <Select value={vnZone} onChange={setVnZone}>
+                        <Option value={105}>105°</Option>
+                        <Option value={107}>107°</Option>
+                        <Option value={109}>109°</Option>
+                      </Select>
+                    </Form.Item>
+                    <Form.Item label="VN2000 X (Easting, m)" name="vn2000_x" rules={[{ required: true }]}>
+                      <Input type="number" />
+                    </Form.Item>
+                    <Form.Item label="VN2000 Y (Northing, m)" name="vn2000_y" rules={[{ required: true }]}>
+                      <Input type="number" />
+                    </Form.Item>
+                  </>
+                )}
                 <Form.Item
                   label="Latitude"
                   name="latitude"
-                  rules={[{ required: true }]}
+                  rules={[{ required: coordinateType === 'wgs84' }]}
                 >
-                  <Input type="number" />
+                  <Input type="number" disabled={coordinateType === 'vn2000'} />
                 </Form.Item>
                 <Form.Item
                   label="Longitude"
                   name="longitude"
-                  rules={[{ required: true }]}
+                  rules={[{ required: coordinateType === 'wgs84' }]}
                 >
-                  <Input type="number" />
+                  <Input type="number" disabled={coordinateType === 'vn2000'} />
                 </Form.Item>
                 <Form.Item label="Area's area" name="area">
                   <Input type="number" />

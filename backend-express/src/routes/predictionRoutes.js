@@ -9,11 +9,12 @@ const {
   createBatchPrediction,
   getPredictionChartData,
   getAllPredictionChartData,
-  createBatchPredictionFromExcel
+  createBatchPredictionFromExcel2,
 } = require('../controllers/predictionController');
 const { authenticate, authorize } = require('../middlewares/authMiddleware');
 const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage() });
+const logger = require('../config/logger');
 
 const router = express.Router();
 
@@ -65,7 +66,7 @@ const router = express.Router();
 router.post(
   '/batch',
   authenticate,
-  authorize(['expert', 'manager']),
+  authorize(['expert']),
   createBatchPrediction
 );
 
@@ -111,13 +112,134 @@ router.post(
  *       403:
  *         description: Forbidden
  */
-router.post(
-  '/excel',
-  authenticate,
-  authorize(['expert', 'manager']),
-  upload.single('file'),
-  createBatchPredictionFromExcel
-);
+// Replace legacy excel import with job enqueue (xlsx-import)
+router.post('/excel', authenticate, authorize(['expert']), upload.single('file'), async (req, res) => {
+  try {
+    const boss = req.app.get('boss');
+    if (!boss) {
+      logger.error('[API] Boss not available');
+      return res.status(500).json({ error: 'job_queue_not_ready' });
+    }
+
+    if (!req.file) return res.status(400).json({ error: 'XLSX file is required (field: file)' });
+    const callerId = req.user?.id;
+    const { areaId, modelName } = req.body || {};
+    if (!callerId || !areaId || !modelName) return res.status(400).json({ error: 'userId (from token), areaId, modelName are required' });
+    const fs = require('fs'); const path = require('path');
+    const uploadsDir = path.join(process.cwd(), 'uploads');
+    if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+    const fileName = `${Date.now()}-${req.file.originalname}`;
+    const filePath = path.join(uploadsDir, fileName);
+    fs.writeFileSync(filePath, req.file.buffer);
+
+    const jobData = { path: filePath, originalname: req.file.originalname, userId: callerId, areaId, modelName };
+    logger.info('[API] Enqueueing Excel import job (Mẫu 1)', { userId: callerId, areaId, modelName, file: req.file.originalname, size: req.file.size });
+    logger.debug('[API] Job data', jobData);
+
+    const jobId = await boss.send('xlsx-import', jobData, { retryLimit: 0 });
+
+    if (!jobId) {
+      logger.error('[API] Failed to get jobId from boss.send()', { returned: jobId });
+      return res.status(500).json({ error: 'failed_to_get_job_id' });
+    }
+
+    logger.info('[API] Excel import job enqueued successfully', { jobId, file: req.file.originalname });
+    return res.json({
+      jobId,
+      message: 'Vui lòng đợi trong khi hệ thống đang xử lý và tạo dự đoán mới. Bạn có thể theo dõi tiến trình tại trang Jobs.',
+      redirect: '/jobs'
+    });
+  } catch (e) {
+    logger.error('[API] Failed to enqueue Excel import job', { error: e.message, stack: e.stack });
+    return res.status(500).json({ error: 'failed_to_queue', message: e.message });
+  }
+});
+
+// Excel2 template import via job
+router.post('/excel2', authenticate, authorize(['expert']), upload.single('file'), async (req, res) => {
+  try {
+    const boss = req.app.get('boss');
+    if (!boss) {
+      logger.error('[API] Boss not available');
+      return res.status(500).json({ error: 'job_queue_not_ready' });
+    }
+
+    if (!req.file) return res.status(400).json({ error: 'XLSX file is required (field: file)' });
+    const callerId = req.user?.id;
+    const { modelName } = req.body || {};
+    if (!callerId) return res.status(400).json({ error: 'userId (from token) is required' });
+    const fs = require('fs'); const path = require('path');
+    const uploadsDir = path.join(process.cwd(), 'uploads');
+    if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+    const fileName = `${Date.now()}-${req.file.originalname}`;
+    const filePath = path.join(uploadsDir, fileName);
+    fs.writeFileSync(filePath, req.file.buffer);
+
+    const jobData = { path: filePath, originalname: req.file.originalname, userId: callerId, modelName, template: 'excel2' };
+    logger.info('[API] Enqueueing Excel import job (Mẫu 2)', { userId: callerId, modelName, file: req.file.originalname, size: req.file.size });
+    logger.debug('[API] Job data', jobData);
+
+    const jobId = await boss.send('xlsx-import', jobData, { retryLimit: 0 });
+
+    if (!jobId) {
+      logger.error('[API] Failed to get jobId from boss.send()', { returned: jobId });
+      return res.status(500).json({ error: 'failed_to_get_job_id' });
+    }
+
+    logger.info('[API] Excel import job (Mẫu 2) enqueued successfully', { jobId, file: req.file.originalname });
+    return res.json({
+      jobId,
+      message: 'Vui lòng đợi trong khi hệ thống đang xử lý và tạo dự đoán mới. Bạn có thể theo dõi tiến trình tại trang Jobs.',
+      redirect: '/jobs'
+    });
+  } catch (e) {
+    logger.error('[API] Failed to enqueue Excel import job (Mẫu 2)', { error: e.message, stack: e.stack });
+    return res.status(500).json({ error: 'failed_to_queue', message: e.message });
+  }
+});
+
+// New CSV import via job (csv-import)
+router.post('/csv', authenticate, authorize(['expert']), upload.single('file'), async (req, res) => {
+  try {
+    const boss = req.app.get('boss');
+    if (!boss) {
+      logger.error('[API] Boss not available');
+      return res.status(500).json({ error: 'job_queue_not_ready' });
+    }
+
+    if (!req.file) return res.status(400).json({ error: 'CSV file is required (field: file)' });
+    const callerId = req.user?.id;
+    const { areaId, modelName } = req.body || {};
+    if (!callerId || !areaId || !modelName) return res.status(400).json({ error: 'userId (from token), areaId, modelName are required' });
+    const fs = require('fs'); const path = require('path');
+    const uploadsDir = path.join(process.cwd(), 'uploads');
+    if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+    const fileName = `${Date.now()}-${req.file.originalname}`;
+    const filePath = path.join(uploadsDir, fileName);
+    fs.writeFileSync(filePath, req.file.buffer);
+
+    const jobData = { path: filePath, originalname: req.file.originalname, userId: callerId, areaId, modelName };
+    logger.info('[API] Enqueueing CSV import job', { userId: callerId, areaId, modelName, file: req.file.originalname, size: req.file.size });
+    logger.debug('[API] Job data', jobData);
+
+    const jobId = await boss.send('csv-import', jobData, { retryLimit: 0 });
+
+    if (!jobId) {
+      logger.error('[API] Failed to get jobId from boss.send()', { returned: jobId });
+      return res.status(500).json({ error: 'failed_to_get_job_id' });
+    }
+
+    logger.info('[API] CSV import job enqueued successfully', { jobId, file: req.file.originalname });
+    return res.json({
+      jobId,
+      message: 'Vui lòng đợi trong khi hệ thống đang xử lý và tạo dự đoán mới. Bạn có thể theo dõi tiến trình tại trang Jobs.',
+      redirect: '/jobs'
+    });
+  } catch (e) {
+    logger.error('[API] Failed to enqueue CSV import job', { error: e.message, stack: e.stack });
+    return res.status(500).json({ error: 'failed_to_queue', message: e.message });
+  }
+});
 
 /**
  * @swagger
@@ -158,8 +280,8 @@ router.post(
  */
 router.post(
   '/',
-  //authenticate,
-  //authorize(['expert', 'admin']),
+  authenticate,
+  authorize(['expert']),
   createPrediction
 );
 
@@ -292,7 +414,6 @@ router.post(
 router.get(
   '/admin',
   authenticate,
-  authorize(['admin', 'manager']),
   getAllPredictionsWithFilters
 );
 

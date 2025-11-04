@@ -220,7 +220,7 @@ const data = await response.json();
 
 // Hiển thị danh sách khu vực với chỉ số mới nhất
 data.data.areas.forEach(area => {
-  console.log(`${area.area.name}: pH = ${area.indicators.pH}, DO = ${area.indicators.DO}`);
+  logger.log(`${area.area.name}: pH = ${area.indicators.pH}, DO = ${area.indicators.DO}`);
 });
 ```
 
@@ -232,7 +232,7 @@ Sử dụng object `trends` để hiển thị xu hướng thay đổi:
 const pHTrend = data.data.trends.pH;
 if (pHTrend) {
   const trendIcon = pHTrend.trend === 'up' ? '↗️' : pHTrend.trend === 'down' ? '↘️' : '➡️';
-  console.log(`pH: ${pHTrend.changePercent.toFixed(1)}% ${trendIcon}`);
+  logger.log(`pH: ${pHTrend.changePercent.toFixed(1)}% ${trendIcon}`);
 }
 ```
 
