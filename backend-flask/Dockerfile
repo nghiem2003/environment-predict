@@ -17,6 +17,7 @@ RUN apt-get update && apt-get install -y \
     libhdf5-dev \
     libnetcdf-dev \
     pkg-config \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first for better caching
@@ -29,8 +30,8 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # Copy application code
 COPY . .
 
-# Create data directory if it doesn't exist
-RUN mkdir -p data
+# Create data and logs directories
+RUN mkdir -p data logs
 
 # Create a non-root user for security
 RUN adduser --disabled-password --gecos '' appuser && \
@@ -41,8 +42,8 @@ USER appuser
 EXPOSE 5001
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=30s --start-period=10s --retries=3 \
     CMD curl -f http://localhost:5001/status || exit 1
 
-# Start the Flask application
-CMD ["sh", "-c", "FLASK_APP=run.py flask run --host=0.0.0.0 --port=5001"]
+# Start the Flask application with uWSGI in production mode
+CMD ["uwsgi", "--ini", "uwsgi.ini"]

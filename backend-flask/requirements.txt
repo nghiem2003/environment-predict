@@ -1,5 +1,6 @@
 # Flask and web server
 flask
+uwsgi
 
 # Core ML and data handling libraries
 numpy
