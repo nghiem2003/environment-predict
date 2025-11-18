@@ -79,10 +79,15 @@ router.get('/', authenticate, authorize(['admin', 'expert']), async (req, res) =
         const isAdmin = req.user?.role === 'admin';
         const params = { limit: Number(limit), offset: Number(offset) };
         const where = [];
-        if (name) { where.push(`name = :name`); params.name = name; }
-        else { where.push(`name IN ('csv-import','xlsx-import')`); }
+        if (name) {
+            where.push(`name = :name`);
+            params.name = name;
+        }
         if (state) { where.push(`state = :state`); params.state = state; }
         if (!isAdmin) { where.push(`data->>'userId' = :userId`); params.userId = String(req.user?.id || ''); }
+        // Exclude PgBoss internal/system jobs (maintenance, archive, etc.)
+        where.push(`name NOT LIKE 'pgboss-%'`);
+        where.push(`name NOT LIKE '__pgboss%'`);
         const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
         const sql = `SELECT id, name, state, data, createdon, startedon, completedon, priority
                  FROM pgboss.job

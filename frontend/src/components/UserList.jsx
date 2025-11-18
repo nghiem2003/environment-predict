@@ -4,6 +4,7 @@ import { useSelector } from 'react-redux';
 import './UserList.css';
 import { jwtDecode } from 'jwt-decode';
 import { useTranslation } from 'react-i18next';
+import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import {
   Card,
   Table,
@@ -63,6 +64,7 @@ const UserList = () => {
     pageSize: 10,
     total: 0,
   });
+  const debouncedSearchTerm = useDebouncedValue(searchTerm, 500);
 
   // Fetch users from the API
   const fetchUsers = async (page = 1, pageSize = 10) => {
@@ -71,7 +73,7 @@ const UserList = () => {
 
       const response = await axios.get('/api/express/auth/paginated', {
         params: {
-          search: searchTerm,
+          search: debouncedSearchTerm,
           role,
           province,
           limit: pageSize,
@@ -125,9 +127,16 @@ const UserList = () => {
 
   useEffect(() => {
     if (authData) {
-      fetchUsers();
+      fetchUsers(1, pagination.pageSize);
     }
-  }, [authData, searchTerm]);
+  }, [authData, debouncedSearchTerm]);
+
+  useEffect(() => {
+    setPagination((prev) => ({
+      ...prev,
+      current: 1,
+    }));
+  }, [debouncedSearchTerm]);
 
   // Always load provinces/districts once token is available
   useEffect(() => {
@@ -155,12 +164,35 @@ const UserList = () => {
     }));
   };
 
+  const convertRoleForSubmission = (values) => {
+    if (values.role === 'province_manager') {
+      return {
+        ...values,
+        role: 'manager',
+        district: null,
+      };
+    }
+    if (values.role === 'district_manager') {
+      return {
+        ...values,
+        role: 'manager',
+      };
+    }
+    return values;
+  };
+
   // Submit handler for creating/updating a user
   const handleUserPopupSubmit = async (values) => {
     try {
-      // Validate required fields
-      if (!values.name || !values.email || !values.address || !values.phone || !values.province) {
+      const basicFields = ['name', 'email', 'address', 'phone', 'role'];
+      const missingBasicField = basicFields.some((field) => !values[field]);
+      if (missingBasicField) {
         message.error('Vui lòng điền đầy đủ thông tin bắt buộc');
+        return;
+      }
+
+      if (values.role !== 'admin' && !values.province) {
+        message.error('Vui lòng chọn tỉnh cho vai trò đã chọn');
         return;
       }
 
@@ -180,7 +212,7 @@ const UserList = () => {
       }
 
       // Convert role for backend - keep original role names for clarity
-      let submitValues = { ...values };
+      let submitValues = convertRoleForSubmission(values);
 
       // For new users, ensure password is provided
       if (!userPopupData.id && !values.password) {
@@ -643,6 +675,10 @@ const UserList = () => {
                     ]
                     : [
                       {
+                        value: 'admin',
+                        label: t('userList.admin'),
+                      },
+                      {
                         value: 'expert',
                         label: t('userList.expert'),
                       },
@@ -693,7 +729,17 @@ const UserList = () => {
           <Form.Item
             name="province"
             label={t('userList.region')}
-            rules={[{ required: true, message: t('userList.required') }]}
+            dependencies={['role']}
+            rules={[
+              ({ getFieldValue }) => ({
+                validator(_, value) {
+                  if (getFieldValue('role') === 'admin' || value) {
+                    return Promise.resolve();
+                  }
+                  return Promise.reject(new Error(t('userList.required')));
+                },
+              }),
+            ]}
           >
             <Select
               size='large'

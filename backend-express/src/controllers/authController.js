@@ -2,6 +2,7 @@ const { User } = require('../models');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { Op } = require('sequelize');
+const logger = require('../config/logger');
 
 exports.login = async (req, res) => {
   try {
@@ -50,7 +51,7 @@ exports.createManagerUser = async (req, res) => {
     } = req.body;
 
     // Validate required fields
-    if (!email || !password || !province) {
+    if (!email || !password) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
@@ -84,8 +85,8 @@ exports.createManagerUser = async (req, res) => {
       password: hashedPassword,
       address,
       phone,
-      province,
-      district,
+      province: province || null,
+      district: district || null,
       status: 'active',
       role: role || 'expert',
     });

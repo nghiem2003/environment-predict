@@ -1,5 +1,9 @@
 const xlsx = require('xlsx');
 const { Area } = require('../models');
+const { Op } = require('sequelize');
+const { Sequelize } = require('sequelize');
+const sequelize = require('../config/db');
+const logger = require('../config/logger');
 
 function normalizeHeader(name) {
     if (!name) return '';
@@ -65,9 +69,47 @@ function o2SolubilityMlPerL(tempC, salinity) {
     return Math.exp(lnC); // ml/L
 }
 
+/**
+ * Normalize area name for comparison:
+ * - Convert to lowercase
+ * - Remove special characters like -, _, etc. (but keep spaces between words)
+ * - Keep Vietnamese diacritics (ả, ế, ư, etc.)
+ * - Only trim leading/trailing spaces, keep spaces between words
+ * @param {string} name - Area name to normalize
+ * @returns {string} - Normalized name
+ */
+function normalizeAreaName(name) {
+    if (!name) return '';
+    // Convert to lowercase
+    let normalized = String(name).toLowerCase();
+    // Remove special characters: -, _, dots, commas, etc.
+    // But keep spaces between words and Vietnamese diacritics (ả, ế, ư, etc.)
+    normalized = normalized.replace(/[-_.,;:!?()[\]{}'"`~@#$%^&*+=|\\\/<>]/g, '');
+    // Normalize multiple spaces to single space (but keep the structure)
+    normalized = normalized.replace(/\s+/g, ' ');
+    // Only trim leading and trailing spaces
+    normalized = normalized.trim();
+    return normalized;
+}
+
 async function parseExcel2(buffer) {
     const wb = xlsx.read(buffer, { type: 'buffer' });
     const results = [];
+
+    // Load all areas once and create a normalized name map for efficient lookup
+    // This avoids complex SQL escaping issues and is more maintainable
+    const allAreas = await Area.findAll({ attributes: ['id', 'name'] });
+    const areaMap = new Map();
+    for (const area of allAreas) {
+        const normalized = normalizeAreaName(area.name);
+        if (normalized) {
+            if (!areaMap.has(normalized)) {
+                areaMap.set(normalized, []);
+            }
+            areaMap.get(normalized).push({ id: area.id, name: area.name });
+        }
+    }
+
     for (const sheetName of wb.SheetNames) {
         const ws = wb.Sheets[sheetName];
         if (!ws) continue;
@@ -127,12 +169,19 @@ async function parseExcel2(buffer) {
                     logger.warn(`[Excel2] Invalid input ranges for O2Sat calculation: T=${temp}, S=${sal}, O2=${o2}`);
                 }
             }
-            // resolve area by name
-            const area = await Area.findOne({ where: { name: currentName } });
+            // resolve area by name using normalized comparison
+            const normalizedCurrentName = normalizeAreaName(currentName);
+            let areaId = null;
+            if (normalizedCurrentName && areaMap.has(normalizedCurrentName)) {
+                const matches = areaMap.get(normalizedCurrentName);
+                // Take first match (all matches have same normalized name)
+                areaId = matches[0].id;
+            }
+
             results.push({
                 sheet: sheetName,
                 areaName: currentName,
-                areaId: area ? area.id : null,
+                areaId: areaId,
                 year,
                 quarter,
                 metrics: features,

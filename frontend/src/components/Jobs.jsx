@@ -16,6 +16,8 @@ const Jobs = () => {
         total: 0,
     });
 
+    const [availableJobNames, setAvailableJobNames] = useState([]);
+
     const fetchJobs = async (page = 1, pageSize = 10) => {
         try {
             setLoading(true);
@@ -28,12 +30,13 @@ const Jobs = () => {
                 }
             });
             const rows = res.data?.jobs || [];
-            const filtered = name ? rows : rows.filter(r => r.name === 'csv-import' || r.name === 'xlsx-import');
-            setJobs(filtered);
+            const namesInResponse = Array.from(new Set(rows.map((r) => r.name))).sort();
+            setAvailableJobNames(namesInResponse);
+            setJobs(rows);
             setPagination({
                 current: page,
                 pageSize: pageSize,
-                total: res.data?.total || filtered.length,
+                total: res.data?.total || rows.length,
             });
         } catch (e) {
             message.error('Không tải được danh sách job');
@@ -47,9 +50,29 @@ const Jobs = () => {
     const columns = [
         { title: 'ID', dataIndex: 'id', key: 'id', ellipsis: true },
         { title: 'Tên', dataIndex: 'name', key: 'name' },
-        { title: 'Trạng thái', dataIndex: 'state', key: 'state', render: (s) => <Tag color={s === 'completed' ? 'green' : s === 'failed' ? 'red' : s === 'active' ? 'blue' : 'default'}>{s}</Tag> },
+        { title: 'Trạng thái', dataIndex: 'state', key: 'state', render: (s) => <Tag color={s === 'completed' ? 'green' : s === 'failed' ? 'red' : s === 'active' ? 'blue' : s === 'retry' ? 'orange' : 'default'}>{s}</Tag> },
         { title: 'Người tạo', key: 'user', render: (_, r) => r.creator?.username || r.data?.userId || '-' },
-        { title: 'Khu vực', key: 'area', render: (_, r) => r.data?.areaId || '-' },
+        {
+            title: 'Chi tiết', key: 'details', render: (_, r) => {
+                const data = r.data || {};
+                if (r.name === 'area-xlsx-import') {
+                    return (
+                        <Space direction="vertical" size={0}>
+                            <Text type="secondary">Tỉnh: {data.provinceId || '-'}</Text>
+                            <Text type="secondary">Huyện: {data.districtId || '-'}</Text>
+                            {data.originalname && <Text type="secondary">File: {data.originalname}</Text>}
+                        </Space>
+                    );
+                }
+                return (
+                    <Space direction="vertical" size={0}>
+                        {data.areaId && <Text type="secondary">Area ID: {data.areaId}</Text>}
+                        {data.modelName && <Text type="secondary">Model: {data.modelName}</Text>}
+                        {data.originalname && <Text type="secondary">File: {data.originalname}</Text>}
+                    </Space>
+                );
+            }
+        },
         { title: 'Tạo lúc', dataIndex: 'createdon', key: 'createdon', render: (v) => v ? new Date(v).toLocaleString('vi-VN') : '-' },
         { title: 'Bắt đầu', dataIndex: 'startedon', key: 'startedon', render: (v) => v ? new Date(v).toLocaleString('vi-VN') : '-' },
         { title: 'Hoàn tất', dataIndex: 'completedon', key: 'completedon', render: (v) => v ? new Date(v).toLocaleString('vi-VN') : '-' },
@@ -60,15 +83,17 @@ const Jobs = () => {
             <Space direction="vertical" style={{ width: '100%' }} size="large">
                 <Title level={3} style={{ margin: 0 }}>Danh sách Job</Title>
                 <Space wrap>
-                    <Select placeholder="Tên job" allowClear value={name} onChange={setName} style={{ width: 200 }}>
-                        <Option value="csv-import">csv-import</Option>
-                        <Option value="xlsx-import">xlsx-import</Option>
+                    <Select placeholder="Tên job" allowClear value={name} onChange={setName} style={{ width: 220 }}>
+                        {(availableJobNames.length ? availableJobNames : ['csv-import', 'xlsx-import', 'area-xlsx-import']).map(jobName => (
+                            <Option key={jobName} value={jobName}>{jobName}</Option>
+                        ))}
                     </Select>
                     <Select placeholder="Trạng thái" allowClear value={state} onChange={setState} style={{ width: 180 }}>
                         <Option value="created">created</Option>
                         <Option value="active">active</Option>
                         <Option value="completed">completed</Option>
                         <Option value="failed">failed</Option>
+                        <Option value="retry">retry</Option>
                     </Select>
                     <Button type="primary" onClick={() => fetchJobs(pagination.current, pagination.pageSize)}>Tải</Button>
                 </Space>

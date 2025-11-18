@@ -21,6 +21,7 @@ import {
   Spin,
   message,
   Tooltip,
+  Select,
 } from 'antd';
 import { MailOutlined, EyeOutlined, CloseOutlined, SendOutlined } from '@ant-design/icons';
 import PredictionBadge from './PredictionBadge';
@@ -45,6 +46,38 @@ const Dashboard = () => {
   const [isLoadingSubscribers, setIsLoadingSubscribers] = useState(false);
   const [isSendingManual, setIsSendingManual] = useState(false);
   const [selectedPrediction, setSelectedPrediction] = useState(null);
+  const [areas, setAreas] = useState([]);
+  const [selectedAreaId, setSelectedAreaId] = useState(null);
+  const [isLoadingAreas, setIsLoadingAreas] = useState(false);
+
+  // Load areas list for filter
+  useEffect(() => {
+    if (token) {
+      try {
+        const decodedToken = jwtDecode(token);
+        if (decodedToken.role === 'admin' || decodedToken.role === 'manager') {
+          setIsLoadingAreas(true);
+          axios
+            .get('/api/express/areas/all')
+            .then((response) => {
+              // API returns { areas: [...] } format
+              const areasData = response.data?.areas || response.data || [];
+              setAreas(Array.isArray(areasData) ? areasData : []);
+            })
+            .catch((error) => {
+              console.error('Error fetching areas:', error);
+              message.error('Không thể tải danh sách khu vực');
+              setAreas([]); // Set empty array on error
+            })
+            .finally(() => {
+              setIsLoadingAreas(false);
+            });
+        }
+      } catch (error) {
+        console.error('Error decoding token:', error);
+      }
+    }
+  }, [token]);
 
   useEffect(() => {
     if (token) {
@@ -58,13 +91,18 @@ const Dashboard = () => {
         if (decodedToken.role === 'admin' || decodedToken.role === 'manager') {
           console.log('start fetching');
 
+          const params = {
+            limit: 10, // Limit number of results per page
+            offset: currentPage * 10,
+          };
+
+          // Add areaId filter if selected
+          if (selectedAreaId) {
+            params.areaId = selectedAreaId;
+          }
+
           axios
-            .get(`/api/express/predictions/admin`, {
-              params: {
-                limit: 10, // Limit number of results per page
-                offset: currentPage * 10,
-              },
-            })
+            .get(`/api/express/predictions/admin`, { params })
             .then((response) => {
               setPredictionList(response.data.rows);
               console.log(response.data);
@@ -74,16 +112,28 @@ const Dashboard = () => {
               console.error('Error fetching prediction details:', error);
             });
         } else {
+          const params = {
+            limit: 10, // Limit number of results per page
+            offset: currentPage * 10,
+          };
+
+          // Add areaId filter if selected
+          if (selectedAreaId) {
+            params.areaId = selectedAreaId;
+          }
+
           axios
-            .get(`/api/express/predictions/user/${decodedToken.id}`, {
-              params: {
-                limit: 10, // Limit number of results per page
-                offset: currentPage * 10,
-              },
-            })
+            .get(`/api/express/predictions/user/${decodedToken.id}`, { params })
             .then((response) => {
-              setPredictionList(response.data);
-              setTotalPredictions(response.data.length);
+              // Backend now returns {rows: [], count: number} format
+              if (response.data.rows !== undefined) {
+                setPredictionList(response.data.rows);
+                setTotalPredictions(response.data.count);
+              } else {
+                // Fallback for old format (array)
+                setPredictionList(Array.isArray(response.data) ? response.data : []);
+                setTotalPredictions(Array.isArray(response.data) ? response.data.length : 0);
+              }
               console.log(response.data);
             })
             .catch((error) => {
@@ -95,7 +145,7 @@ const Dashboard = () => {
         toast.error(t('dashboard.invalidToken'));
       }
     }
-  }, [currentPage]);
+  }, [currentPage, selectedAreaId]);
 
   useEffect(() => { }, [predictionList]);
 
@@ -211,9 +261,32 @@ const Dashboard = () => {
         }}
         bodyStyle={{ padding: 24 }}
       >
-        <Title level={3} style={{ marginBottom: 24 }}>
-          {t('dashboard.title')}
-        </Title>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+          <Title level={3} style={{ marginBottom: 0 }}>
+            {t('dashboard.title')}
+          </Title>
+          {(userRole === 'admin' || userRole === 'manager') && (
+            <Select
+              placeholder="Lọc theo khu vực"
+              allowClear
+              style={{ width: 300 }}
+              value={selectedAreaId}
+              onChange={(value) => {
+                setSelectedAreaId(value);
+                setCurrentPage(0); // Reset to first page when filter changes
+              }}
+              loading={isLoadingAreas}
+              showSearch
+              filterOption={(input, option) =>
+                (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+              }
+              options={areas.map((area) => ({
+                value: area.id,
+                label: area.name,
+              }))}
+            />
+          )}
+        </div>
         <Table
           columns={[
             {

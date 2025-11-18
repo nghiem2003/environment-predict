@@ -1,6 +1,7 @@
 const nodemailer = require('nodemailer');
 require('dotenv').config();
 const { Area, AreaSubscription } = require('../models'); // Adjust the path as necessary
+const logger = require('../config/logger');
 
 
 const sendEmail = async (req, res) => {

@@ -142,6 +142,17 @@
       "max_long": "Max Long"
     },
     "add_button": "Add New Area",
+    "import_button": "Import areas from Excel",
+    "import_modal": {
+      "title": "Import areas from Excel",
+      "ok": "Create job",
+      "select_file": "Select file",
+      "file": "Excel file (.xlsx)",
+      "invalid_file": "Only Excel (.xlsx) files are supported",
+      "missing_file": "Please select an Excel (.xlsx) file to import.",
+      "hint": "Only columns C (X), D (Y) and E (Location name) from row 2 are read.",
+      "success": "Import job created. You can track the progress on the Jobs page."
+    },
     "table": {
       "name": "Area Name",
       "type": "Area Type",
@@ -283,6 +294,8 @@
     "subscribeEmail": "Subscribe to Email Alerts",
     "showDetails": "Show details",
     "hideDetails": "Hide details",
-    "close": "Close"
+    "cancel": "Cancel",
+    "close": "Close",
+    "selectFile": "Select file"
   }
 }

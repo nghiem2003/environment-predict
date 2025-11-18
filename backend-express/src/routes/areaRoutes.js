@@ -2,6 +2,12 @@ const express = require('express');
 const { authenticate, authorize } = require('../middlewares/authMiddleware');
 const { getAllAreas, getAllAreasNoPagination, getAreaById, createArea, updateArea, deleteArea } = require('../controllers/areaController');
 const { Province, Area, District } = require('../models/index.js');
+const multer = require('multer');
+const logger = require('../config/logger');
+const fs = require('fs');
+const path = require('path');
+
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
 const router = express.Router();
 
 /**
@@ -546,5 +552,89 @@ router.put('/:id', authenticate, authorize(['admin', 'manager']), updateArea);
  *         description: Area not found
  */
 router.delete('/:id', authenticate, authorize(['admin', 'manager']), deleteArea);
+
+router.post('/import-excel', authenticate, authorize(['admin', 'manager']), upload.single('file'), async (req, res) => {
+    const boss = req.app.get('boss');
+    if (!boss) {
+        logger.error('[API] Boss not available for area import');
+        return res.status(500).json({ error: 'job_queue_not_ready' });
+    }
+
+    if (!req.file) {
+        return res.status(400).json({ error: 'excel_file_required' });
+    }
+
+    const { provinceId, districtId, area, area_type } = req.body || {};
+    if (!provinceId || !districtId) {
+        return res.status(400).json({ error: 'province_and_district_required' });
+    }
+
+    let filePath;
+    try {
+        const district = await District.findOne({ where: { id: districtId } });
+        if (!district) {
+            return res.status(400).json({ error: 'district_not_found' });
+        }
+        if (String(district.province_id) !== String(provinceId)) {
+            return res.status(400).json({ error: 'district_not_in_province' });
+        }
+
+        const uploadsDir = path.join(process.cwd(), 'uploads');
+        if (!fs.existsSync(uploadsDir)) {
+            fs.mkdirSync(uploadsDir, { recursive: true });
+        }
+
+        const fileName = `${Date.now()}-${req.file.originalname}`;
+        filePath = path.join(uploadsDir, fileName);
+        fs.writeFileSync(filePath, req.file.buffer);
+
+        const jobData = {
+            path: filePath,
+            originalname: req.file.originalname,
+            provinceId,
+            districtId,
+            area: area ? parseFloat(area) : null,
+            area_type: area_type || 'oyster',
+            userId: req.user?.id || null,
+        };
+
+        logger.info('[API] Enqueueing area import job', {
+            jobData,
+            fileSize: req.file.size,
+        });
+
+        const jobId = await boss.send('area-xlsx-import', jobData, { retryLimit: 0 });
+
+        if (!jobId) {
+            logger.error('[API] Failed to get jobId from boss.send() for area import', { jobData });
+            return res.status(500).json({ error: 'failed_to_get_job_id' });
+        }
+
+        logger.info('[API] Area import job enqueued successfully', { jobId });
+        return res.json({
+            jobId,
+            message: 'Đã tạo job import khu vực. Vui lòng theo dõi tiến trình tại trang Jobs.',
+            redirect: '/jobs',
+        });
+    } catch (error) {
+        logger.error('[API] Failed to enqueue area import job', {
+            message: error.message,
+            stack: error.stack,
+        });
+
+        if (filePath && fs.existsSync(filePath)) {
+            try {
+                fs.unlinkSync(filePath);
+            } catch (cleanupError) {
+                logger.warn('[API] Failed to cleanup temp file after area import enqueue failure', {
+                    error: cleanupError.message,
+                    filePath,
+                });
+            }
+        }
+
+        return res.status(500).json({ error: 'failed_to_queue_area_import', message: error.message });
+    }
+});
 
 module.exports = router;

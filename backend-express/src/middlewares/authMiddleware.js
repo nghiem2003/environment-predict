@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken');
+const logger = require('../config/logger');
 
 const authenticate = (req, res, next) => {
   const token = req.header('Authorization')?.replace('Bearer ', '');
@@ -19,7 +20,7 @@ const authorize = (roles) => (req, res, next) => {
     if (!roles.includes(req.user.role)) {
       return res.status(403).json({ error: 'Forbidden' });
     }
-    logger.log('passed authorize')
+    logger.debug('Authorization check passed', { userId: req.user?.id, role: req.user?.role, allowedRoles: roles });
 
     next();
   } catch (e) {

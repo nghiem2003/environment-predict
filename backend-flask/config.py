@@ -28,7 +28,7 @@ REQUIRED_FIELDS = [
 
 DEFAULT_FALLBACK_VALUES = {
     'T_degC': 29.0,       # Nhiệt độ lý tưởng
-    'Salnty': 32.5,       # Độ mặn lý tưởng
+    'Salnty': 30.0,       # Độ mặn lý tưởng
     'O2ml_L': 5.0,        # Oxy hòa tan
     'R_PO4': 0.5,         # Phosphate
     'IntChl': 0.2,        # Chlorophyll

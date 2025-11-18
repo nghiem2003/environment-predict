@@ -141,6 +141,17 @@
       "max_long": "Kinh độ tối đa"
     },
     "add_button": "Thêm khu vực mới",
+    "import_button": "Nhập khu vực từ Excel",
+    "import_modal": {
+      "title": "Nhập khu vực từ Excel",
+      "ok": "Tạo job",
+      "file": "File Excel (.xlsx)",
+      "select_file": "Chọn file",
+      "invalid_file": "Chỉ hỗ trợ file Excel (.xlsx)",
+      "missing_file": "Vui lòng chọn file Excel (.xlsx) để nhập.",
+      "hint": "Chỉ đọc các cột: C (X), D (Y), E (Tên địa điểm) kể từ dòng 2.",
+      "success": "Đã tạo job import khu vực. Bạn có thể theo dõi tại trang Jobs."
+    },
     "table": {
       "name": "Tên khu vực",
       "type": "Loại khu vực",
@@ -198,7 +209,9 @@
     "subscribeEmail": "Đăng ký email thông báo",
     "showDetails": "Hiện chi tiết",
     "hideDetails": "Ẩn chi tiết",
-    "close": "Đóng"
+    "cancel": "Hủy",
+    "close": "Đóng",
+    "selectFile": "Chọn file"
   },
   "logout": {
     "success": "Đăng xuất thành công"

@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import axios from '../axios';
 import { useSelector } from 'react-redux';
 import { jwtDecode } from 'jwt-decode';
 import './AreaList.css';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
+import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import {
   MapContainer,
   TileLayer,
@@ -29,6 +30,9 @@ import {
   Row,
   Col,
   Tooltip,
+  Upload,
+  Tabs,
+  message,
 } from 'antd';
 
 import {
@@ -38,6 +42,7 @@ import {
   MailOutlined,
   SaveOutlined,
   CloseOutlined,
+  UploadOutlined,
 } from '@ant-design/icons';
 
 const { Option } = Select;
@@ -55,6 +60,7 @@ const getVN2000Proj4 = (lon0) => `+proj=tmerc +lat_0=0 +lon_0=${lon0} +k=0.9999 
 
 const AreaList = () => {
   const [form] = Form.useForm();
+  const [importForm] = Form.useForm();
   const { t } = useTranslation();
   const { token } = useSelector((state) => state.auth);
   const navigate = useNavigate();
@@ -75,6 +81,11 @@ const AreaList = () => {
   const [regionList, setRegionList] = useState([]);
   const [districtList, setDistrictList] = useState([]);
   const [filteredDistrictList, setFilteredDistrictList] = useState([]);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [importFileList, setImportFileList] = useState([]);
+  const [importLoading, setImportLoading] = useState(false);
+  const [importProvince, setImportProvince] = useState('');
+  const [importDistrict, setImportDistrict] = useState('');
   const [newArea, setNewArea] = useState({
     id: '',
     name: '',
@@ -86,10 +97,30 @@ const AreaList = () => {
   });
   const [coordinateType, setCoordinateType] = useState('wgs84');
   const [vnZone, setVnZone] = useState('auto'); // 'auto' | 105 | 107 | 109
+  const [provinceCentralMeridian, setProvinceCentralMeridian] = useState(null);
+  const [selectedProvince, setSelectedProvince] = useState(null);
+  const [selectedDistrict, setSelectedDistrict] = useState(null);
+  const [provinceTouched, setProvinceTouched] = useState(false);
+  const [districtTouched, setDistrictTouched] = useState(false);
+  const [filterInitialized, setFilterInitialized] = useState(false);
+  const debouncedSearchTerm = useDebouncedValue(searchTerm, 500);
+
+  const userInfo = useMemo(() => {
+    if (!token) return null;
+    try {
+      return jwtDecode(token);
+    } catch (error) {
+      console.error('Error decoding token:', error);
+      return null;
+    }
+  }, [token]);
+
 
   const isWithinVietnam = (lat, lon) => lat >= 8 && lat <= 24 && lon >= 102 && lon <= 110;
   const convertVN2000ToWGS84 = (x, y, zone) => {
     try {
+      // Trong VN2000: X là Easting (longitude), Y là Northing (latitude)
+      // proj4 nhận [x, y] và trả về [lon, lat]
       if (zone === 'auto') {
         const zones = [105, 107, 109];
         for (const z of zones) {
@@ -114,12 +145,106 @@ const AreaList = () => {
     role: '',
   });
 
+  const filteredImportDistricts = useMemo(() => {
+    if (!importProvince) {
+      return districtList;
+    }
+    return districtList.filter((district) => String(district.province_id) === String(importProvince));
+  }, [districtList, importProvince]);
+
+  const importUploadProps = useMemo(() => ({
+    beforeUpload: (file) => {
+      const isExcel = file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' || file.type === 'application/vnd.ms-excel' || file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
+      if (!isExcel) {
+        message.error(t('area_list.import_modal.invalid_file'));
+        return Upload.LIST_IGNORE;
+      }
+      setImportFileList([file]);
+      return false;
+    },
+    onRemove: () => {
+      setImportFileList([]);
+    },
+    multiple: false,
+    accept: '.xlsx,.xls',
+    fileList: importFileList,
+  }), [importFileList, t]);
+
+  const resetImportState = useCallback(() => {
+    setImportFileList([]);
+    setImportProvince('');
+    setImportDistrict('');
+    importForm.resetFields();
+    importForm.setFieldsValue({ area_type: 'oyster' }); // Reset về giá trị mặc định
+  }, [importForm]);
+
+  const handleOpenImportModal = () => {
+    const defaultProvince = userInfo?.province ? String(userInfo.province) : '';
+    const defaultDistrict = userInfo?.district ? String(userInfo.district) : '';
+
+    setImportProvince(defaultProvince);
+    setImportDistrict(defaultDistrict);
+    importForm.setFieldsValue({
+      provinceId: defaultProvince || undefined,
+      districtId: defaultDistrict || undefined,
+      area_type: 'oyster', // Giá trị mặc định
+      area: undefined, // Reset area
+    });
+    setIsImportModalOpen(true);
+  };
+
+  const handleImportSubmit = async () => {
+    try {
+      const values = await importForm.validateFields();
+      if (!importFileList.length) {
+        message.error(t('area_list.import_modal.missing_file'));
+        return;
+      }
+
+      setImportLoading(true);
+      const formData = new FormData();
+      formData.append('provinceId', values.provinceId);
+      formData.append('districtId', values.districtId);
+      if (values.area !== undefined && values.area !== null && values.area !== '') {
+        formData.append('area', values.area);
+      }
+      if (values.area_type) {
+        formData.append('area_type', values.area_type);
+      }
+      formData.append('file', importFileList[0]);
+
+      const response = await axios.post('/api/express/areas/import-excel', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+
+      message.success(t('area_list.import_modal.success', 'Đã tạo job import khu vực. Bạn có thể theo dõi tại trang Jobs.'));
+      setIsImportModalOpen(false);
+      resetImportState();
+
+      if (response?.data?.redirect) {
+        navigate(response.data.redirect);
+      }
+    } catch (error) {
+      if (error?.errorFields) {
+        return; // Form validation error already shown
+      }
+      const backendMessage = error?.response?.data?.error || error?.response?.data?.message;
+      message.error(backendMessage || 'Không thể tạo job import khu vực.');
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
   // Fetch areas from the API
   const fetchAreas = async (province, district, role) => {
     try {
+      // Use selected filters if set, otherwise fallback to user's default filters
+      const provinceFilter = provinceTouched ? selectedProvince : (province || null);
+      const districtFilter = districtTouched ? selectedDistrict : (district || null);
+
       const response = await axios.get('/api/express/areas', {
         params: {
-          search: searchTerm,
+          search: debouncedSearchTerm,
           area_type: areaType,
           lat_min: latRange.min,
           lat_max: latRange.max,
@@ -128,8 +253,8 @@ const AreaList = () => {
           limit: 10, // Limit number of results per page
           offset: currentPage * 10,
           role,
-          province,
-          district, // Pass userId for filtering if needed
+          ...(provinceFilter ? { province: provinceFilter } : {}), // Only include if not empty
+          ...(districtFilter ? { district: districtFilter } : {}), // Only include if not empty
         },
       });
       setAreas(response.data.areas);
@@ -147,26 +272,44 @@ const AreaList = () => {
     }
   };
 
+  useEffect(() => {
+    if (userInfo) {
+      setUserFilter({
+        province: userInfo.province || '',
+        district: userInfo.district || '',
+        role: userInfo.role || '',
+      });
+      // Auto-set filter from userInfo only on first load (not if user has already interacted)
+      if (!filterInitialized) {
+        if (userInfo.province) {
+          setSelectedProvince(userInfo.province);
+        }
+        if (userInfo.district) {
+          setSelectedDistrict(userInfo.district);
+        }
+        setFilterInitialized(true);
+      }
+    } else {
+      setUserFilter({ province: '', district: '', role: '' });
+    }
+  }, [userInfo, filterInitialized]);
+
+  const userProvinceFilter = userFilter.province;
+  const userDistrictFilter = userFilter.district;
+  const userRoleFilter = userFilter.role;
+
   // Fetch areas when dependencies change
   useEffect(() => {
-    if (token) {
-      try {
-        const decodedToken = jwtDecode(token); // Decode the JWT token
-        setUserFilter({
-          province: decodedToken.province,
-          district: decodedToken.district,
-          role: decodedToken.role,
-        });
-        fetchAreas(
-          decodedToken.province,
-          decodedToken.district,
-          decodedToken.role
-        );
-      } catch (error) {
-        console.error('Error decoding token:', error);
-      }
-    }
-  }, [searchTerm, areaType, latRange, longRange, currentPage, token]);
+    fetchAreas(
+      userProvinceFilter,
+      userDistrictFilter,
+      userRoleFilter
+    );
+  }, [debouncedSearchTerm, areaType, latRange, longRange, currentPage, userProvinceFilter, userDistrictFilter, userRoleFilter, selectedProvince, selectedDistrict]);
+
+  useEffect(() => {
+    setCurrentPage(0);
+  }, [debouncedSearchTerm]);
 
   const handleAddArea = async (values) => {
     console.log('id', form.getFieldValue('id'));
@@ -174,13 +317,28 @@ const AreaList = () => {
     try {
       // Convert VN2000 to WGS84 if needed
       if (coordinateType === 'vn2000') {
+        if (!provinceCentralMeridian) {
+          message.error('Tỉnh này chưa có kinh tuyến trục, không thể sử dụng VN2000');
+          return;
+        }
         const xStr = (values.vn2000_x ?? '').toString().trim();
         const yStr = (values.vn2000_y ?? '').toString().trim();
-        if (!xStr || !yStr) { console.error('VN2000 coordinates are required'); return; }
+        if (!xStr || !yStr) {
+          message.error('Vui lòng nhập đủ X và Y (VN2000)');
+          return;
+        }
         const x = Number(xStr); const y = Number(yStr);
-        if (!Number.isFinite(x) || !Number.isFinite(y)) { console.error('VN2000 coordinates are invalid'); return; }
-        const res = convertVN2000ToWGS84(x, y, vnZone);
-        if (!res) { console.error('VN2000 convert failed'); return; }
+        if (!Number.isFinite(x) || !Number.isFinite(y)) {
+          message.error('Tọa độ VN2000 không hợp lệ');
+          return;
+        }
+        console.log('VN2000 Input - X (Easting):', x, 'Y (Northing):', y, 'Zone:', provinceCentralMeridian);
+        const res = convertVN2000ToWGS84(x, y, provinceCentralMeridian);
+        console.log('VN2000 Convert Result - Lat:', res?.lat, 'Lon:', res?.lon);
+        if (!res) {
+          message.error('Không thể chuyển đổi VN2000 → WGS84');
+          return;
+        }
         values.latitude = res.lat;
         values.longitude = res.lon;
       }
@@ -211,6 +369,8 @@ const AreaList = () => {
       setIsPopupOpen(false);
       fetchAreas(userFilter.province, userFilter.district, userFilter.role);
       form.resetFields();
+      setProvinceCentralMeridian(null);
+      setCoordinateType('wgs84');
       setNewArea({
         id: '',
         name: '',
@@ -220,7 +380,6 @@ const AreaList = () => {
         region: '',
         area_type: 'oyster',
       });
-      setCoordinateType('wgs84');
     } catch (error) {
       console.error('Error saving area:', error);
     }
@@ -243,7 +402,7 @@ const AreaList = () => {
     console.log(areaToUpdate);
 
     // Filter districts based on the area's province, not the current user's province
-    const areaProvince = areaToUpdate.province || jwtDecode(token).province;
+    const areaProvince = areaToUpdate.province || userInfo?.province;
     setFilteredDistrictList(
       districtList.filter(
         (district) => district.province_id === areaProvince
@@ -422,99 +581,160 @@ const AreaList = () => {
               <Option value="cobia">Cobia</Option>
             </Select>
           </Col>
-          <Col xs={24} sm={12} md={4}>
-            <Button
-              type="primary"
-              size="large"
-              block
-              icon={<PlusOutlined />}
-              onClick={() => {
-                // Reset form completely
-                form.resetFields();
+          <Col xs={12} sm={6} md={2}>
+            <Tooltip title={t('area_list.add_button') || 'Thêm khu vực mới'}>
+              <Button
+                type="primary"
+                size="large"
+                icon={<PlusOutlined />}
+                onClick={() => {
+                  form.resetFields();
 
-                // Set default values based on user role
-                const decodedToken = jwtDecode(token);
-                form.setFieldValue('province', decodedToken.province);
-                form.setFieldValue('area_type', 'oyster');
+                  form.setFieldValue('area_type', 'oyster');
 
-                // Filter districts based on user's province
-                setFilteredDistrictList(
-                  districtList.filter(
-                    (district) =>
-                      district.province_id === decodedToken.province
-                  )
-                );
+                  if (userInfo?.province) {
+                    form.setFieldValue('province', userInfo.province);
+                    setFilteredDistrictList(
+                      districtList.filter(
+                        (district) =>
+                          String(district.province_id) === String(userInfo.province)
+                      )
+                    );
+                  } else {
+                    setFilteredDistrictList(districtList);
+                  }
 
-                // If manager has a district in token, prefill it
-                if (decodedToken.district) {
-                  form.setFieldValue('district', decodedToken.district);
-                }
+                  if (userInfo?.district) {
+                    form.setFieldValue('district', userInfo.district);
+                  }
 
-                // Reset map position
-                setMapCenter([10.762622, 106.660172]);
-                setPosition(null);
+                  setMapCenter([10.762622, 106.660172]);
+                  setPosition(null);
 
-                setIsPopupOpen(true);
-              }}
-            >
-              {t('area_list.add_button') || 'Thêm khu vực mới'}
-            </Button>
+                  setIsPopupOpen(true);
+                }}
+                block
+              />
+            </Tooltip>
+          </Col>
+          <Col xs={12} sm={6} md={2}>
+            <Tooltip title={t('area_list.import_button') || 'Nhập khu vực từ Excel'}>
+              <Button
+                size="large"
+                icon={<UploadOutlined />}
+                onClick={handleOpenImportModal}
+                block
+              />
+            </Tooltip>
           </Col>
         </Row>
 
-        {/* Hàng thứ hai: Filter theo tọa độ với dấu gạch ngang */}
+        {/* Hàng thứ hai: Filter theo tọa độ và tỉnh/huyện */}
         <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-          <Col xs={24} sm={12} md={12}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Input
-                size="large"
-                placeholder={t('area_list.filter.min_lat') || 'Vĩ độ tối thiểu'}
-                value={latRange.min}
-                onChange={(e) =>
-                  setLatRange({ ...latRange, min: e.target.value })
-                }
-                type="number"
-                style={{ flex: 1 }}
-              />
-              <span style={{ color: '#999', fontSize: '16px', fontWeight: 'bold' }}>—</span>
-              <Input
-                size="large"
-                placeholder={t('area_list.filter.max_lat') || 'Vĩ độ tối đa'}
-                value={latRange.max}
-                onChange={(e) =>
-                  setLatRange({ ...latRange, max: e.target.value })
-                }
-                type="number"
-                style={{ flex: 1 }}
-              />
-            </div>
+          <Col xs={24} sm={12} md={4}>
+            <Input
+              size="large"
+              placeholder={t('area_list.filter.min_lat') || 'Vĩ độ tối thiểu'}
+              value={latRange.min}
+              onChange={(e) =>
+                setLatRange({ ...latRange, min: e.target.value })
+              }
+              type="number"
+            />
           </Col>
-          <Col xs={24} sm={12} md={12}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Input
-                size="large"
-                placeholder={
-                  t('area_list.filter.min_long') || 'Kinh độ tối thiểu'
-                }
-                value={longRange.min}
-                onChange={(e) =>
-                  setLongRange({ ...longRange, min: e.target.value })
-                }
-                type="number"
-                style={{ flex: 1 }}
-              />
-              <span style={{ color: '#999', fontSize: '16px', fontWeight: 'bold' }}>—</span>
-              <Input
-                size="large"
-                placeholder={t('area_list.filter.max_long') || 'Kinh độ tối đa'}
-                value={longRange.max}
-                onChange={(e) =>
-                  setLongRange({ ...longRange, max: e.target.value })
-                }
-                type="number"
-                style={{ flex: 1 }}
-              />
-            </div>
+          <Col xs={24} sm={12} md={4}>
+            <Input
+              size="large"
+              placeholder={t('area_list.filter.max_lat') || 'Vĩ độ tối đa'}
+              value={latRange.max}
+              onChange={(e) =>
+                setLatRange({ ...latRange, max: e.target.value })
+              }
+              type="number"
+            />
+          </Col>
+          <Col xs={24} sm={12} md={4}>
+            <Input
+              size="large"
+              placeholder={
+                t('area_list.filter.min_long') || 'Kinh độ tối thiểu'
+              }
+              value={longRange.min}
+              onChange={(e) =>
+                setLongRange({ ...longRange, min: e.target.value })
+              }
+              type="number"
+            />
+          </Col>
+          <Col xs={24} sm={12} md={4}>
+            <Input
+              size="large"
+              placeholder={t('area_list.filter.max_long') || 'Kinh độ tối đa'}
+              value={longRange.max}
+              onChange={(e) =>
+                setLongRange({ ...longRange, max: e.target.value })
+              }
+              type="number"
+            />
+          </Col>
+          <Col xs={24} sm={12} md={4}>
+            <Select
+              placeholder="Lọc theo tỉnh/thành phố"
+              allowClear
+              size="large"
+              style={{ width: '100%' }}
+              value={selectedProvince}
+              onChange={(value) => {
+                setProvinceTouched(true);
+                setSelectedProvince(value ?? null);
+                setSelectedDistrict(null);
+                setDistrictTouched(true);
+                setCurrentPage(0);
+              }}
+              disabled={userInfo?.role !== 'admin'}
+              showSearch
+              filterOption={(input, option) =>
+                (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+              }
+              options={regionList.map((province) => ({
+                value: province.id,
+                label: province.name,
+              }))}
+            />
+          </Col>
+          <Col xs={24} sm={12} md={4}>
+            <Select
+              placeholder="Lọc theo quận/huyện"
+              allowClear
+              size="large"
+              style={{ width: '100%' }}
+              value={selectedDistrict}
+              onChange={(value) => {
+                setDistrictTouched(true);
+                setSelectedDistrict(value ?? null);
+                setCurrentPage(0);
+              }}
+              loading={!districtList.length}
+              disabled={
+                !selectedProvince ||
+                !(
+                  userInfo?.role === 'admin' ||
+                  (userInfo?.role === 'manager' && !userInfo?.district)
+                )
+              }
+              showSearch
+              filterOption={(input, option) =>
+                (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+              }
+              options={districtList
+                .filter((district) =>
+                  !selectedProvince || String(district.province_id) === String(selectedProvince)
+                )
+                .map((district) => ({
+                  value: district.id,
+                  label: district.name,
+                }))}
+            />
           </Col>
         </Row>
         <Table
@@ -535,6 +755,131 @@ const AreaList = () => {
           />
         </div>
 
+        <Modal
+          open={isImportModalOpen}
+          title={t('area_list.import_modal.title') || 'Import khu vực từ Excel'}
+          onCancel={() => {
+            setIsImportModalOpen(false);
+            resetImportState();
+          }}
+          onOk={handleImportSubmit}
+          confirmLoading={importLoading}
+          okText={t('area_list.import_modal.ok') || 'Tạo job'}
+          cancelText={t('common.cancel') || 'Hủy'}
+          width={640}
+          destroyOnClose
+        >
+          <Tabs
+            defaultActiveKey="xlsx"
+            items={[{
+              key: 'xlsx',
+              label: 'Excel (.xlsx)',
+              children: (
+                <Form
+                  form={importForm}
+                  layout="vertical"
+                  onFinish={handleImportSubmit}
+                >
+                  <Form.Item
+                    label={t('area_list.popup.select_province') || 'Tỉnh'}
+                    name="provinceId"
+                    rules={[{ required: true, message: 'Vui lòng chọn tỉnh' }]}
+                  >
+                    <Select
+                      placeholder={t('area_list.popup.select_province') || 'Chọn tỉnh'}
+                      disabled={userInfo?.role === 'manager'}
+                      onChange={(value) => {
+                        setImportProvince(value);
+                        setImportDistrict('');
+                        importForm.setFieldsValue({ districtId: undefined });
+                      }}
+                      showSearch
+                      optionFilterProp="children"
+                    >
+                      {regionList.map((region) => (
+                        <Option key={region.id} value={region.id}>
+                          {region.name}
+                        </Option>
+                      ))}
+                    </Select>
+                  </Form.Item>
+
+                  <Form.Item
+                    label={t('area_list.popup.select_district') || 'Huyện'}
+                    name="districtId"
+                    rules={[{ required: true, message: 'Vui lòng chọn huyện' }]}
+                  >
+                    <Select
+                      placeholder={t('area_list.popup.select_district') || 'Chọn huyện'}
+                      onChange={(value) => {
+                        setImportDistrict(value);
+                      }}
+                      showSearch
+                      optionFilterProp="children"
+                      disabled={
+                        !importProvince ||
+                        (userInfo?.role === 'manager' && !!userInfo?.district)
+                      }
+                    >
+                      {filteredImportDistricts.map((district) => (
+                        <Option key={district.id} value={district.id}>
+                          {district.name}
+                        </Option>
+                      ))}
+                    </Select>
+                  </Form.Item>
+
+                  <Form.Item
+                    label="Diện tích (ha)"
+                    name="area"
+                    rules={[
+                      {
+                        validator: (_, value) => {
+                          if (!value || value === '') return Promise.resolve();
+                          const num = parseFloat(value);
+                          if (isNaN(num) || num < 0) {
+                            return Promise.reject(new Error('Diện tích phải là số dương'));
+                          }
+                          return Promise.resolve();
+                        },
+                      },
+                    ]}
+                    normalize={(value) => {
+                      if (!value) return value;
+                      return value.toString().replace(/[^0-9.]/g, '');
+                    }}
+                  >
+                    <Input type="number" placeholder="Nhập diện tích (ha)" step="0.01" min="0" />
+                  </Form.Item>
+
+                  <Form.Item
+                    label={t('area_list.filter.type') || 'Loại khu vực'}
+                    name="area_type"
+                    initialValue="oyster"
+                  >
+                    <Select>
+                      <Option value="oyster">{t('area_list.filter.oyster') || 'Oyster'}</Option>
+                      <Option value="cobia">{t('area_list.filter.cobia') || 'Cobia'}</Option>
+                    </Select>
+                  </Form.Item>
+
+                  <Form.Item
+                    label={t('area_list.import_modal.file') || 'File Excel (.xlsx)'}
+                    required
+                  >
+                    <Upload {...importUploadProps}>
+                      <Button icon={<UploadOutlined />}>{t('area_list.import_modal.select_file') || 'Chọn file'}</Button>
+                    </Upload>
+                    <Typography.Paragraph type="secondary" style={{ marginTop: 8 }}>
+                      {t('area_list.import_modal.hint')}
+                    </Typography.Paragraph>
+                  </Form.Item>
+                </Form>
+              )
+            }]}
+          />
+        </Modal>
+
         {/* Add/Update Area Modal */}
         <Modal
           open={isPopupOpen}
@@ -546,6 +891,8 @@ const AreaList = () => {
           onCancel={() => {
             setIsPopupOpen(false);
             form.resetFields();
+            setProvinceCentralMeridian(null);
+            setCoordinateType('wgs84');
           }}
           footer={null}
           styles={{ body: { maxHeight: '70vh', overflowY: 'auto' } }}
@@ -559,10 +906,62 @@ const AreaList = () => {
                 style={{ overflowY: 'auto' }}
                 onFinish={handleAddArea}
               >
-                <Form.Item label="Coordinate Type">
-                  <Select value={coordinateType} onChange={setCoordinateType}>
-                    <Option value="wgs84">WGS84 (lat/lon)</Option>
-                    <Option value="vn2000">VN2000 (TM 105°)</Option>
+                <Form.Item
+                  label={t('area_list.popup.select_province')}
+                  name="province"
+                  rules={[{ required: true, message: 'Province is required' }]}
+                >
+                  <Select
+                    disabled={userInfo?.role === 'manager'}
+                    onChange={async (value) => {
+                      form.setFieldsValue({ district: '' });
+                      // Filter districts when province changes
+                      setFilteredDistrictList(
+                        districtList.filter(
+                          (district) => district.province_id === value
+                        )
+                      );
+                      // Lấy central_meridian từ province
+                      try {
+                        const province = regionList.find(p => p.id === value);
+                        if (province?.central_meridian) {
+                          setProvinceCentralMeridian(province.central_meridian);
+                        } else {
+                          setProvinceCentralMeridian(null);
+                        }
+                        // Nếu không có central_meridian và đang dùng vn2000, chuyển về wgs84
+                        if (!province?.central_meridian && coordinateType === 'vn2000') {
+                          setCoordinateType('wgs84');
+                          message.warning('Tỉnh này chưa có kinh tuyến trục, chỉ có thể sử dụng WGS84');
+                        }
+                      } catch (error) {
+                        console.error('Error getting province central_meridian:', error);
+                        setProvinceCentralMeridian(null);
+                      }
+                    }}
+                  >
+                    {regionList.map((region) => (
+                      <Option key={region.id} value={region.id}>
+                        {region.name}
+                      </Option>
+                    ))}
+                  </Select>
+                </Form.Item>
+                <Form.Item
+                  label={t('area_list.popup.select_district')}
+                  name="district"
+                >
+                  <Select
+                    disabled={
+                      userInfo?.role === 'manager' &&
+                      userInfo?.district
+                    }
+                  >
+                    {filteredDistrictList.map((region) => (
+                      <Option key={region.id} value={region.id}>
+                        {region.name}
+                      </Option>
+                    ))}
                   </Select>
                 </Form.Item>
                 <Form.Item
@@ -572,14 +971,27 @@ const AreaList = () => {
                 >
                   <Input />
                 </Form.Item>
-                {coordinateType === 'vn2000' && (
+                <Form.Item label="Coordinate Type">
+                  <Select
+                    value={coordinateType}
+                    onChange={setCoordinateType}
+                    disabled={!provinceCentralMeridian && coordinateType === 'vn2000'}
+                  >
+                    <Option value="wgs84">WGS84 (lat/lon)</Option>
+                    <Option
+                      value="vn2000"
+                      disabled={!provinceCentralMeridian}
+                    >
+                      VN2000 {provinceCentralMeridian ? `(TM ${provinceCentralMeridian}°)` : '(Cần chọn tỉnh có kinh tuyến trục)'}
+                    </Option>
+                  </Select>
+                </Form.Item>
+                {coordinateType === 'vn2000' && provinceCentralMeridian && (
                   <>
-                    <Form.Item label="VN2000 TM kinh tuyến">
-                      <Select value={vnZone} onChange={setVnZone}>
-                        <Option value={105}>105°</Option>
-                        <Option value={107}>107°</Option>
-                        <Option value={109}>109°</Option>
-                      </Select>
+                    <Form.Item
+                      label={`VN2000 TM ${provinceCentralMeridian}° (tự động)`}
+                    >
+                      <Input disabled value={`Kinh tuyến trục: ${provinceCentralMeridian}°`} />
                     </Form.Item>
                     <Form.Item label="VN2000 X (Easting, m)" name="vn2000_x" rules={[{ required: true }]}>
                       <Input type="number" />
@@ -605,47 +1017,6 @@ const AreaList = () => {
                 </Form.Item>
                 <Form.Item label="Area's area" name="area">
                   <Input type="number" />
-                </Form.Item>
-                <Form.Item
-                  label={t('area_list.popup.select_province')}
-                  name="province"
-                  rules={[{ required: true, message: 'Province is required' }]}
-                >
-                  <Select
-                    disabled={jwtDecode(token).role === 'manager'}
-                    onChange={(value) => {
-                      form.setFieldsValue({ district: '' });
-                      // Filter districts when province changes
-                      setFilteredDistrictList(
-                        districtList.filter(
-                          (district) => district.province_id === value
-                        )
-                      );
-                    }}
-                  >
-                    {regionList.map((region) => (
-                      <Option key={region.id} value={region.id}>
-                        {region.name}
-                      </Option>
-                    ))}
-                  </Select>
-                </Form.Item>
-                <Form.Item
-                  label={t('area_list.popup.select_district')}
-                  name="district"
-                >
-                  <Select
-                    disabled={
-                      jwtDecode(token).role === 'manager' &&
-                      jwtDecode(token).district
-                    }
-                  >
-                    {filteredDistrictList.map((region) => (
-                      <Option key={region.id} value={region.id}>
-                        {region.name}
-                      </Option>
-                    ))}
-                  </Select>
                 </Form.Item>
 
                 <Form.Item label={t('area_list.filter.type')} name="area_type">

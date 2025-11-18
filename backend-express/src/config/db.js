@@ -11,4 +11,15 @@ const sequelize = new Sequelize(DB_NAME, DB_USER, DB_PASSWORD, {
   port: 5432,
 });
 
+async function ensureDbExtensions() {
+  try {
+    await sequelize.query('CREATE EXTENSION IF NOT EXISTS unaccent;');
+    console.log('[DB] unaccent extension ready');
+  } catch (err) {
+    console.error('[DB] Failed to enable unaccent', err.message);
+  }
+}
+
+ensureDbExtensions();   // runs once when this module is loaded
+
 module.exports = sequelize;

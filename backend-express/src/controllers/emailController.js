@@ -1,6 +1,7 @@
 const { Email, Area, Otp } = require('../models');
 const nodemailer = require('nodemailer');
 const crypto = require('crypto');
+const logger = require('../config/logger');
 
 
 const resultConvert = (result) => {

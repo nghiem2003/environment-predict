@@ -1,6 +1,25 @@
 const { Op } = require('sequelize');
-const { Area, Province, District, Prediction, PredictionNatureElement } = require('../models');
+const { Area, Province, District, Prediction, PredictionNatureElement, sequelize } = require('../models');
 const { sendPredictionNotification } = require('./emailController');
+const logger = require('../config/logger');
+
+const normalizeSearchTerm = (value = '') =>
+  value
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+
+const buildSearchCondition = (column, rawSearch) => {
+  const normalized = normalizeSearchTerm(rawSearch);
+  if (!normalized) return null;
+  return sequelize.where(
+    sequelize.fn('unaccent', sequelize.fn('lower', sequelize.col(column))),
+    {
+      [Op.like]: `%${normalized}%`,
+    }
+  );
+};
 
 exports.getAllAreas = async (req, res) => {
   try {
@@ -17,14 +36,16 @@ exports.getAllAreas = async (req, res) => {
       district,
       province,
     } = req.query;
-    logger.log(req.query);
+    logger.debug('Get All Areas - Request query', req.query);
 
     // Start with an empty query object
     let query = {};
 
     // If a search term is provided, add it to the query (search by name)
-    if (search) {
-      query.name = { [Op.like]: `%${search}%` }; // Sequelize query for partial match
+    const searchCondition = buildSearchCondition('Area.name', search);
+    if (searchCondition) {
+      query[Op.and] = query[Op.and] || [];
+      query[Op.and].push(searchCondition);
     }
 
     // If area_type is provided, filter by area type
@@ -45,15 +66,22 @@ exports.getAllAreas = async (req, res) => {
       if (long_min) query.longitude[Op.gte] = long_min; // Greater than or equal to long_min
       if (long_max) query.longitude[Op.lte] = long_max; // Less than or equal to long_max
     }
-    if (role === 'manager') {
-      logger.log('Manager role detected, applying district filter');
-      if (district) {
-        query.district = district; // lọc theo district
-      } else if (province) {
-        query.province = province; // lọc theo province nếu không có district
-      }
+
+    // Filter by province and district if provided (for all users)
+    if (province) {
+      query.province = province; // UUID
     }
-    logger.log('Query for Areas:', query);
+    if (district) {
+      query.district = district; // UUID
+    }
+
+    // Manager-specific filter: if manager doesn't provide filter, apply their default scope
+    if (role === 'manager' && !province && !district) {
+      logger.debug('Manager role detected, applying default district/province filter');
+      // Manager filter logic is handled by user's province/district from token
+      // This is already handled in the query params passed from frontend
+    }
+    logger.debug('Query for Areas', { query });
     const options = {
       where: query,
       include: [
@@ -61,7 +89,7 @@ exports.getAllAreas = async (req, res) => {
           model: Province,
           as: 'Province',
           required: false,
-          attributes: ['id', 'name'],
+          attributes: ['id', 'name', 'central_meridian'],
         },
         {
           model: District,
@@ -97,13 +125,13 @@ exports.getAllAreas = async (req, res) => {
 exports.getAllAreasNoPagination = async (req, res) => {
   try {
     const { search, area_type, lat_min, lat_max, long_min, long_max, province, district } = req.query;
-    logger.log(req.query);
+    logger.debug('Get All Areas (No Pagination) - Request query', req.query);
 
     let query = {};
-    if (search) {
-      query.name = {
-        [Op.iLike]: `%${search}%`,
-      };
+    const searchCondition = buildSearchCondition('Area.name', search);
+    if (searchCondition) {
+      query[Op.and] = query[Op.and] || [];
+      query[Op.and].push(searchCondition);
     }
     if (area_type) {
       query.area_type = area_type;
@@ -132,7 +160,7 @@ exports.getAllAreasNoPagination = async (req, res) => {
           model: Province,
           as: 'Province',
           required: false,
-          attributes: ['id', 'name'],
+          attributes: ['id', 'name', 'central_meridian'],
         },
         {
           model: District,
@@ -163,9 +191,9 @@ exports.getAreaById = async (req, res) => {
       where: { id: id },
       include: {
         model: Province,
-
         as: 'Province',
         required: false,
+        attributes: ['id', 'name', 'central_meridian'],
       },
     });
     res.status(200).json(area);
@@ -241,7 +269,7 @@ exports.deleteArea = async (req, res) => {
       return res.status(404).json({ error: 'Area not found.' });
     }
 
-    logger.log('Deleting area:', area.name);
+    logger.info('Deleting area', { areaName: area.name, areaId: area.id });
 
     // Start a transaction to ensure all deletions succeed or fail together
     const transaction = await Area.sequelize.transaction();
@@ -272,7 +300,7 @@ exports.deleteArea = async (req, res) => {
       // Commit the transaction
       await transaction.commit();
 
-      logger.log(`Successfully deleted area ${area.name} and all related predictions`);
+      logger.info('Successfully deleted area and all related predictions', { areaName: area.name, deletedPredictions: predictions.length });
       res.status(200).json({
         message: 'Area and all related predictions deleted successfully.',
         deletedArea: area.name,
@@ -295,7 +323,7 @@ exports.deleteArea = async (req, res) => {
 
 exports.updateArea = async (req, res) => {
   try {
-    logger.log(req.body);
+    logger.debug('Update Area - Request body', req.body);
 
     const { id } = req.params;
     const { name, latitude, longitude, province, district, area, area_type } =
@@ -341,7 +369,7 @@ exports.updateArea = async (req, res) => {
     selectedArea.district = district || selectedArea.district;
     selectedArea.area_type = area_type;
 
-    logger.log('Updating area:', selectedArea.name);
+    logger.info('Updating area', { areaName: selectedArea.name, areaId: selectedArea.id });
     await selectedArea.save();
 
     // Note: Email notifications are now sent when predictions are created, not when areas are updated

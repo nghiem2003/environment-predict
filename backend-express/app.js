@@ -13,14 +13,17 @@ const jobRoutes = require('./src/routes/jobRoutes.js');
 const sequelize = require('./src/config/db.js');
 const cors = require('cors');
 const helmet = require('helmet');
+const requestLogger = require('./src/middlewares/requestLogger');
 const cron = require('node-cron');
 const logger = require('./src/config/logger');
+const { runMigrations } = require('./src/config/runMigrations');
 const app = express();
 require('dotenv').config();
 app.use(helmet());
 app.use(cors());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
+app.use(requestLogger);
 // Init pg-boss for background jobs
 const PgBoss = require('pg-boss');
 const DB_USER = dbConfig.username || process.env.DB_USER || 'postgres';
@@ -152,6 +155,24 @@ app.use('/api/express/nature-elements', natureElementRoutes);
 app.use('/api/express', swaggerRoutes);
 app.use('/api/express/jobs', jobRoutes);
 
+// Chạy migrations và seeders khi khởi động server - ĐÃ TẮT
+// (async () => {
+//   try {
+//     await runMigrations();
+
+//     sequelize.sync().then(() => {
+//       app.listen(5000, () => {
+//         logger.info('🚀 Server running on http://localhost:5000');
+//         logger.info('📚 API Documentation available at http://localhost:5000/api/express/docs');
+//       });
+//     });
+//   } catch (error) {
+//     logger.error('Failed to run migrations:', error);
+//     process.exit(1);
+//   }
+// })();
+
+// Khởi động server không chạy migrations/seeders
 sequelize.sync().then(() => {
   app.listen(5000, () => {
     logger.info('🚀 Server running on http://localhost:5000');

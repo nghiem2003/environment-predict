@@ -14,7 +14,6 @@ const { sendPredictionNotification } = require('./emailController');
 const xlsx = require('xlsx');
 const { parseExcel2 } = require('../services/importService');
 const logger = require('../config/logger');
-const pLimit = require('p-limit');
 
 // Required fields for prediction model - only these should be saved to database
 const REQUIRED_FIELDS = [
@@ -22,125 +21,146 @@ const REQUIRED_FIELDS = [
   'R_Depth', 'Distance', 'Wind_Spd', 'Wave_Ht', 'Wave_Prd', 'IntChl', 'Dry_T'
 ];
 
+// Helper function to create prediction without Express req/res
+async function createPredictionInternal(userId, areaId, inputs, modelName, createdAt = null) {
+  const area = await Area.findByPk(areaId);
+  if (!area) {
+    throw new Error('Area not found');
+  }
+
+  // Filter inputs to only include required fields for the model
+  const filteredInputs = {};
+  const skippedFields = [];
+  for (const [key, value] of Object.entries(inputs)) {
+    if (REQUIRED_FIELDS.includes(key)) {
+      filteredInputs[key] = Number.parseFloat(value);
+    } else {
+      skippedFields.push(key);
+    }
+  }
+
+  if (skippedFields.length > 0) {
+    logger.debug(`[Prediction] Filtered out non-required fields: ${skippedFields.join(', ')}`);
+  }
+
+  // Prepare request data for Flask API - only include REQUIRED_FIELDS + lat/lon
+  const flaskRequestData = {};
+  REQUIRED_FIELDS.forEach(field => {
+    if (filteredInputs[field] != null) {
+      flaskRequestData[field] = filteredInputs[field];
+    }
+  });
+  flaskRequestData.lat = area.latitude;
+  flaskRequestData.lon = area.longitude;
+
+  const endpoint = modelName.includes('oyster')
+    ? '/predict/oyster'
+    : '/predict/cobia';
+  const flaskUrl = `${process.env.FLASK_API_URL}${endpoint}`;
+
+  let flaskResponse;
+  try {
+    flaskResponse = await axios.post(flaskUrl, flaskRequestData, {
+      params: { model: modelName },
+    });
+  } catch (axiosError) {
+    logger.error('[Prediction] Flask API error', {
+      message: axiosError.message,
+      status: axiosError.response?.status,
+      data: axiosError.response?.data,
+      url: flaskUrl
+    });
+    throw new Error(axiosError.response?.data?.error || axiosError.message || 'Flask API error');
+  }
+
+  // Check HTTP status code
+  if (flaskResponse.status >= 400) {
+    logger.error('[Prediction] Flask returned error status', { status: flaskResponse.status, data: flaskResponse.data });
+    throw new Error(flaskResponse.data?.error || 'Flask API returned error status');
+  }
+
+  const flaskResult = flaskResponse.data;
+  if (flaskResult.error) {
+    logger.error('[Prediction] Flask response contains error', { error: flaskResult.error });
+    throw new Error(flaskResult.error);
+  }
+
+  const { prediction_result } = flaskResult;
+
+  const predictionData = {
+    user_id: userId,
+    area_id: areaId,
+    prediction_text: prediction_result.prediction,
+  };
+
+  if (createdAt && !isNaN(new Date(createdAt).getTime())) {
+    const customDate = new Date(createdAt);
+    predictionData.createdAt = customDate;
+    predictionData.updatedAt = customDate;
+    logger.debug('[Prediction] Using custom createdAt', { createdAt: customDate });
+  }
+
+  const predictionRecord = await Prediction.create(predictionData);
+  logger.info('[Prediction] Created prediction record in database', {
+    predictionId: predictionRecord.id,
+    areaId,
+    userId
+  });
+
+  // Save filtered inputs
+  let savedElements = 0;
+  for (const [elementName, value] of Object.entries(filteredInputs)) {
+    const entry = await NatureElement.findOne({
+      where: { name: elementName },
+    });
+
+    if (!entry) {
+      logger.warn(`[Prediction] NatureElement not found: ${elementName}`);
+      continue;
+    }
+
+    await PredictionNatureElement.create({
+      prediction_id: predictionRecord.id,
+      nature_element_id: entry.id,
+      value,
+    });
+    savedElements++;
+  }
+
+  logger.info(`[Prediction] Saved ${savedElements} nature elements to database`);
+
+  return {
+    prediction_id: predictionRecord.id,
+    prediction_text: prediction_result.prediction,
+    model_used: modelName,
+  };
+}
+
 exports.createPrediction = async (req, res) => {
   try {
     const userId = req.user?.id || req.body.userId;
     const { areaId, inputs, modelName } = req.body;
 
-    const area = await Area.findByPk(areaId);
-    logger.debug('modelName', { modelName });
-
-    // Filter inputs to only include required fields for the model
-    const filteredInputs = {};
-    const skippedFields = [];
-    for (const [key, value] of Object.entries(inputs)) {
-      if (REQUIRED_FIELDS.includes(key)) {
-        filteredInputs[key] = Number.parseFloat(value);
-      } else {
-        skippedFields.push(key);
-      }
-    }
-
-    if (skippedFields.length > 0) {
-      logger.debug(`[Prediction] Filtered out non-required fields: ${skippedFields.join(', ')}`);
-    }
-    logger.debug(`[Prediction] Filtered inputs (${Object.keys(filteredInputs).length} fields)`, filteredInputs);
-
-    // Prepare request data for Flask API - only include REQUIRED_FIELDS + lat/lon
-    const flaskRequestData = {};
-    REQUIRED_FIELDS.forEach(field => {
-      if (filteredInputs[field] != null) {
-        flaskRequestData[field] = filteredInputs[field];
-      }
-    });
-    flaskRequestData.lat = area.latitude;
-    flaskRequestData.lon = area.longitude;
-    logger.debug('[Prediction] Flask request data (REQUIRED_FIELDS + lat/lon)', flaskRequestData);
-
-    const endpoint = modelName.includes('oyster')
-      ? '/predict/oyster'
-      : '/predict/cobia';
-    const flaskUrl = `${process.env.FLASK_API_URL}${endpoint}`;
-
-    let flaskResponse;
-    try {
-      flaskResponse = await axios.post(flaskUrl, flaskRequestData, {
-        params: { model: modelName },
-      });
-    } catch (axiosError) {
-      logger.error('[Prediction] Flask API error', {
-        message: axiosError.message,
-        status: axiosError.response?.status,
-        data: axiosError.response?.data,
-        url: flaskUrl
-      });
-      return res.status(axiosError.response?.status || 500).json({
-        error: axiosError.response?.data?.error || axiosError.message || 'Flask API error'
-      });
-    }
-
-    // Check HTTP status code
-    if (flaskResponse.status >= 400) {
-      logger.error('[Prediction] Flask returned error status', { status: flaskResponse.status, data: flaskResponse.data });
-      return res.status(flaskResponse.status).json({
-        error: flaskResponse.data?.error || 'Flask API returned error status'
-      });
-    }
-
-    const flaskResult = flaskResponse.data;
-    if (flaskResult.error) {
-      logger.error('[Prediction] Flask response contains error', { error: flaskResult.error });
-      return res.status(400).json({ error: flaskResult.error });
-    }
-
-    const { prediction_result } = flaskResult;
-
-    const predictionRecord = await Prediction.create({
-      user_id: userId,
-      area_id: areaId,
-      prediction_text: prediction_result.prediction,
-      ...(req.body.createdAt && {
-        createdAt: req.body.createdAt,
-        updatedAt: req.body.createdAt,
-      }),
-    });
-
-    // Save filtered inputs (already filtered above)
-    for (const [elementName, value] of Object.entries(filteredInputs)) {
-      const entry = await NatureElement.findOne({
-        where: { name: elementName },
-      });
-
-      if (!entry) {
-        logger.warn(`[Prediction] NatureElement not found: ${elementName}`);
-        continue;
-      }
-
-      await PredictionNatureElement.create({
-        prediction_id: predictionRecord.id,
-        nature_element_id: entry.id,
-        value,
-      });
-    }
-    logger.info(`[Prediction] Saved ${Object.keys(filteredInputs).length} nature elements to database`);
-    logger.info('Prediction created successfully', { predictionId: predictionRecord.id });
+    const result = await createPredictionInternal(
+      userId,
+      areaId,
+      inputs,
+      modelName,
+      req.body.createdAt
+    );
 
     // Send email notification to subscribers
     try {
       await sendPredictionNotification(areaId, {
-        result: prediction_result.prediction,
+        result: result.prediction_text,
         model: modelName,
-        predictionId: predictionRecord.id,
+        predictionId: result.prediction_id,
       });
     } catch (emailError) {
       logger.error('Failed to send prediction notification', { error: emailError.message });
     }
 
-    res.json({
-      prediction_id: predictionRecord.id,
-      prediction_text: prediction_result.prediction,
-      model_used: modelName,
-    });
+    res.json(result);
   } catch (error) {
     logger.error('Create Prediction Error', {
       message: error.message,
@@ -259,6 +279,7 @@ exports.getPredictionDetails = async (req, res) => {
             attributes: ['value'],
           },
           attributes: ['id', 'name', 'description', 'unit', 'category'],
+          required: false, // Don't filter out predictions without nature elements
         },
       ],
     });
@@ -353,6 +374,14 @@ exports.getAllPredictionsWithFilters = async (req, res) => {
             },
           ],
         },
+        {
+          model: NatureElement,
+          through: {
+            attributes: ['value'],
+          },
+          attributes: ['id', 'name', 'description', 'unit', 'category'],
+          required: false, // Don't filter out predictions without nature elements
+        },
       ],
       order: [['createdAt', 'DESC']],
     };
@@ -365,8 +394,8 @@ exports.getAllPredictionsWithFilters = async (req, res) => {
     }
 
     const where = {};
-    if (userId) where.user_id = userId;
-    if (areaId) where.area_id = areaId;
+    if (userId) where.user_id = parseInt(userId, 10);
+    if (areaId) where.area_id = parseInt(areaId, 10);
 
     // Nếu là manager, chỉ cho phép xem dự đoán trong phạm vi quản lý
     if (req.user.role === 'manager') {
@@ -376,9 +405,13 @@ exports.getAllPredictionsWithFilters = async (req, res) => {
       if (userDistrict) {
         // Manager cấp quận - chỉ xem dự đoán của quận đó
         where['$Area.district$'] = userDistrict;
+        // Ensure Area is required for the filter to work
+        options.include[1].required = true;
       } else if (userProvince) {
         // Manager cấp tỉnh - xem dự đoán của tỉnh đó
         where['$Area.province$'] = userProvince;
+        // Ensure Area is required for the filter to work
+        options.include[1].required = true;
       } else {
         return res.status(403).json({
           error: 'Manager must be assigned to a province or district.',
@@ -411,12 +444,11 @@ exports.getAllPredictionsWithFilters = async (req, res) => {
 exports.getPredictionsByUser = async (req, res) => {
   try {
     const { userId } = req.params;
-    const { limit = 10, offset = 0 } = req.query;
+    const { limit = 10, offset = 0, areaId = undefined } = req.query;
 
-    logger.debug('Fetching predictions for user', { userId, pagination: { limit, offset } });
+    logger.debug('Fetching predictions for user', { userId, pagination: { limit, offset }, areaId });
 
     const options = {
-      where: { user_id: userId },
       attributes: ['id', 'user_id', 'area_id', 'prediction_text', 'createdAt', 'updatedAt'],
       include: [
         {
@@ -432,7 +464,27 @@ exports.getPredictionsByUser = async (req, res) => {
             'longitude',
             'area',
             'area_type',
+            'province',
+            'district',
           ],
+          include: [
+            {
+              model: Province,
+              attributes: ['id', 'name'],
+            },
+            {
+              model: District,
+              attributes: ['id', 'name'],
+            },
+          ],
+        },
+        {
+          model: NatureElement,
+          through: {
+            attributes: ['value'],
+          },
+          attributes: ['id', 'name', 'description', 'unit', 'category'],
+          required: false, // Don't filter out predictions without nature elements
         },
       ],
       order: [['createdAt', 'DESC']],
@@ -445,13 +497,17 @@ exports.getPredictionsByUser = async (req, res) => {
       options.offset = parseInt(offset, 10);
     }
 
-    const predictions = await Prediction.findAll(options);
+    const where = { user_id: parseInt(userId, 10) };
+    if (areaId) {
+      where.area_id = parseInt(areaId, 10);
+    }
+    options.where = where;
 
-    if (predictions.length === 0) {
+    const predictions = await Prediction.findAndCountAll(options);
+
+    if (predictions.rows.length === 0) {
       logger.debug('No predictions found for user', { userId });
-      return res
-        .status(404)
-        .json({ error: 'No predictions found for this user' });
+      return res.json({ rows: [], count: 0 });
     }
     res.json(predictions);
   } catch (error) {
@@ -628,9 +684,9 @@ exports.createBatchPredictionFromExcel = async (req, res) => {
     // Convert to JSON (object rows and matrix) for flexible parsing
     const rowsObjects = xlsx.utils.sheet_to_json(ws, { defval: null, raw: true });
     const rowsMatrix = xlsx.utils.sheet_to_json(ws, { header: 1, defval: null, raw: true });
-    logger.log('[Excel] sheetName:', sheetName);
-    logger.log('[Excel] rowsObjects length:', rowsObjects.length);
-    logger.log('[Excel] rowsMatrix dims:', rowsMatrix.length, rowsMatrix[0] ? rowsMatrix[0].length : 0);
+    logger.info('[Excel] sheetName:', { sheetName });
+    logger.info('[Excel] rowsObjects length:', { length: rowsObjects.length });
+    logger.info('[Excel] rowsMatrix dims:', { rows: rowsMatrix.length, cols: rowsMatrix[0] ? rowsMatrix[0].length : 0 });
     if (!rowsObjects.length && (!rowsMatrix || !rowsMatrix.length)) {
       return res.status(400).json({ error: 'Sheet is empty' });
     }
@@ -657,7 +713,7 @@ exports.createBatchPredictionFromExcel = async (req, res) => {
       const headerMap = {};
       Object.keys(rowsObjects[0]).forEach(h => headerMap[h] = mapHeaderToFeature(h));
       if (Object.values(headerMap).some(Boolean)) {
-        logger.log('[Excel] Wide header map -> feature:', headerMap);
+        logger.info('[Excel] Wide header map -> feature:', { headerMap });
         normalized = rowsObjects.map((r) => {
           const obj = {};
           for (const [h, v] of Object.entries(r)) {
@@ -715,7 +771,7 @@ exports.createBatchPredictionFromExcel = async (req, res) => {
         const widest = Math.max(monthsRow.length, ...(rowsMatrix.slice(startRow).map(r => (r || []).length)));
         for (let c = startCol; c < widest; c++) monthCols.push({ col: c, createdAt: null });
       }
-      logger.log('[Excel] headerRow:', headerRow + 1, '| monthCols parsed:', monthCols);
+      logger.info('[Excel] headerRow:', { headerRow: headerRow + 1, monthColsCount: monthCols.length });
       // Hard-code only 4 needed features by absolute row index:
       // Row numbers are 1-based visually; here we use 0-based indices.
       const rowIndexByFeature = {
@@ -728,7 +784,7 @@ exports.createBatchPredictionFromExcel = async (req, res) => {
       for (const [feat, r] of Object.entries(rowIndexByFeature)) {
         const row = rowsMatrix[r] || [];
         const unitText = row[unitCol] ? norm(row[unitCol]) : '';
-        logger.log(`[Excel] row ${r + 1}: feat=${feat} unit='${unitText}' values@cols=${monthCols.map(m => m.col).join(',')}`);
+        logger.info(`[Excel] row ${r + 1}: feat=${feat} unit='${unitText}' values@cols=${monthCols.map(m => m.col).join(',')}`);
         for (let i = 0; i < monthCols.length; i++) {
           const { col } = monthCols[i];
           const raw = row[col];
@@ -740,18 +796,18 @@ exports.createBatchPredictionFromExcel = async (req, res) => {
         }
       }
       normalized = collected.filter(o => Object.keys(o).some(k => k !== 'createdAt'));
-      logger.log('[Excel] normalized count (fixed):', normalized.length);
-      if (normalized.length) logger.log('[Excel] normalized[0]:', normalized[0]);
+      logger.info('[Excel] normalized count (fixed):', { count: normalized.length });
+      if (normalized.length) logger.info('[Excel] normalized[0]:', normalized[0]);
     }
     if (!normalized.length) {
       return res.status(400).json({ error: 'Could not detect any usable indicators from Excel', debug: { rowsObjects: rowsObjects.length, rowsMatrix: rowsMatrix.length } });
     }
 
     // Reuse existing batch controller logic with parsed data
-    logger.log('[Excel] Sending normalized data to batch, size=', normalized.length);
+    logger.info('[Excel] Sending normalized data to batch:', { size: normalized.length });
 
     req.body = { userId, areaId, modelName, data: normalized };
-    logger.log(normalized);
+    logger.debug('[Excel] Normalized data:', normalized);
 
     return exports.createBatchPrediction(req, res);
   } catch (error) {
@@ -770,73 +826,66 @@ exports.createBatchPredictionFromExcel2 = async (req, res) => {
     if (!userId) return res.status(400).json({ error: 'userId is required (from token)' });
     if (!modelName) return res.status(400).json({ error: 'modelName is required' });
 
-    logger.log('[Excel2] Processing with modelName:', modelName, 'userId:', userId);
+    logger.info('[Excel2] Processing with modelName:', { modelName, userId });
     const parsed = await parseExcel2(req.file.buffer);
-    logger.log('[Excel2] Parsed rows:', parsed.length);
+    logger.info('[Excel2] Parsed rows:', { count: parsed.length });
 
-    // Create p-limit instance with concurrency of 5
-    const limit = pLimit(5);
+    // Process rows sequentially (one by one) instead of parallel
+    const results = [];
+    let created = 0;
 
-    // Process rows with concurrent limit of 5
-    const processRow = async (row, index) => {
+    for (let index = 0; index < parsed.length; index++) {
+      const row = parsed[index];
+
       if (!row.areaId) {
         logger.warn(`[Excel2] Skipping row ${index + 1}/${parsed.length} without areaId:`, row.areaName);
-        return { success: false, skipped: true };
+        results.push({ success: false, skipped: true });
+        continue;
       }
 
-      const inputs = row.metrics;
-      const fakeReq = { body: { userId, areaId: row.areaId, inputs, modelName } };
+      try {
+        const inputs = row.metrics;
 
-      return new Promise((resolve, reject) => {
-        let statusCode = 200;
-        let resolved = false;
-        const r = {
-          status(c) {
-            statusCode = c;
-            return this;
-          },
-          json(data) {
-            if (resolved) return; // Prevent multiple resolves
-            resolved = true;
-            // Check status code and reject if error
-            if (statusCode >= 400) {
-              const error = new Error(data?.error || `createPrediction returned status ${statusCode}`);
-              error.statusCode = statusCode;
-              error.data = data;
-              reject(error);
-            } else {
-              resolve({ success: true, status: statusCode, data });
-            }
-          }
-        };
-        Promise.resolve(exports.createPrediction(fakeReq, r))
-          .catch(error => {
-            if (!resolved) {
-              resolved = true;
-              reject(error);
-            }
+        // Calculate createdAt from year and quarter if available
+        let createdAt = null;
+        if (row.year && row.quarter) {
+          // Quarter 1 = Jan (month 0), Quarter 2 = Apr (month 3), etc.
+          const month = (row.quarter - 1) * 3;
+          createdAt = new Date(row.year, month, 1);
+          logger.debug(`[Excel2] Using custom date for row ${index + 1}:`, {
+            year: row.year,
+            quarter: row.quarter,
+            createdAt
           });
-      });
-    };
+        }
 
-    // Create array of promises with p-limit
-    const promises = parsed.map((row, index) =>
-      limit(() => processRow(row, index).catch(error => {
+        const result = await createPredictionInternal(
+          userId,
+          row.areaId,
+          inputs,
+          modelName,
+          createdAt
+        );
+
+        logger.info(`[Excel2] Successfully created prediction for row ${index + 1}/${parsed.length}`, {
+          areaName: row.areaName,
+          predictionId: result.prediction_id
+        });
+
+        results.push({ success: true, data: result });
+        created++;
+      } catch (error) {
         logger.error(`[Excel2] Error processing row ${index + 1}/${parsed.length} (area: ${row.areaName}):`, {
           error: error.message,
           statusCode: error.statusCode,
           data: error.data
         });
-        // Re-throw to stop processing and let worker mark job as failed
+        // Stop processing and let worker mark job as failed
         throw new Error(`Failed at row ${index + 1}/${parsed.length} (area: ${row.areaName}): ${error.message}`);
-      }))
-    );
+      }
+    }
 
-    // Wait for all promises to complete
-    const results = await Promise.all(promises);
-    const created = results.filter(r => r && r.success && !r.skipped).length;
-
-    logger.log('[Excel2] Created predictions:', created, 'out of', parsed.length, 'parsed rows');
+    logger.info('[Excel2] Created predictions:', { created, total: parsed.length });
     return res.json({ parsed: parsed.length, created });
   } catch (e) {
     logger.error('createBatchPredictionFromExcel2 error:', e);
@@ -848,7 +897,7 @@ exports.createBatchPredictionFromExcel2 = async (req, res) => {
 exports.getPredictionChartData = async (req, res) => {
   try {
     const { areaId, limit = 10 } = req.query;
-    logger.log('Fetching prediction chart data for area:', areaId);
+    logger.info('Fetching prediction chart data for area:', { areaId });
 
     if (!areaId) {
       return res.status(400).json({ error: 'areaId is required' });
@@ -864,6 +913,7 @@ exports.getPredictionChartData = async (req, res) => {
             attributes: ['value'],
           },
           attributes: ['id', 'name', 'description', 'unit', 'category'],
+          required: false, // Don't filter out predictions without nature elements
         },
         {
           model: Area,
@@ -970,7 +1020,7 @@ exports.getPredictionChartData = async (req, res) => {
 exports.getAllPredictionChartData = async (req, res) => {
   try {
     const { limit = 5 } = req.query;
-    logger.log('Fetching all prediction chart data with limit:', limit);
+    logger.info('Fetching all prediction chart data:', { limit });
 
     // Get latest predictions for all areas
     const predictions = await Prediction.findAll({
@@ -981,6 +1031,7 @@ exports.getAllPredictionChartData = async (req, res) => {
             attributes: ['value'],
           },
           attributes: ['id', 'name', 'description', 'unit', 'category'],
+          required: false, // Don't filter out predictions without nature elements
         },
         {
           model: Area,
