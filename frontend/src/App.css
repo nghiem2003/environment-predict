@@ -14,12 +14,13 @@
 /* Fix Ant Design Pagination overflow and centering */
 .ant-pagination {
   display: flex !important;
-  justify-content: center !important;
+   justify-content: flex-end !important;
   width: 100% !important;
   overflow: visible !important;
   padding: 0 !important;
   margin: 0 auto 16px auto !important;
   box-shadow: none !important;
+  max-width: 100% !important;
 }
 
 /* Fix vertical alignment of Ant Design Pagination numbers */

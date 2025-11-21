@@ -224,15 +224,11 @@ const Login = () => {
                 >
                   <Form.Item
                     name="email"
-                    label={<span style={{ fontWeight: 500 }}>Email</span>}
+                    label={<span style={{ fontWeight: 500 }}>{t('login.email') || 'Email/Tên đăng nhập'}</span>}
                     rules={[
                       {
                         required: true,
                         message: t('login.emailRequired') || 'Vui lòng nhập email'
-                      },
-                      {
-                        type: 'email',
-                        message: t('login.invalidEmail') || 'Email không hợp lệ'
                       },
                     ]}
                   >

@@ -8,11 +8,11 @@ exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    const user = await User.findOne({ where: { email: email } });
-    const isPasswordMatch = await bcrypt.compare(password, user.password);
-
-    if (!user && !isPasswordMatch)
+    const user = await User.findOne({ where: { [Op.or]: [{ email: email }, { login_name: email }] } });
+    if (!user)
       return res.status(401).json({ error: 'Invalid credentials' });
+    if (!await bcrypt.compare(password, user.password))
+      return res.status(401).json({ error: 'Mật khẩu không chính xác' });
 
     if (user.status === 'inactivate')
       return res.status(403).json({ error: 'Your account is deactivated' });

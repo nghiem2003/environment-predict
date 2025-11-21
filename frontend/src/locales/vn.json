@@ -83,8 +83,9 @@
   },
   "login": {
     "title": "Đăng nhập",
-    "email": "Email",
+    "email": "Email/Tên đăng nhập",
     "password": "Mật khẩu",
+    "success": "Đăng nhập thành công",
     "button": "Đăng nhập",
     "invalidEmail": "Email không hợp lệ",
     "emailRequired": "Vui lòng nhập email",

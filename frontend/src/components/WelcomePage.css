@@ -27,18 +27,18 @@ ul {
   max-height: 400px;
 }
 
-li {
+/* li {
   padding: 15px;
   border-bottom: 1px solid #eee;
   cursor: pointer;
   transition: background-color 0.3s;
-}
+} */
 
 li:last-child {
   border-bottom: none;
 }
 
-li:hover {
+/* li:hover {
   background-color: #007bff;
   color: #fff;
-}
+} */

@@ -19,7 +19,8 @@ import {
   Form,
   Select,
   message,
-  Tooltip
+  Tooltip,
+  Spin,
 } from 'antd';
 import {
   EditOutlined,
@@ -61,13 +62,15 @@ const UserList = () => {
   const [selectedRegionName, setSelectedRegionName] = useState('');
   const [pagination, setPagination] = useState({
     current: 1,
-    pageSize: 10,
+    usersPerPage: 10,
     total: 0,
   });
+  const [loading, setLoading] = useState(false);
   const debouncedSearchTerm = useDebouncedValue(searchTerm, 500);
 
   // Fetch users from the API
-  const fetchUsers = async (page = 1, pageSize = 10) => {
+  const fetchUsers = async (page = 1, usersPerPage = 10) => {
+    setLoading(true);
     try {
       const { role, province } = authData || {};
 
@@ -76,19 +79,21 @@ const UserList = () => {
           search: debouncedSearchTerm,
           role,
           province,
-          limit: pageSize,
-          offset: (page - 1) * pageSize
+          limit: usersPerPage,
+          offset: (page - 1) * usersPerPage
         },
       });
       console.log(response.data.users);
       setUsers(response.data.users || []);
       setPagination({
         current: page,
-        pageSize: pageSize,
+        usersPerPage: usersPerPage,
         total: response.data.total || 0,
       });
     } catch (error) {
       console.error('Error fetching users:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -127,15 +132,12 @@ const UserList = () => {
 
   useEffect(() => {
     if (authData) {
-      fetchUsers(1, pagination.pageSize);
+      fetchUsers(pagination.current, pagination.usersPerPage);
     }
-  }, [authData, debouncedSearchTerm]);
+  }, [authData, pagination.current, pagination.usersPerPage]);
 
   useEffect(() => {
-    setPagination((prev) => ({
-      ...prev,
-      current: 1,
-    }));
+    fetchUsers(1, pagination.usersPerPage);
   }, [debouncedSearchTerm]);
 
   // Always load provinces/districts once token is available
@@ -448,150 +450,153 @@ const UserList = () => {
             </Button>
           </Col>
         </Row>
-        <div style={{ overflowX: 'auto', width: '100%', position: 'relative' }}>
-          <Table
-            className="user-actions-table"
-            columns={[
-              {
-                title: t('userList.fullName'),
-                dataIndex: 'username',
-                key: 'username',
-                width: 'max-content',
-                minWidth: 150,
-              },
-              {
-                title: t('userList.email'),
-                dataIndex: 'email',
-                key: 'email',
-                width: 'max-content',
-                minWidth: 200,
-              },
-              {
-                title: t('userList.address'),
-                dataIndex: 'address',
-                key: 'address',
-                width: 'max-content',
-                minWidth: 200,
-              },
-              {
-                title: t('userList.phone'),
-                dataIndex: 'phone',
-                key: 'phone',
-                width: 'max-content',
-                minWidth: 120,
-              },
-              {
-                title: t('userList.role'),
-                dataIndex: 'role',
-                key: 'role',
-                width: 'max-content',
-                minWidth: 100,
-                render: (role, record) => {
-                  if (
-                    role === 'manager' ||
-                    role === 'province_manager' ||
-                    role === 'district_manager'
-                  ) {
-                    // Use district/province to determine label
-                    if (record.district) {
-                      return t('userList.districtManager');
-                    }
-                    if (record.province) {
-                      return t('userList.provinceManager');
-                    }
-                  }
-                  return t(`userList.${role}`);
+        <Spin spinning={loading}>
+          <div style={{ overflowX: 'auto', width: '100%', position: 'relative' }}>
+            <Table
+              className="user-actions-table"
+              columns={[
+                {
+                  title: t('userList.fullName'),
+                  dataIndex: 'username',
+                  key: 'username',
+                  width: 'max-content',
+                  minWidth: 150,
                 },
-              },
-              {
-                title: t('userList.status'),
-                dataIndex: 'status',
-                key: 'status',
-                width: 'max-content',
-                minWidth: 100,
-                render: (status) =>
-                  status === 'active'
-                    ? t('userList.activeAccount')
-                    : t('userList.inactiveAccount'),
-              },
-              {
-                title: t('userList.actions'),
-                key: 'actions',
-                width: 'min-content',
-                align: 'center',
-                fixed: 'right',
-                onCell: () => ({
-                  style: { whiteSpace: 'nowrap' },
-                }),
-                render: (_, user) => (
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'nowrap', alignItems: 'center', justifyContent: 'center' }}>
-                    <Tooltip title={t('userList.editUser')}>
-                      <Button
-                        type="primary"
-                        icon={<EditOutlined />}
-                        size="middle"
-                        onClick={() => handleModifyUser(user)}
-                      />
-                    </Tooltip>
-                    {user.role !== 'admin' ? (
-                      user.status === 'active' ? (
-                        <Tooltip title={t('userList.deactivateUser')}>
-                          <Button
-                            danger
-                            type="primary"
-                            icon={<StopOutlined />}
-                            size="middle"
-                            onClick={() => {
-                              setSelectedUser(user);
-                              setIsConfirmPopupOpen(true);
-                            }}
-                          />
-                        </Tooltip>
-                      ) : (
-                        <Tooltip title={t('userList.activateUser')}>
-                          <Button
-                            type="primary"
-                            icon={<CheckOutlined />}
-                            size="middle"
-                            onClick={() => handleActivateUser(user.id)}
-                          />
-                        </Tooltip>
-                      )
-                    ) : null}
-                    {jwtDecode(token).role === 'admin' &&
-                      user.role !== 'admin' && (
-                        <Tooltip title={t('userList.deleteUser') || 'Xoá'}>
-                          <Button
-                            danger
-                            type="default"
-                            icon={<DeleteOutlined />}
-                            size="middle"
-                            onClick={() => {
-                              setSelectedUser(user);
-                              setIsDeleteConfirmOpen(true);
-                            }}
-                          />
-                        </Tooltip>
-                      )}
-                  </div>
-                ),
-              },
-            ]}
-            dataSource={users}
-            rowKey="id"
-            pagination={false}
-            scroll={{ x: 'max-content' }}
-            style={{ width: '100%' }}
-            locale={{ emptyText: t('userList.noData') }}
-          />
-        </div>
+                {
+                  title: t('userList.email'),
+                  dataIndex: 'email',
+                  key: 'email',
+                  width: 'max-content',
+                  minWidth: 200,
+                },
+                {
+                  title: t('userList.address'),
+                  dataIndex: 'address',
+                  key: 'address',
+                  width: 'max-content',
+                  minWidth: 200,
+                },
+                {
+                  title: t('userList.phone'),
+                  dataIndex: 'phone',
+                  key: 'phone',
+                  width: 'max-content',
+                  minWidth: 120,
+                },
+                {
+                  title: t('userList.role'),
+                  dataIndex: 'role',
+                  key: 'role',
+                  width: 'max-content',
+                  minWidth: 100,
+                  render: (role, record) => {
+                    if (
+                      role === 'manager' ||
+                      role === 'province_manager' ||
+                      role === 'district_manager'
+                    ) {
+                      // Use district/province to determine label
+                      if (record.district) {
+                        return t('userList.districtManager');
+                      }
+                      if (record.province) {
+                        return t('userList.provinceManager');
+                      }
+                    }
+                    return t(`userList.${role}`);
+                  },
+                },
+                {
+                  title: t('userList.status'),
+                  dataIndex: 'status',
+                  key: 'status',
+                  width: 'max-content',
+                  minWidth: 100,
+                  render: (status) =>
+                    status === 'active'
+                      ? t('userList.activeAccount')
+                      : t('userList.inactiveAccount'),
+                },
+                {
+                  title: t('userList.actions'),
+                  key: 'actions',
+                  width: 'min-content',
+                  align: 'center',
+                  fixed: 'right',
+                  onCell: () => ({
+                    style: { whiteSpace: 'nowrap' },
+                  }),
+                  render: (_, user) => (
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'nowrap', alignItems: 'center', justifyContent: 'center' }}>
+                      <Tooltip title={t('userList.editUser')}>
+                        <Button
+                          type="primary"
+                          icon={<EditOutlined />}
+                          size="middle"
+                          onClick={() => handleModifyUser(user)}
+                        />
+                      </Tooltip>
+                      {user.role !== 'admin' ? (
+                        user.status === 'active' ? (
+                          <Tooltip title={t('userList.deactivateUser')}>
+                            <Button
+                              danger
+                              type="primary"
+                              icon={<StopOutlined />}
+                              size="middle"
+                              onClick={() => {
+                                setSelectedUser(user);
+                                setIsConfirmPopupOpen(true);
+                              }}
+                            />
+                          </Tooltip>
+                        ) : (
+                          <Tooltip title={t('userList.activateUser')}>
+                            <Button
+                              type="primary"
+                              icon={<CheckOutlined />}
+                              size="middle"
+                              onClick={() => handleActivateUser(user.id)}
+                            />
+                          </Tooltip>
+                        )
+                      ) : null}
+                      {jwtDecode(token).role === 'admin' &&
+                        user.role !== 'admin' && (
+                          <Tooltip title={t('userList.deleteUser') || 'Xoá'}>
+                            <Button
+                              danger
+                              type="default"
+                              icon={<DeleteOutlined />}
+                              size="middle"
+                              onClick={() => {
+                                setSelectedUser(user);
+                                setIsDeleteConfirmOpen(true);
+                              }}
+                            />
+                          </Tooltip>
+                        )}
+                    </div>
+                  ),
+                },
+              ]}
+              dataSource={users}
+              rowKey="id"
+              pagination={false}
+              scroll={{ x: 'max-content' }}
+              style={{ width: '100%' }}
+              locale={{ emptyText: t('userList.noData') }}
+            />
+          </div>
+        </Spin>
         <div style={{ margin: '16px 0', textAlign: 'center' }}>
           <Pagination
             current={pagination.current}
             total={pagination.total}
-            pageSize={pagination.pageSize}
-            showSizeChanger={false}
-            onChange={(page, pageSize) => fetchUsers(page, pageSize)}
+            pageSize={pagination.usersPerPage}
+            onChange={(page, usersPerPage) => { setPagination((prev) => ({ ...prev, current: page, usersPerPage })); fetchUsers(page, usersPerPage); }}
+            showSizeChanger={true}
+            pageSizeOptions={[10, 20, 50, 100]}
           />
         </div>
         {/* Modals for add/edit, confirm, etc. can be refactored similarly if needed */}

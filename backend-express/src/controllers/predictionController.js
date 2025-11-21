@@ -176,7 +176,9 @@ exports.getLatestPrediction = async (req, res) => {
   try {
     const { areaId } = req.params;
     logger.debug('Fetching latest prediction for area', { areaId });
-
+    const area = await Area.findByPk(areaId);
+    if (!area)
+      return res.status(404).json({ error: 'Area not found' });
     const prediction = await Prediction.findOne({
       where: { area_id: areaId },
       order: [['id', 'DESC']],
@@ -193,7 +195,7 @@ exports.getLatestPrediction = async (req, res) => {
     });
 
     if (!prediction)
-      return res.status(404).json({ error: 'No predictions found' });
+      return res.status(200).json({ prediction: null, message: 'No predictions found' });
 
     res.json(prediction);
   } catch (error) {
@@ -374,14 +376,6 @@ exports.getAllPredictionsWithFilters = async (req, res) => {
             },
           ],
         },
-        {
-          model: NatureElement,
-          through: {
-            attributes: ['value'],
-          },
-          attributes: ['id', 'name', 'description', 'unit', 'category'],
-          required: false, // Don't filter out predictions without nature elements
-        },
       ],
       order: [['createdAt', 'DESC']],
     };
@@ -422,7 +416,6 @@ exports.getAllPredictionsWithFilters = async (req, res) => {
     options.where = where;
 
     const predictions = await Prediction.findAndCountAll(options);
-
     if (predictions.rows.length === 0) {
       logger.debug('No predictions found with filters', req.query);
       return res

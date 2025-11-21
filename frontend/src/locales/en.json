@@ -83,8 +83,9 @@
   },
   "login": {
     "title": "Login",
-    "email": "Email",
+    "email": "Email/Username",
     "password": "Password",
+    "success": "Login successfully",
     "button": "Login",
     "invalidEmail": "Invalid email",
     "emailRequired": "Email is required",

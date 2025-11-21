@@ -33,6 +33,7 @@ import {
   Upload,
   Tabs,
   message,
+  Spin,
 } from 'antd';
 
 import {
@@ -68,7 +69,6 @@ const AreaList = () => {
   const [position, setPosition] = useState(null);
   const [currentPage, setCurrentPage] = useState(0);
   const [totalAreas, setTotalAreas] = useState(0);
-  const areasPerPage = 10; // Number of areas per page
   const [areas, setAreas] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [areaType, setAreaType] = useState('');
@@ -86,6 +86,7 @@ const AreaList = () => {
   const [importLoading, setImportLoading] = useState(false);
   const [importProvince, setImportProvince] = useState('');
   const [importDistrict, setImportDistrict] = useState('');
+  const [areasPerPage, setAreasPerPage] = useState(10);
   const [newArea, setNewArea] = useState({
     id: '',
     name: '',
@@ -103,6 +104,7 @@ const AreaList = () => {
   const [provinceTouched, setProvinceTouched] = useState(false);
   const [districtTouched, setDistrictTouched] = useState(false);
   const [filterInitialized, setFilterInitialized] = useState(false);
+  const [loading, setLoading] = useState(false);
   const debouncedSearchTerm = useDebouncedValue(searchTerm, 500);
 
   const userInfo = useMemo(() => {
@@ -236,7 +238,8 @@ const AreaList = () => {
   };
 
   // Fetch areas from the API
-  const fetchAreas = async (province, district, role) => {
+  const fetchAreas = async (province, district, role, areasPerPage) => {
+    setLoading(true);
     try {
       // Use selected filters if set, otherwise fallback to user's default filters
       const provinceFilter = provinceTouched ? selectedProvince : (province || null);
@@ -250,8 +253,8 @@ const AreaList = () => {
           lat_max: latRange.max,
           long_min: longRange.min,
           long_max: longRange.max,
-          limit: 10, // Limit number of results per page
-          offset: currentPage * 10,
+          limit: areasPerPage, // Limit number of results per page
+          offset: currentPage * areasPerPage,
           role,
           ...(provinceFilter ? { province: provinceFilter } : {}), // Only include if not empty
           ...(districtFilter ? { district: districtFilter } : {}), // Only include if not empty
@@ -269,6 +272,8 @@ const AreaList = () => {
       console.log(regionResponse.data);
     } catch (error) {
       console.error('Error fetching areas:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -303,9 +308,10 @@ const AreaList = () => {
     fetchAreas(
       userProvinceFilter,
       userDistrictFilter,
-      userRoleFilter
+      userRoleFilter,
+      areasPerPage
     );
-  }, [debouncedSearchTerm, areaType, latRange, longRange, currentPage, userProvinceFilter, userDistrictFilter, userRoleFilter, selectedProvince, selectedDistrict]);
+  }, [debouncedSearchTerm, areaType, latRange, longRange, currentPage, areasPerPage, userProvinceFilter, userDistrictFilter, userRoleFilter, selectedProvince, selectedDistrict]);
 
   useEffect(() => {
     setCurrentPage(0);
@@ -367,7 +373,7 @@ const AreaList = () => {
         await axios.post('/api/express/areas', values);
       }
       setIsPopupOpen(false);
-      fetchAreas(userFilter.province, userFilter.district, userFilter.role);
+      fetchAreas(userFilter.province, userFilter.district, userFilter.role, areasPerPage);
       form.resetFields();
       setProvinceCentralMeridian(null);
       setCoordinateType('wgs84');
@@ -391,7 +397,7 @@ const AreaList = () => {
 
       await axios.delete(`/api/express/areas/${id}`);
       setIsDeleteConfirmOpen(false); // Close delete confirmation
-      fetchAreas(userFilter.province, userFilter.district, userFilter.role); // Refresh the area list after deletion
+      fetchAreas(userFilter.province, userFilter.district, userFilter.role, areasPerPage); // Refresh the area list after deletion
     } catch (error) {
       console.error('Error deleting area:', error);
     }
@@ -737,21 +743,24 @@ const AreaList = () => {
             />
           </Col>
         </Row>
-        <Table
-          columns={columns}
-          dataSource={areas}
-          rowKey="id"
-          pagination={false}
-          style={{ width: '100%' }}
-          scroll={{ x: 'max-content' }}
-        />
+        <Spin spinning={loading}>
+          <Table
+            columns={columns}
+            dataSource={areas}
+            rowKey="id"
+            pagination={false}
+            style={{ width: '100%' }}
+            scroll={{ x: 'max-content' }}
+          />
+        </Spin>
         <div style={{ margin: '16px 0', textAlign: 'center' }}>
           <Pagination
             current={currentPage + 1}
             total={totalAreas}
             pageSize={areasPerPage}
-            onChange={(page) => setCurrentPage(page - 1)}
-            showSizeChanger={false}
+            onChange={(page, pageSize) => { setCurrentPage(page - 1); setAreasPerPage(pageSize); }}
+            showSizeChanger={true}
+            pageSizeOptions={[10, 20, 50, 100]}
           />
         </div>
 

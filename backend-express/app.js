@@ -17,6 +17,8 @@ const requestLogger = require('./src/middlewares/requestLogger');
 const cron = require('node-cron');
 const logger = require('./src/config/logger');
 const { runMigrations } = require('./src/config/runMigrations');
+const { populateLoginName } = require('./scripts/populate_login_name');
+
 const app = express();
 require('dotenv').config();
 app.use(helmet());
@@ -155,11 +157,15 @@ app.use('/api/express/nature-elements', natureElementRoutes);
 app.use('/api/express', swaggerRoutes);
 app.use('/api/express/jobs', jobRoutes);
 
+
 // Chạy migrations và seeders khi khởi động server - ĐÃ TẮT
 // (async () => {
 //   try {
 //     await runMigrations();
 
+(async () => {
+  await populateLoginName();
+})();
 //     sequelize.sync().then(() => {
 //       app.listen(5000, () => {
 //         logger.info('🚀 Server running on http://localhost:5000');
@@ -172,8 +178,8 @@ app.use('/api/express/jobs', jobRoutes);
 //   }
 // })();
 
-// Khởi động server không chạy migrations/seeders
-sequelize.sync().then(() => {
+// Khởi động server với sync alter (tự động cập nhật schema theo model)
+sequelize.sync({ alter: true }).then(() => {
   app.listen(5000, () => {
     logger.info('🚀 Server running on http://localhost:5000');
     logger.info('📚 API Documentation available at http://localhost:5000/api/express/docs');

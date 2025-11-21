@@ -34,7 +34,7 @@ const Dashboard = () => {
   console.log('The token', token);
   const [currentPage, setCurrentPage] = useState(0);
   const [totalPredictions, setTotalPredictions] = useState(0);
-  const predictionsPerPage = 10;
+  const [predictionsPerPage, setPredictionsPerPage] = useState(10);
   const [showModal, setShowModal] = useState(false);
   const [selectedPredictionId, setSelectedPredictionId] = useState(null);
   const [userId, setUserId] = useState(null);
@@ -49,30 +49,38 @@ const Dashboard = () => {
   const [areas, setAreas] = useState([]);
   const [selectedAreaId, setSelectedAreaId] = useState(null);
   const [isLoadingAreas, setIsLoadingAreas] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   // Load areas list for filter
   useEffect(() => {
     if (token) {
       try {
         const decodedToken = jwtDecode(token);
-        if (decodedToken.role === 'admin' || decodedToken.role === 'manager') {
-          setIsLoadingAreas(true);
-          axios
-            .get('/api/express/areas/all')
-            .then((response) => {
-              // API returns { areas: [...] } format
-              const areasData = response.data?.areas || response.data || [];
-              setAreas(Array.isArray(areasData) ? areasData : []);
-            })
-            .catch((error) => {
-              console.error('Error fetching areas:', error);
-              message.error('Không thể tải danh sách khu vực');
-              setAreas([]); // Set empty array on error
-            })
-            .finally(() => {
-              setIsLoadingAreas(false);
-            });
-        }
+        setUserRole(decodedToken.role);
+        setIsLoadingAreas(true);
+        axios
+          .get('/api/express/areas/all')
+          .then((response) => {
+            // API returns { areas: [...] } format
+            let areasData = response.data?.areas || response.data || [];
+            if (decodedToken.role === 'manager') {
+              if (decodedToken.district) {
+                areasData = areasData.filter(area => area.district === decodedToken.district);
+              } else {
+                areasData = areasData.filter(area => area.province === decodedToken.province);
+              }
+            }
+            setAreas(Array.isArray(areasData) ? areasData : []);
+          })
+          .catch((error) => {
+            console.error('Error fetching areas:', error);
+            message.error('Không thể tải danh sách khu vực');
+            setAreas([]); // Set empty array on error
+          })
+          .finally(() => {
+            setIsLoadingAreas(false);
+          });
+
       } catch (error) {
         console.error('Error decoding token:', error);
       }
@@ -81,6 +89,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     if (token) {
+      setLoading(true);
       try {
         const decodedToken = jwtDecode(token); // Decode the JWT token
         console.log(decodedToken);
@@ -92,7 +101,7 @@ const Dashboard = () => {
           console.log('start fetching');
 
           const params = {
-            limit: 10, // Limit number of results per page
+            limit: predictionsPerPage, // Limit number of results per page
             offset: currentPage * 10,
           };
 
@@ -110,10 +119,13 @@ const Dashboard = () => {
             })
             .catch((error) => {
               console.error('Error fetching prediction details:', error);
+            })
+            .finally(() => {
+              setLoading(false);
             });
         } else {
           const params = {
-            limit: 10, // Limit number of results per page
+            limit: predictionsPerPage, // Limit number of results per page
             offset: currentPage * 10,
           };
 
@@ -138,14 +150,18 @@ const Dashboard = () => {
             })
             .catch((error) => {
               console.error('Error fetching prediction details:', error);
+            })
+            .finally(() => {
+              setLoading(false);
             });
         }
       } catch (error) {
         console.error('Error decoding token:', error);
         toast.error(t('dashboard.invalidToken'));
+        setLoading(false);
       }
     }
-  }, [currentPage, selectedAreaId]);
+  }, [currentPage, selectedAreaId, predictionsPerPage]);
 
   useEffect(() => { }, [predictionList]);
 
@@ -265,7 +281,7 @@ const Dashboard = () => {
           <Title level={3} style={{ marginBottom: 0 }}>
             {t('dashboard.title')}
           </Title>
-          {(userRole === 'admin' || userRole === 'manager') && (
+          {(
             <Select
               placeholder="Lọc theo khu vực"
               allowClear
@@ -287,109 +303,112 @@ const Dashboard = () => {
             />
           )}
         </div>
-        <Table
-          columns={[
-            {
-              title: t('dashboard.id'),
-              dataIndex: 'id',
-              key: 'id',
-              render: (id) => `${t('dashboard.prediction')}#${id}`,
-            },
-            ...(userRole === 'admin' || userRole === 'manager'
-              ? [
-                {
-                  title: t('dashboard.creator'),
-                  dataIndex: ['User', 'username'],
-                  key: 'creator',
-                },
-              ]
-              : []),
-            {
-              title: t('dashboard.area'),
-              dataIndex: ['Area', 'name'],
-              key: 'area',
-            },
-            {
-              title: 'Kết quả',
-              dataIndex: 'prediction_text',
-              key: 'result',
-              render: (_, record) => (
-                <PredictionBadge prediction={record} />
-              ),
-            },
-            {
-              title: 'Ngày tạo',
-              dataIndex: 'createdAt',
-              key: 'createdAt',
-              render: (date) => {
-                if (!date) return '-';
-                return new Date(date).toLocaleString('vi-VN', {
-                  year: 'numeric',
-                  month: '2-digit',
-                  day: '2-digit',
-                  hour: '2-digit',
-                  minute: '2-digit'
-                });
+        <Spin spinning={loading}>
+          <Table
+            columns={[
+              {
+                title: t('dashboard.id'),
+                dataIndex: 'id',
+                key: 'id',
+                render: (id) => `${t('dashboard.prediction')}#${id}`,
               },
-            },
-            ...(userRole === 'admin' || userRole === 'manager'
-              ? [
-                {
-                  title: 'Địa điểm',
-                  key: 'location',
-                  render: (_, record) => {
-                    const province = record.Area?.Province?.name || '';
-                    const district = record.Area?.District?.name || '';
-                    if (!province && !district) return '-';
-                    return `${province}${province && district ? ', ' : ''}${district}`;
+              ...(userRole === 'admin' || userRole === 'manager'
+                ? [
+                  {
+                    title: t('dashboard.creator'),
+                    dataIndex: ['User', 'username'],
+                    key: 'creator',
                   },
+                ]
+                : []),
+              {
+                title: t('dashboard.area'),
+                dataIndex: ['Area', 'name'],
+                key: 'area',
+              },
+              {
+                title: 'Kết quả',
+                dataIndex: 'prediction_text',
+                key: 'result',
+                render: (_, record) => (
+                  <PredictionBadge prediction={record} />
+                ),
+              },
+              {
+                title: 'Ngày tạo',
+                dataIndex: 'createdAt',
+                key: 'createdAt',
+                render: (date) => {
+                  if (!date) return '-';
+                  return new Date(date).toLocaleString('vi-VN', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  });
                 },
-              ]
-              : []),
-            {
-              title: t('dashboard.actions'),
-              key: 'actions',
-              fixed: 'right',
-              width: 'min-content',
-              align: 'center',
-              render: (_, item) => (
-                <Space>
-                  <Tooltip title={t('dashboard.viewDetails')}>
-                    <Button
-                      type="primary"
-                      icon={<EyeOutlined />}
-                      size="middle"
-                      onClick={() => handleViewDetails(item.id)}
-                    />
-                  </Tooltip>
-                  {(userRole === 'admin' || userRole === 'manager') && (
-                    <Tooltip title="Gửi thông báo">
+              },
+              ...(userRole === 'admin' || userRole === 'manager'
+                ? [
+                  {
+                    title: 'Địa điểm',
+                    key: 'location',
+                    render: (_, record) => {
+                      const province = record.Area?.Province?.name || '';
+                      const district = record.Area?.District?.name || '';
+                      if (!province && !district) return '-';
+                      return `${province}${province && district ? ', ' : ''}${district}`;
+                    },
+                  },
+                ]
+                : []),
+              {
+                title: t('dashboard.actions'),
+                key: 'actions',
+                fixed: 'right',
+                width: 'min-content',
+                align: 'center',
+                render: (_, item) => (
+                  <Space>
+                    <Tooltip title={t('dashboard.viewDetails')}>
                       <Button
-                        type="default"
-                        icon={<MailOutlined />}
+                        type="primary"
+                        icon={<EyeOutlined />}
                         size="middle"
-                        onClick={() => showManualNotificationModal(item)}
+                        onClick={() => handleViewDetails(item.id)}
                       />
                     </Tooltip>
-                  )}
-                </Space>
-              ),
-            },
-          ]}
-          dataSource={predictionList}
-          rowKey="id"
-          pagination={false}
-          style={{ width: '100%', overflowX: 'scroll' }}
-          scroll={{ x: 'max-content' }}
-          locale={{ emptyText: t('dashboard.noData') }}
-        />
+                    {(userRole === 'admin' || userRole === 'manager') && (
+                      <Tooltip title="Gửi thông báo">
+                        <Button
+                          type="default"
+                          icon={<MailOutlined />}
+                          size="middle"
+                          onClick={() => showManualNotificationModal(item)}
+                        />
+                      </Tooltip>
+                    )}
+                  </Space>
+                ),
+              },
+            ]}
+            dataSource={predictionList}
+            rowKey="id"
+            pagination={false}
+            style={{ width: '100%', overflowX: 'scroll' }}
+            scroll={{ x: 'max-content' }}
+            locale={{ emptyText: t('dashboard.noData') }}
+          />
+        </Spin>
         <div style={{ margin: '16px 0', textAlign: 'center' }}>
           <Pagination
             current={currentPage + 1}
             total={totalPredictions}
             pageSize={predictionsPerPage}
-            onChange={(page) => setCurrentPage(page - 1)}
-            showSizeChanger={false}
+            onChange={(page, pageSize) => { setCurrentPage(page - 1); setPredictionsPerPage(pageSize); }}
+            showSizeChanger={true}
+            pageSizeOptions={[10, 20, 50, 100]}
           />
         </div>
         <Modal

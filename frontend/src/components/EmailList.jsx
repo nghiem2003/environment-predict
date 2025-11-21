@@ -18,6 +18,7 @@ import {
   Grid,
   Row,
   Col,
+  Spin,
 } from 'antd';
 import {
   MailOutlined,
@@ -48,21 +49,21 @@ const EmailList = () => {
   const [editingId, setEditingId] = useState(null);
   const [pagination, setPagination] = useState({
     current: 1,
-    pageSize: 10,
+    emailsPerPage: 10,
     total: 0,
   });
 
   // Fetch subscriptions
-  const fetchSubscriptions = async (page = 1, pageSize = 10) => {
+  const fetchSubscriptions = async (page = 1, emailsPerPage = 10) => {
     setLoading(true);
     try {
       const response = await axios.get('/api/express/emails', {
-        params: { limit: pageSize, offset: (page - 1) * pageSize },
+        params: { limit: emailsPerPage, offset: (page - 1) * emailsPerPage },
       });
       setSubscriptions(response.data.subscriptions);
       setPagination({
-        ...pagination,
         current: page,
+        emailsPerPage: emailsPerPage,
         total: response.data.total,
       });
     } catch (error) {
@@ -107,7 +108,7 @@ const EmailList = () => {
       setModalVisible(false);
       form.resetFields();
       setEditingId(null);
-      fetchSubscriptions(pagination.current, pagination.pageSize);
+      fetchSubscriptions(pagination.current, pagination.emailsPerPage);
     } catch (error) {
       console.error('Error submitting email subscription:', error);
       const errorMsg = error.response?.data?.error || t('email.createFailed') || 'Có lỗi xảy ra khi lưu đăng ký email';
@@ -120,7 +121,7 @@ const EmailList = () => {
     try {
       await axios.delete(`/api/express/emails/${id}`);
       message.success(t('email.deleteSuccess'));
-      fetchSubscriptions(pagination.current, pagination.pageSize);
+      fetchSubscriptions(pagination.current, pagination.emailsPerPage);
     } catch (error) {
       message.error(t('email.deleteFailed'));
     }
@@ -253,7 +254,7 @@ const EmailList = () => {
       .email-pagination .ant-pagination-item,
       .email-pagination .ant-pagination-prev,
       .email-pagination .ant-pagination-next { margin-top: 20px; }
-      .email-pagination .ant-pagination-options { order: 2; width: 100%; display: flex; justify-content: center; margin-top: 12px; }
+      .email-pagination .ant-pagination-options { justify-content: center; margin-top: 20px; }
     `;
     document.head.appendChild(style);
     return () => {
@@ -282,21 +283,25 @@ const EmailList = () => {
           </Col>
         </Row>
 
-        <Table
-          columns={columns}
-          dataSource={subscriptions}
-          rowKey="id"
-          loading={loading}
-          style={{ width: '100%' }}
-          scroll={{ x: 'max-content' }}
-          pagination={{
-            className: 'email-pagination',
-            position: ['bottomCenter'],
-            ...pagination,
-            showQuickJumper: true,
-            onChange: (page, pageSize) => fetchSubscriptions(page, pageSize),
-          }}
-        />
+        <Spin spinning={loading}>
+          <Table
+            columns={columns}
+            dataSource={subscriptions}
+            rowKey="id"
+            loading={false}
+            style={{ width: '100%' }}
+            scroll={{ x: 'max-content' }}
+            pagination={{
+              className: 'email-pagination',
+              position: ['bottomCenter'],
+              ...pagination,
+              showQuickJumper: true,
+              showSizeChanger: true,
+              pageSizeOptions: [10, 20, 50, 100],
+              onChange: (page, emailsPerPage) => { setPagination((prev) => ({ ...prev, current: page, emailsPerPage })); fetchSubscriptions(page, emailsPerPage); },
+            }}
+          />
+        </Spin>
       </Card>
 
       <Modal
