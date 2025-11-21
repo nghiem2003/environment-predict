@@ -10,7 +10,8 @@ async function populateLoginName() {
             where: {
                 email: { [require('sequelize').Op.ne]: null },
             },
-            raw: true
+            raw: true,
+            order: [['id', 'ASC']] // Đảm bảo thứ tự để xử lý trùng lặp nhất quán
         });
 
         logger.info(`📊 Tìm thấy ${users.length} user(s) trong database`);
@@ -27,7 +28,29 @@ async function populateLoginName() {
 
             if (user.email) {
                 // Lấy phần trước dấu @
-                const loginName = user.email.split('@')[0].trim();
+                let baseLoginName = user.email.split('@')[0].trim();
+                let loginName = baseLoginName;
+                let suffix = 1;
+
+                // Kiểm tra xem login_name có bị trùng không, nếu có thì thêm suffix
+                while (true) {
+                    const existingUser = await User.findOne({
+                        where: {
+                            login_name: loginName
+                        },
+                        raw: true
+                    });
+
+                    // Nếu không tìm thấy user nào có login_name này, hoặc tìm thấy chính user hiện tại
+                    if (!existingUser || existingUser.id === user.id) {
+                        break;
+                    }
+
+                    // Nếu bị trùng, thêm suffix
+                    loginName = `${baseLoginName}${suffix}`;
+                    suffix++;
+                    logger.warn(`⚠️  login_name "${baseLoginName}" đã tồn tại, thử "${loginName}"`);
+                }
 
                 logger.info(`📝 Cập nhật user ID ${user.id}: "${user.email}" -> login_name="${loginName}"`);
 

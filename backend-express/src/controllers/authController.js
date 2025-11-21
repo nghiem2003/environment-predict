@@ -41,6 +41,8 @@ exports.login = async (req, res) => {
 exports.createManagerUser = async (req, res) => {
   try {
     const {
+      name,
+      login_name,
       email,
       password,
       address = null,
@@ -53,6 +55,11 @@ exports.createManagerUser = async (req, res) => {
     // Validate required fields
     if (!email || !password) {
       return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    // Validate login_name if provided
+    if (login_name && !/^[a-zA-Z0-9_]+$/.test(login_name)) {
+      return res.status(400).json({ error: 'Login name can only contain letters, numbers and underscores' });
     }
 
     // Validate district requirement for expert role
@@ -75,12 +82,28 @@ exports.createManagerUser = async (req, res) => {
       }
     }
 
-    const isExist = await User.findOne({ where: { email } });
-    if (isExist) return res.status(403).json({ error: 'User existed' });
+    // Check if email already exists
+    const emailExists = await User.findOne({ where: { email } });
+    if (emailExists) return res.status(403).json({ error: 'Email already exists' });
+
+    // Check if login_name already exists
+    if (login_name) {
+      const loginNameExists = await User.findOne({ where: { login_name } });
+      if (loginNameExists) return res.status(403).json({ error: 'Login name already exists' });
+    }
 
     const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Determine login_name: use provided value, or fallback to email prefix
+    const finalLoginName = login_name || email.split('@')[0];
+    let dupCount = 0;
+    while (await User.findOne({ where: { login_name: finalLoginName } })) {
+      dupCount++;
+      finalLoginName = `${finalLoginName}${dupCount}`;
+    }
     const user = await User.create({
-      username: email.split('@')[0],
+      username: name || email.split('@')[0],
+      login_name: finalLoginName,
       email: email,
       password: hashedPassword,
       address,
@@ -255,6 +278,7 @@ exports.updateUserById = async (req, res) => {
 
     const {
       name = null,
+      login_name = null,
       address = null,
       phone = null,
       province = null,
@@ -279,6 +303,27 @@ exports.updateUserById = async (req, res) => {
       }
     }
 
+    // Validate login_name if provided
+    if (login_name && !/^[a-zA-Z0-9_]+$/.test(login_name)) {
+      return res.status(400).json({ error: 'Login name can only contain letters, numbers and underscores' });
+    }
+
+    // Check if login_name is being changed and already exists
+    if (login_name && login_name !== user.login_name) {
+      const loginNameExists = await User.findOne({ where: { login_name, id: { [Op.ne]: id } } });
+      if (loginNameExists) {
+        return res.status(403).json({ error: 'Login name already exists' });
+      }
+    }
+
+    // Check if email is being changed and already exists
+    if (email && email !== user.email) {
+      const emailExists = await User.findOne({ where: { email, id: { [Op.ne]: id } } });
+      if (emailExists) {
+        return res.status(403).json({ error: 'Email already exists' });
+      }
+    }
+
     // Validate province/district relationship if provided
     if (province) {
       const provinceObj = await require('../models').Province.findOne({ where: { id: province } });
@@ -294,6 +339,7 @@ exports.updateUserById = async (req, res) => {
     }
 
     user.username = name ? name : user.username;
+    user.login_name = login_name ? login_name : user.login_name;
     user.address = address ? address : user.address;
     user.phone = phone ? phone : user.phone;
     user.province = province ? province : user.province;

@@ -53,6 +53,7 @@ const UserList = () => {
   const [userPopupData, setUserPopupData] = useState({
     id: null,
     name: '',
+    login_name: '',
     email: '',
     address: '',
     phone: '',
@@ -259,6 +260,7 @@ const UserList = () => {
       setUserPopupData({
         id: null,
         name: '',
+        login_name: '',
         email: '',
         address: '',
         phone: '',
@@ -291,6 +293,7 @@ const UserList = () => {
     setUserPopupData({
       id: user.id,
       name: user.username,
+      login_name: user.login_name || '',
       email: user.email,
       address: user.address,
       phone: user.phone,
@@ -304,6 +307,7 @@ const UserList = () => {
     form.resetFields();
     form.setFieldsValue({
       name: user.username,
+      login_name: user.login_name || '',
       email: user.email,
       address: user.address,
       phone: user.phone,
@@ -630,6 +634,21 @@ const UserList = () => {
             rules={[{ required: true, message: t('userList.required') }]}
           >
             <Input size='large' />
+          </Form.Item>
+
+          <Form.Item
+            name="login_name"
+            label="Tên đăng nhập"
+            rules={[
+              { required: true, message: 'Vui lòng nhập tên đăng nhập' },
+              {
+                pattern: /^[a-zA-Z0-9_]+$/,
+                message: 'Tên đăng nhập chỉ được chứa chữ cái, số và dấu gạch dưới'
+              },
+            ]}
+            tooltip="Tên đăng nhập sẽ được sử dụng để đăng nhập vào hệ thống"
+          >
+            <Input size='large' placeholder="Ví dụ: john_doe" />
           </Form.Item>
 
           <Form.Item
