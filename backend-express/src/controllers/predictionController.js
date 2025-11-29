@@ -1157,6 +1157,95 @@ exports.getAllPredictionChartData = async (req, res) => {
   }
 };
 
+// Stats for predictions: latest prediction ratio (good/average/poor) per area
+exports.getLatestPredictionStats = async (req, res) => {
+  try {
+    const { role, province, district } = req.query;
+
+    // Build area filter based on user role
+    const areaWhere = {};
+    if (role === 'manager') {
+      if (district) {
+        areaWhere.district = district;
+      } else if (province) {
+        areaWhere.province = province;
+      }
+    }
+
+    // Reuse logic from getAllPredictionChartData but only need latest per area
+    const predictions = await Prediction.findAll({
+      include: [
+        {
+          model: NatureElement,
+          through: {
+            attributes: ['value'],
+          },
+          attributes: ['id', 'name', 'description', 'unit', 'category'],
+          required: false,
+        },
+        {
+          model: Area,
+          attributes: ['id', 'name', 'area_type', 'province', 'district'],
+          where: Object.keys(areaWhere).length > 0 ? areaWhere : undefined,
+          include: [
+            {
+              model: Province,
+              attributes: ['id', 'name'],
+            },
+            {
+              model: District,
+              attributes: ['id', 'name'],
+            },
+          ],
+        },
+      ],
+      order: [['createdAt', 'DESC']],
+    });
+    logger.info(`Predictions haha: ${predictions.length}`);
+    if (predictions.length === 0) {
+      return res.status(200).json({
+        good: 0,
+        average: 0,
+        poor: 0,
+        totalAreas: 0,
+      });
+    }
+
+    // Group by area and get latest prediction for each area
+    const areaGroups = {};
+    predictions.forEach(prediction => {
+      const areaId = prediction.area_id;
+      if (!areaGroups[areaId]) {
+        areaGroups[areaId] = prediction; // Store only the latest (first one due to DESC order)
+      }
+    });
+
+    let good = 0;
+    let average = 0;
+    let poor = 0;
+
+    Object.values(areaGroups).forEach(prediction => {
+      const value = parseInt(prediction.prediction_text, 10);
+      if (value === 1) good += 1;
+      else if (value === 0) average += 1;
+      else if (value === -1) poor += 1;
+    });
+
+    return res.status(200).json({
+      good,
+      average,
+      poor,
+      totalAreas: Object.keys(areaGroups).length,
+    });
+  } catch (error) {
+    logger.error('Get Latest Prediction Stats Error:', {
+      message: error.message,
+      stack: error.stack,
+    });
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
 // Helper function to calculate time ago
 function getTimeAgo(date) {
   const now = new Date();

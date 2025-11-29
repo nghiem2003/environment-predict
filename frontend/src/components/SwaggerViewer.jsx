@@ -698,7 +698,7 @@ const SwaggerViewer = () => {
                 border: '1px solid rgba(255, 255, 255, 0.2)',
                 borderRadius: 8,
               }}
-              bodyStyle={{ padding: 16 }}
+              styles={{ body: { padding: 16 } }}
             >
               <Space direction="vertical" size="small" style={{ width: '100%' }}>
                 <Text style={{ color: '#fff', fontWeight: 'bold' }}>
@@ -922,7 +922,7 @@ const SwaggerViewer = () => {
                                           </Text>
                                         </Space>
                                       ),
-                                      children: (
+                                      items: (
                                         <div style={{ padding: '8px 0' }}>
                                           <pre style={{
                                             background: '#f5f5f5',
@@ -1287,10 +1287,7 @@ const SwaggerViewer = () => {
         ]}
         width="95vw"
         style={{ top: 20 }}
-        bodyStyle={{
-          padding: '16px 24px',
-          width: '100%'
-        }}
+        styles={{ body: { padding: '16px 24px', width: '100%' } }}
       >
         <Space direction="vertical" size="large" style={{ width: '100%' }}>
           <div>
@@ -1361,7 +1358,7 @@ const SwaggerViewer = () => {
                       </Text>
                     </Space>
                   ),
-                  children: (
+                  items: (
                     <div style={{ padding: '8px 0' }}>
                       {response.content ? (
                         <pre style={{
@@ -1413,10 +1410,7 @@ const SwaggerViewer = () => {
         ]}
         width="95vw"
         style={{ top: 20 }}
-        bodyStyle={{
-          padding: '16px 24px',
-          width: '100%'
-        }}
+        styles={{ body: { padding: '16px 24px', width: '100%' } }}
       >
         <pre style={{
           background: '#f5f5f5',
@@ -1485,7 +1479,7 @@ const SwaggerViewer = () => {
                     API Endpoints
                   </span>
                 ),
-                children: (
+                items: (
                   <div style={{ padding: '16px 0', width: '100%' }}>
                     {renderAPIsByTag()}
                   </div>
@@ -1499,7 +1493,7 @@ const SwaggerViewer = () => {
                     Security
                   </span>
                 ),
-                children: (
+                items: (
                   <div style={{ padding: '16px 0', width: '100%' }}>
                     {renderSecuritySchemes()}
                   </div>
@@ -1513,7 +1507,7 @@ const SwaggerViewer = () => {
                     Data Schemas
                   </span>
                 ),
-                children: (
+                items: (
                   <div style={{ padding: '16px 0', width: '100%' }}>
                     {renderSchemasList()}
                   </div>
@@ -1527,7 +1521,7 @@ const SwaggerViewer = () => {
                     Raw JSON
                   </span>
                 ),
-                children: (
+                items: (
                   <div style={{ padding: '16px 0', width: '100%' }}>
                     <Card style={{ margin: '16px 0' }}>
                       <pre style={{

@@ -195,8 +195,24 @@
     "prediction_list": "View Prediction List",
     "user_list": "View Users List",
     "email_list": "Email Subscriptions",
+    "stats": "Statistics Dashboard",
     "create_prediction": "Create Prediction",
     "logout": "Log Out"
+  },
+  "stats": {
+    "title": "System Statistics",
+    "subtitle": "Overview based on your current permission scope",
+    "totalAreas": "Total Areas",
+    "totalUsers": "Total Users",
+    "latestPredictionPie": "Latest Prediction Ratio",
+    "areaDistribution": "Area Distribution by Province/City",
+    "emailCumulative": "Email Subscription Count (Cumulative)",
+    "byDay": "By day",
+    "byMonth": "By month",
+    "noData": "No data to display",
+    "noToken": "No authentication information found",
+    "loadError": "Failed to load statistics data",
+    "unknownProvince": "Unknown province/city"
   },
   "logout": {
     "success": "Logout successfully"

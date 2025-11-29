@@ -121,6 +121,71 @@ exports.getAllAreas = async (req, res) => {
   }
 };
 
+// Stats for areas: total count and distribution by province (for charts)
+exports.getAreaStats = async (req, res) => {
+  try {
+    const {
+      role,
+      district,
+      province,
+    } = req.query;
+
+    let where = {};
+
+    // Admin sees all areas, no filter
+    // Manager only sees areas within their province/district
+    if (role === 'manager') {
+      if (district) {
+        where.district = district;
+      } else if (province) {
+        where.province = province;
+      }
+      // If manager doesn't provide filters, they should still be scoped (handled by frontend)
+    }
+    // For admin or other roles, where remains empty = all areas
+
+    // Total areas with current scope
+    const totalAreas = await Area.count({ where });
+
+    // Distribution by province for chart
+    const distributionRaw = await Area.findAll({
+      where,
+      attributes: [
+        'province',
+        [sequelize.fn('COUNT', sequelize.col('Area.id')), 'count'],
+      ],
+      include: [
+        {
+          model: Province,
+          as: 'Province',
+          attributes: ['id', 'name'],
+          required: false,
+        },
+      ],
+      group: ['Area.province', 'Province.id', 'Province.name'],
+      order: [[{ model: Province, as: 'Province' }, 'name', 'ASC']],
+    });
+
+    const byProvince = distributionRaw.map((row) => ({
+      provinceId: row.province,
+      provinceName: row.Province ? row.Province.name : null,
+      count: Number(row.get('count')) || 0,
+    }));
+
+    return res.status(200).json({
+      totalAreas,
+      byProvince,
+    });
+  } catch (error) {
+    logger.error('Get Area Stats Error:', {
+      message: error.message,
+      stack: error.stack,
+      query: req.query,
+    });
+    return res.status(500).json({ error: error.message });
+  }
+};
+
 // Get all areas without pagination (for dropdowns, selects, etc.)
 exports.getAllAreasNoPagination = async (req, res) => {
   try {

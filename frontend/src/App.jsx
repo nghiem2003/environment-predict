@@ -24,6 +24,7 @@ import InteractiveMap from './components/InteractiveMap';
 import UserList from './components/UserList';
 import UserProfile from './components/UserProfile';
 import Jobs from './components/Jobs';
+import AdminStats from './components/AdminStats';
 import EmailList from './components/EmailList';
 import EmailSubscription from './components/EmailSubscription';
 import UnsubscribePage from './components/UnsubscribePage';
@@ -102,6 +103,11 @@ const App = () => {
       return [
         ...commonItems,
         {
+          key: '/admin-stats',
+          icon: <DashboardOutlined />,
+          label: t('sidebar.stats'),
+        },
+        {
           key: '/areas',
           icon: <AreaChartOutlined />,
           label: t('sidebar.area_list'),
@@ -139,6 +145,11 @@ const App = () => {
     } else if (role === 'manager') {
       return [
         ...commonItems,
+        {
+          key: '/admin-stats',
+          icon: <DashboardOutlined />,
+          label: t('sidebar.stats'),
+        },
         {
           key: '/dashboard',
           icon: <DashboardOutlined />,
@@ -244,7 +255,7 @@ const App = () => {
             size={screens.xs ? 'small' : 'middle'}
             style={{ justifyContent: 'flex-end' }}
           >
-            <Button.Group size={screens.xs ? 'small' : 'middle'}>
+            <Space.Compact size={screens.xs ? 'small' : 'middle'}>
               <Button
                 type={i18n.language === 'en' ? 'primary' : 'default'}
                 style={{
@@ -267,7 +278,7 @@ const App = () => {
               >
                 VN
               </Button>
-            </Button.Group>
+            </Space.Compact>
             {token ? (
               <Dropdown
                 menu={{ items: userMenuItems }}
@@ -351,8 +362,8 @@ const App = () => {
           breakpoint="lg"
           collapsedWidth={screens.xs ? 0 : 80}
           width="15vw"
-          minWidth={180}
           style={{
+            minWidth: 180,
             overflow: 'auto',
             height: '100vh',
             position: 'fixed',
@@ -436,17 +447,21 @@ const App = () => {
               path="/"
               element={
                 token ? (
-                  jwtDecode(token).role === 'manager' ? (
-                    <Navigate to="/dashboard" replace />
-                  ) : (
-                    <Navigate to="/dashboard" replace />
-                  )
+                  <Navigate to="/dashboard" replace />
                 ) : (
                   <Navigate to="/interactive-map" replace />
                 )
               }
             />
             <Route path="/Login" element={<Login />} />
+            <Route
+              path="/admin-stats"
+              element={
+                <ProtectedRoute roles={['admin', 'manager']}>
+                  <AdminStats />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="/dashboard"
               element={

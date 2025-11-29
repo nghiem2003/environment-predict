@@ -13,6 +13,7 @@ const {
   verifyOTPAndSubscribe,
   sendManualNotification,
   getAreaSubscribers,
+  getEmailSubscriptionStats,
 } = require('../controllers/emailController');
 
 const router = express.Router();
@@ -96,6 +97,53 @@ const router = express.Router();
  */
 router.get('/', authenticate, authorize(['admin', 'manager']), getAllEmailSubscriptions);
 router.get('/all', authenticate, authorize(['admin', 'manager']), getAllEmailSubscriptionsNoPagination);
+
+/**
+ * @swagger
+ * /emails/stats/subscriptions:
+ *   get:
+ *     summary: Get email subscription statistics (cumulative by day)
+ *     tags: [Emails]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: is_active
+ *         schema:
+ *           type: boolean
+ *           default: true
+ *         description: Filter by subscription active status
+ *     responses:
+ *       200:
+ *         description: Email subscription stats
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 series:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       date:
+ *                         type: string
+ *                         example: "2024-01-01"
+ *                       value:
+ *                         type: integer
+ *                 totalSubscriptions:
+ *                   type: integer
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ */
+router.get(
+  '/stats/subscriptions',
+  authenticate,
+  authorize(['admin', 'manager']),
+  getEmailSubscriptionStats
+);
 
 /**
  * @swagger

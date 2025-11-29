@@ -1,6 +1,6 @@
 const express = require('express');
 const { authenticate, authorize } = require('../middlewares/authMiddleware');
-const { getAllAreas, getAllAreasNoPagination, getAreaById, createArea, updateArea, deleteArea } = require('../controllers/areaController');
+const { getAllAreas, getAllAreasNoPagination, getAreaById, createArea, updateArea, deleteArea, getAreaStats } = require('../controllers/areaController');
 const { Province, Area, District } = require('../models/index.js');
 const multer = require('multer');
 const logger = require('../config/logger');
@@ -204,6 +204,64 @@ router.get('/', authenticate, authorize(['admin', 'manager', 'expert']), getAllA
  *         description: Server error
  */
 router.get('/all', getAllAreasNoPagination);
+
+/**
+ * @swagger
+ * /areas/stats/summary:
+ *   get:
+ *     summary: Get area statistics (total and distribution by province)
+ *     tags: [Areas]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: role
+ *         schema:
+ *           type: string
+ *           enum: [admin, manager, expert]
+ *         description: User role (used by frontend for consistent filtering)
+ *       - in: query
+ *         name: province
+ *         schema:
+ *           type: integer
+ *         description: Filter by province ID
+ *       - in: query
+ *         name: district
+ *         schema:
+ *           type: integer
+ *         description: Filter by district ID
+ *     responses:
+ *       200:
+ *         description: Area stats summary
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 totalAreas:
+ *                   type: integer
+ *                 byProvince:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       provinceId:
+ *                         type: integer
+ *                       provinceName:
+ *                         type: string
+ *                       count:
+ *                         type: integer
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ */
+router.get(
+  '/stats/summary',
+  authenticate,
+  authorize(['admin', 'manager']),
+  getAreaStats
+);
 
 /**
  * @swagger

@@ -39,13 +39,23 @@ exports.getAllEmailSubscriptions = async (req, res) => {
       query.email = { [require('sequelize').Op.like]: `%${email}%` };
     }
 
+    const areaScope = {};
+    if (req.user && req.user.role === 'manager') {
+      if (req.user.district) {
+        areaScope.district = req.user.district;
+      } else if (req.user.province) {
+        areaScope.province = req.user.province;
+      }
+    }
+
     const options = {
       where: query,
       include: [
         {
           model: Area,
           as: 'area',
-          attributes: ['id', 'name', 'area_type'],
+          attributes: ['id', 'name', 'area_type', 'province', 'district'],
+          ...(Object.keys(areaScope).length ? { where: areaScope } : {}),
         },
       ],
       order: [['created_at', 'DESC']],
@@ -59,7 +69,16 @@ exports.getAllEmailSubscriptions = async (req, res) => {
     }
 
     const subscriptions = await Email.findAll(options);
-    const total = await Email.count({ where: query });
+
+    // Count with same scope (manager should only see scoped total)
+    const countOptions = {
+      where: query,
+      include: options.include,
+      distinct: true,
+      col: 'Email.id',
+      subQuery: false,
+    };
+    const total = await Email.count(countOptions);
 
     res.status(200).json({ subscriptions, total });
   } catch (error) {
@@ -82,13 +101,23 @@ exports.getAllEmailSubscriptionsNoPagination = async (req, res) => {
       query.is_active = is_active === 'true';
     }
 
+    const areaScope = {};
+    if (req.user && req.user.role === 'manager') {
+      if (req.user.district) {
+        areaScope.district = req.user.district;
+      } else if (req.user.province) {
+        areaScope.province = req.user.province;
+      }
+    }
+
     const options = {
       where: query,
       include: [
         {
           model: Area,
           as: 'area',
-          attributes: ['id', 'name', 'area_type'],
+          attributes: ['id', 'name', 'area_type', 'province', 'district'],
+          ...(Object.keys(areaScope).length ? { where: areaScope } : {}),
         },
       ],
       order: [['created_at', 'DESC']],
@@ -98,6 +127,167 @@ exports.getAllEmailSubscriptionsNoPagination = async (req, res) => {
     res.status(200).json({ subscriptions });
   } catch (error) {
     logger.error('Get All Email Subscriptions (No Pagination) Error:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Stats for email subscriptions: cumulative by day/month (optimized for charts)
+exports.getEmailSubscriptionStats = async (req, res) => {
+  try {
+    const { is_active = 'true', granularity = 'day', limit = 12, role, province = null, district = null } = req.query;
+
+    let query = {};
+    if (is_active !== undefined) {
+      query.is_active = is_active === 'true';
+    }
+    const areaScope = {};
+    if (role === 'manager') {
+      if (district) {
+        areaScope.district = district;
+      } else if (province) {
+        areaScope.province = province;
+      }
+    }
+
+    const options = {
+      where: query,
+      include: [
+        {
+          model: Area,
+          as: 'area',
+          attributes: ['id', 'name', 'area_type', 'province', 'district'],
+          ...(Object.keys(areaScope).length ? { where: areaScope } : {}),
+        },
+      ],
+      order: [['created_at', 'ASC']],
+    };
+
+    const subscriptions = await Email.findAll(options);
+
+    // Tạo danh sách 12 ngày/tháng gần nhất TRƯỚC
+    const limitNum = parseInt(limit, 10) || 12;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const dateKeys = [];
+    for (let i = limitNum - 1; i >= 0; i--) {
+      const date = new Date(today);
+
+      if (granularity === 'month') {
+        // Lùi về i tháng trước
+        date.setMonth(date.getMonth() - i);
+        const year = date.getFullYear();
+        const month = date.getMonth() + 1;
+        dateKeys.push(`${year}-${String(month).padStart(2, '0')}`);
+      } else {
+        // Lùi về i ngày trước
+        date.setDate(date.getDate() - i);
+        const year = date.getFullYear();
+        const month = date.getMonth() + 1;
+        const day = date.getDate();
+        dateKeys.push(`${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`);
+      }
+    }
+
+    // Lấy ngày đầu tiên trong dateKeys để tính cumulative từ đầu đến đó
+    const firstDateKey = dateKeys[0];
+    let firstDateLimit;
+    if (granularity === 'month') {
+      const [year, month] = firstDateKey.split('-').map(Number);
+      firstDateLimit = new Date(year, month - 1, 1); // Ngày đầu tháng
+    } else {
+      const [year, month, day] = firstDateKey.split('-').map(Number);
+      firstDateLimit = new Date(year, month - 1, day);
+    }
+
+    // Aggregate by date based on granularity và tính cumulative
+    const buckets = {};
+    let cumulativeBeforeFirstDate = 0; // Cumulative từ đầu đến ngày đầu tiên trong dateKeys
+
+    subscriptions.forEach((sub) => {
+      const created = sub.created_at || sub.createdAt;
+      if (!created) return;
+      const d = new Date(created);
+      if (Number.isNaN(d.getTime())) return;
+
+      // Check xem subscription này có trước ngày đầu tiên trong dateKeys không
+      let isBeforeFirstDate = false;
+      if (granularity === 'month') {
+        // So sánh theo tháng: YYYY-MM
+        const subYear = d.getFullYear();
+        const subMonth = d.getMonth() + 1; // getMonth() trả về 0-11, cần +1
+        const subKey = `${subYear}-${String(subMonth).padStart(2, '0')}`;
+        isBeforeFirstDate = subKey < firstDateKey; // So sánh string YYYY-MM
+      } else {
+        // So sánh theo ngày
+        const subDate = new Date(d);
+        subDate.setHours(0, 0, 0, 0);
+        isBeforeFirstDate = subDate < firstDateLimit;
+      }
+
+      if (isBeforeFirstDate) {
+        // Cộng vào cumulative từ đầu
+        cumulativeBeforeFirstDate++;
+      } else {
+        // Aggregate vào buckets cho các ngày/tháng trong dateKeys
+        let key;
+        if (granularity === 'month') {
+          // Group by month: YYYY-MM
+          key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        } else {
+          // Group by day: YYYY-MM-DD
+          key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
+            2,
+            '0'
+          )}-${String(d.getDate()).padStart(2, '0')}`;
+        }
+        buckets[key] = (buckets[key] || 0) + 1;
+      }
+    });
+
+    // Tính cumulative cho từng dateKey, bắt đầu từ cumulativeBeforeFirstDate
+    let currentCumulative = cumulativeBeforeFirstDate;
+    const series = dateKeys.map((dateKey) => {
+      // Check xem có dữ liệu mới trong dateKey này không
+      if (buckets[dateKey] !== undefined && buckets[dateKey] > 0) {
+        currentCumulative += buckets[dateKey];
+      }
+      // Nếu không có dữ liệu, giữ nguyên currentCumulative
+
+      // Format date for response
+      let dateStr;
+      if (granularity === 'month') {
+        // For monthly, use last day of month as date
+        const [year, month] = dateKey.split('-').map(Number);
+        const lastDay = new Date(year, month, 0).getDate();
+        dateStr = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+      } else {
+        // For daily, use the date key directly
+        dateStr = dateKey;
+      }
+
+      return { date: dateStr, value: currentCumulative };
+    });
+
+
+
+    console.log('📊 [Backend] Email stats series:', {
+      length: series.length,
+      expected: limitNum,
+      matches: series.length === limitNum,
+      firstItem: series[0],
+      lastItem: series[series.length - 1],
+    });
+    console.log('haha', series);
+
+    return res.status(200).json({
+      series,
+      totalSubscriptions: subscriptions.length,
+      granularity,
+      limit: limitNum,
+    });
+  } catch (error) {
+    logger.error('Get Email Subscription Stats Error:', error);
     res.status(500).json({ error: error.message });
   }
 };

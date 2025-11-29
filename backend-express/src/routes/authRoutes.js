@@ -10,6 +10,7 @@ const {
   deleteUser,
   getUserById,
   changePassword,
+  getUserStats,
   //createAdminUser,
 } = require('../controllers/authController');
 const { authenticate, authorize } = require('../middlewares/authMiddleware');
@@ -283,6 +284,53 @@ router.get('/', authenticate, authorize(['admin', 'manager']), getAllUser);
  *         description: Forbidden
  */
 router.get('/paginated', authenticate, authorize(['admin', 'manager']), getUsersPaginated);
+
+/**
+ * @swagger
+ * /auth/stats/summary:
+ *   get:
+ *     summary: Get user statistics (total users)
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: role
+ *         schema:
+ *           type: string
+ *           enum: [admin, manager]
+ *         description: Role of the requesting user (used for filtering)
+ *       - in: query
+ *         name: province
+ *         schema:
+ *           type: integer
+ *         description: Province ID (used for manager scope)
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Optional search by username
+ *     responses:
+ *       200:
+ *         description: User stats summary
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 totalUsers:
+ *                   type: integer
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ */
+router.get(
+  '/stats/summary',
+  authenticate,
+  authorize(['admin', 'manager']),
+  getUserStats
+);
 
 /**
  * @swagger

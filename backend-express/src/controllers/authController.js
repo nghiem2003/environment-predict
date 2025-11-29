@@ -208,6 +208,46 @@ exports.getUsersPaginated = async (req, res) => {
   }
 };
 
+// Stats for users: total users within current manager scope
+exports.getUserStats = async (req, res) => {
+  try {
+    const { role, province, search = null } = req.query;
+
+    let whereCondition = {};
+
+    // Admin sees all users, no filter
+    // Manager only sees users within their province
+    if (role === 'manager') {
+      whereCondition = {
+        role: role,
+        province: province,
+        district: {
+          [Op.ne]: null,
+        },
+      };
+    }
+    // For admin, whereCondition remains empty = all users
+
+    if (search) {
+      whereCondition.username = {
+        [Op.iLike]: `%${search}%`,
+      };
+    }
+
+    const total = await User.count({ where: whereCondition });
+
+    return res.status(200).json({
+      totalUsers: total,
+    });
+  } catch (error) {
+    logger.error('Get User Stats Error:', {
+      message: error.message,
+      stack: error.stack,
+    });
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
 exports.deactiveUser = async (req, res) => {
   try {
     const { id } = req.params;

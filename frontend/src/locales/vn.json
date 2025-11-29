@@ -194,8 +194,24 @@
     "prediction_list": "Xem danh sách dự đoán",
     "user_list": "Xem danh sách người dùng",
     "email_list": "Đăng ký Email",
+    "stats": "Thống kê tổng quan",
     "create_prediction": "Tạo dự đoán",
     "logout": "Đăng xuất"
+  },
+  "stats": {
+    "title": "Thống kê hệ thống",
+    "subtitle": "Tổng quan theo quyền hạn hiện tại",
+    "totalAreas": "Tổng số khu vực",
+    "totalUsers": "Tổng số người dùng",
+    "latestPredictionPie": "Tỉ lệ dự đoán mới nhất",
+    "areaDistribution": "Phân bổ khu vực theo tỉnh/thành",
+    "emailCumulative": "Số người đăng ký nhận thông báo (lũy kế)",
+    "byDay": "Theo ngày",
+    "byMonth": "Theo tháng",
+    "noData": "Không có dữ liệu để hiển thị",
+    "noToken": "Không tìm thấy thông tin đăng nhập",
+    "loadError": "Không thể tải dữ liệu thống kê",
+    "unknownProvince": "Không rõ tỉnh/thành"
   },
   "common": {
     "showSidebar": "Hiện thanh bên",

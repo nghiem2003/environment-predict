@@ -427,7 +427,7 @@ const UserList = () => {
           boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
           borderRadius: 12,
         }}
-        bodyStyle={{ padding: 24 }}
+        styles={{ body: { padding: 24 } }}
       >
         <Title level={3} style={{ marginBottom: 24 }}>
           {t('userList.title') || 'Danh sách người dùng'}

@@ -172,7 +172,7 @@ const Login = () => {
               boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
               border: 'none'
             }}
-            bodyStyle={{ padding: 0 }}
+            styles={{ body: { padding: 0 } }}
           >
             <div style={{ padding: '28px' }}>
               <Space direction="vertical" size="large" style={{ width: '100%' }}>

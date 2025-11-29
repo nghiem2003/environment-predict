@@ -10,6 +10,7 @@ const {
   getPredictionChartData,
   getAllPredictionChartData,
   createBatchPredictionFromExcel2,
+  getLatestPredictionStats,
 } = require('../controllers/predictionController');
 const { authenticate, authorize } = require('../middlewares/authMiddleware');
 const multer = require('multer');
@@ -673,6 +674,36 @@ router.get(
 router.get(
   '/chart/all',
   getAllPredictionChartData
+);
+
+/**
+ * @swagger
+ * /predictions/stats/latest-ratio:
+ *   get:
+ *     summary: Get latest prediction ratio (good/average/poor) per area
+ *     tags: [Predictions]
+ *     responses:
+ *       200:
+ *         description: Latest prediction stats
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 good:
+ *                   type: integer
+ *                 average:
+ *                   type: integer
+ *                 poor:
+ *                   type: integer
+ *                 totalAreas:
+ *                   type: integer
+ *       500:
+ *         description: Server error
+ */
+router.get(
+  '/stats/latest-ratio',
+  getLatestPredictionStats
 );
 
 module.exports = router;

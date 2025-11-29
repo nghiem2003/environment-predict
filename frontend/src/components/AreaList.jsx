@@ -554,7 +554,7 @@ const AreaList = () => {
           boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
           borderRadius: 12,
         }}
-        bodyStyle={{ padding: 24 }}
+        styles={{ body: { padding: 24 } }}
       >
         <Title level={3} style={{ marginBottom: 24 }}>
           {t('area_list.title') || 'Danh sách khu vực'}
@@ -776,7 +776,7 @@ const AreaList = () => {
           okText={t('area_list.import_modal.ok') || 'Tạo job'}
           cancelText={t('common.cancel') || 'Hủy'}
           width={640}
-          destroyOnClose
+          destroyOnHidden
         >
           <Tabs
             defaultActiveKey="xlsx"
