@@ -17,13 +17,14 @@ import {
   Spin,
 } from 'antd';
 import { UploadOutlined } from '@ant-design/icons';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 const { Option } = Select;
 const { Title } = Typography;
 
 const CreateNewPrediction = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
   const { token } = useSelector((state) => state.auth);
   const [userId, setUserId] = useState(null);
   const [areas, setAreas] = useState([]);
@@ -103,6 +104,37 @@ const CreateNewPrediction = () => {
     };
     fetchAreas();
   }, [token]);
+
+  // Check for areaId in query params to auto-select area
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+
+    const areaId = params.get('areaId');
+    console.log('selectedAreaId', selectedAreaId, 'areaId', areaId);
+
+    if (areaId && !selectedAreaId && areas.length > 0) {
+      // Fetch area data by ID and set it
+      const fetchAreaAndSelect = async () => {
+        try {
+          const areaData = areas.find((a) => a.id === +areaId);
+          if (!areaData) {
+            message.error('Khu vực không tồn tại');
+            return;
+          }
+
+          // Verify area belongs to user's region
+          setSelectedAreaId(areaData.id);
+          setAreaType(areaData.area_type || '');
+          singleForm.setFieldsValue({ areaId: areaData.id });
+        } catch (error) {
+          console.error('Error fetching area:', error);
+          message.error('Không thể tải thông tin khu vực');
+        }
+      };
+
+      fetchAreaAndSelect();
+    }
+  }, [location.search, selectedAreaId, areas]);
 
   const handleCSVUpload = ({ file }) => {
     if (file.status === 'removed') {

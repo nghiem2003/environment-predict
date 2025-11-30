@@ -378,6 +378,7 @@ exports.getAllPredictionsWithFilters = async (req, res) => {
         },
       ],
       order: [['createdAt', 'DESC']],
+      distinct: true, // Required for accurate count with multiple includes
     };
 
     if (limit) {
@@ -481,6 +482,7 @@ exports.getPredictionsByUser = async (req, res) => {
         },
       ],
       order: [['createdAt', 'DESC']],
+      distinct: true, // Required for accurate count with multiple includes and many-to-many relationships
     };
 
     if (limit) {

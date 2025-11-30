@@ -5,6 +5,9 @@
     "searchPlaceholder": "Search for an area..."
   },
   "userList": {
+    "loginNameUsed": "Login name already used",
+    "loginNameValid": "Login name is valid",
+    "shortLoginName": "Login name must be at least 3 characters",
     "selectRole": "Select Role",
     "title": "User List",
     "updateSuccess": "User updated successfully",
@@ -299,6 +302,7 @@
     "districtPlaceholder": "Select district"
   },
   "common": {
+    "loading": "Loading...",
     "showSidebar": "Show Sidebar",
     "hideSidebar": "Hide Sidebar",
     "hide":"Hide",
@@ -313,6 +317,12 @@
     "hideDetails": "Hide details",
     "cancel": "Cancel",
     "close": "Close",
-    "selectFile": "Select file"
+    "selectFile": "Select file",
+    "map": "Map",
+    "management": "Management",
+    "goToMap": "Go to Map",
+    "goToManagement": "Go to Management",
+    "updateArea": "Update Area",
+    "createPrediction": "Create New Prediction"
   }
 }

@@ -19,6 +19,7 @@ exports.login = async (req, res) => {
     const token = jwt.sign(
       {
         id: user.id,
+        name: user.username || user.name,
         role: user.role,
         province: user.province,
         district: user.district,
@@ -118,6 +119,43 @@ exports.createManagerUser = async (req, res) => {
     logger.error('Create Manager User Error:', {
       message: error.message,
       stack: error.stack,
+    });
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+exports.checkLoginName = async (req, res) => {
+  try {
+    const { login_name, exclude_id } = req.query;
+
+    if (!login_name || login_name.trim() === '') {
+      return res.status(400).json({ error: 'login_name is required' });
+    }
+
+    // Build where condition
+    const whereCondition = {
+      login_name: login_name.trim(),
+    };
+
+    // Exclude current user when updating (if exclude_id is provided)
+    if (exclude_id) {
+      whereCondition.id = { [Op.ne]: exclude_id };
+    }
+
+    const existingUser = await User.findOne({ where: whereCondition });
+
+    const minLength = 3;
+    const isMinLength = login_name.length >= minLength;
+    return res.status(200).json({
+      available: !existingUser && isMinLength,
+      message: existingUser ? 'Tên đăng nhập đã được sử dụng' : isMinLength ? 'Tên đăng nhập có thể sử dụng' : 'Tên đăng nhập phải có ít nhất 3 ký tự'
+    });
+  } catch (error) {
+    logger.error('Check Login Name Error:', {
+      message: error.message,
+      stack: error.stack,
+      login_name: req.query.login_name,
+      exclude_id: req.query.exclude_id,
     });
     return res.status(500).json({ error: 'Internal server error' });
   }

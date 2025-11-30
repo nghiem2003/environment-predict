@@ -282,6 +282,16 @@ const InteractiveMap = () => {
     const navigate = useNavigate();
     const mapRef = useRef(null);
 
+    // Get user role from token
+    const userRole = token ? (() => {
+        try {
+            const decodedToken = jwtDecode(token);
+            return decodedToken.role;
+        } catch (e) {
+            return null;
+        }
+    })() : null;
+
     // State management
     const [areas, setAreas] = useState([]);
     const [filteredAreas, setFilteredAreas] = useState([]);
@@ -897,6 +907,30 @@ const InteractiveMap = () => {
                                                         block
                                                     >
                                                         {isDetailCardVisible ? t('common.hideDetails') : t('common.showDetails')}
+                                                    </Button>
+                                                )}
+                                                {(userRole === 'admin' || userRole === 'manager') && (
+                                                    <Button
+                                                        size="large"
+                                                        onClick={() => {
+                                                            navigate(`/areas?areaId=${selectedArea.id}&action=update`);
+                                                        }}
+                                                        type="primary"
+                                                        block
+                                                    >
+                                                        {t('common.updateArea') || 'Cập nhật khu vực'}
+                                                    </Button>
+                                                )}
+                                                {userRole === 'expert' && (
+                                                    <Button
+                                                        size="large"
+                                                        onClick={() => {
+                                                            navigate(`/create-prediction?areaId=${selectedArea.id}`);
+                                                        }}
+                                                        type="primary"
+                                                        block
+                                                    >
+                                                        {t('common.createPrediction') || 'Tạo dự đoán mới'}
                                                     </Button>
                                                 )}
                                                 <Button

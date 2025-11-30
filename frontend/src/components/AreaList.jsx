@@ -4,7 +4,7 @@ import { useSelector } from 'react-redux';
 import { jwtDecode } from 'jwt-decode';
 import './AreaList.css';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import {
   MapContainer,
@@ -65,6 +65,7 @@ const AreaList = () => {
   const { t } = useTranslation();
   const { token } = useSelector((state) => state.auth);
   const navigate = useNavigate();
+  const location = useLocation();
   const [map, setMap] = useState(null);
   const [position, setPosition] = useState(null);
   const [currentPage, setCurrentPage] = useState(0);
@@ -101,6 +102,31 @@ const AreaList = () => {
   const [provinceCentralMeridian, setProvinceCentralMeridian] = useState(null);
   const [selectedProvince, setSelectedProvince] = useState(null);
   const [selectedDistrict, setSelectedDistrict] = useState(null);
+
+  // Helper function to set central meridian from province
+  const setCentralMeridianFromProvince = (provinceId) => {
+    if (!provinceId) {
+      setProvinceCentralMeridian(null);
+      return;
+    }
+    try {
+      const province = regionList.find(p => p.id === provinceId);
+      if (province?.central_meridian) {
+        setProvinceCentralMeridian(province.central_meridian);
+      } else {
+        setProvinceCentralMeridian(null);
+        // Nếu không có central_meridian và đang dùng vn2000, chuyển về wgs84
+        if (coordinateType === 'vn2000') {
+          setCoordinateType('wgs84');
+          message.warning('Tỉnh này chưa có kinh tuyến trục, chỉ có thể sử dụng WGS84');
+        }
+      }
+    } catch (error) {
+      console.error('Error getting province central_meridian:', error);
+      setProvinceCentralMeridian(null);
+    }
+  };
+
   const [provinceTouched, setProvinceTouched] = useState(false);
   const [districtTouched, setDistrictTouched] = useState(false);
   const [filterInitialized, setFilterInitialized] = useState(false);
@@ -317,6 +343,74 @@ const AreaList = () => {
     setCurrentPage(0);
   }, [debouncedSearchTerm]);
 
+  // Check for areaId and action=update in query params to auto-open update modal
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const areaId = params.get('areaId');
+    const action = params.get('action');
+
+    if (areaId && action === 'update' && !isPopupOpen && !loading) {
+      // Open modal first
+      setIsPopupOpen(true);
+
+      // Fetch area data and populate form
+      const fetchAreaAndUpdate = async () => {
+        try {
+          const response = await axios.get(`/api/express/areas/area/${areaId}`);
+          const areaData = response.data;
+
+          // Filter districts based on the area's province
+          const areaProvince = areaData.province || userInfo?.province;
+          setFilteredDistrictList(
+            districtList.filter(
+              (district) => district.province_id === areaProvince
+            )
+          );
+
+          form.setFieldsValue({
+            id: areaData.id || '',
+            name: areaData.name || '',
+            latitude: areaData.latitude || '',
+            longitude: areaData.longitude || '',
+            area: areaData.area || '',
+            province: areaData.province || '',
+            district: areaData.district || '',
+            area_type: areaData.area_type || 'oyster',
+          });
+
+          // Auto-fill central meridian from province
+          if (areaProvince) {
+            setCentralMeridianFromProvince(areaProvince);
+          } else {
+            setProvinceCentralMeridian(null);
+          }
+
+          // Update map center and position
+          if (areaData.latitude && areaData.longitude) {
+            const newPos = [
+              Number(areaData.latitude),
+              Number(areaData.longitude),
+            ];
+            setMapCenter(newPos);
+            setPosition(newPos);
+          }
+        } catch (error) {
+          console.error('Error fetching area:', error);
+          message.error('Không thể tải thông tin khu vực');
+          setIsPopupOpen(false);
+        }
+      };
+
+      fetchAreaAndUpdate();
+
+      // Clean up URL after a short delay
+      setTimeout(() => {
+        navigate(location.pathname, { replace: true });
+      }, 100);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.search, isPopupOpen, loading]);
+
   const handleAddArea = async (values) => {
     console.log('id', form.getFieldValue('id'));
 
@@ -426,6 +520,13 @@ const AreaList = () => {
       area_type: areaToUpdate.area_type || 'oyster',
     });
 
+    // Auto-fill central meridian from province when editing
+    if (areaProvince) {
+      setCentralMeridianFromProvince(areaProvince);
+    } else {
+      setProvinceCentralMeridian(null);
+    }
+
     // Update map center and position when editing an area
     if (areaToUpdate.latitude && areaToUpdate.longitude) {
       const newPos = [
@@ -490,8 +591,8 @@ const AreaList = () => {
     { title: t('area_list.table.name'), dataIndex: 'name', key: 'name' },
     {
       title: t('area_list.table.type'),
-      dataIndex: 'area_type',
       key: 'area_type',
+      render: (_, area) => `${t(`area_list.filter.${area.area_type}`)}`,
     },
     { title: t('area_list.table.lat'), dataIndex: 'latitude', key: 'latitude' },
     {
@@ -583,8 +684,8 @@ const AreaList = () => {
               placeholder={t('area_list.type_placeholder') || 'Tất cả'}
             >
               <Option value="">{t('area_list.type_all') || 'Tất cả'}</Option>
-              <Option value="oyster">Oyster</Option>
-              <Option value="cobia">Cobia</Option>
+              <Option value="oyster">{t('area_list.filter.oyster') || 'Oyster'}</Option>
+              <Option value="cobia">{t('area_list.filter.cobia') || 'Cobia'}</Option>
             </Select>
           </Col>
           <Col xs={12} sm={6} md={2}>
@@ -606,8 +707,11 @@ const AreaList = () => {
                           String(district.province_id) === String(userInfo.province)
                       )
                     );
+                    // Auto-fill central meridian from province
+                    setCentralMeridianFromProvince(userInfo.province);
                   } else {
                     setFilteredDistrictList(districtList);
+                    setProvinceCentralMeridian(null);
                   }
 
                   if (userInfo?.district) {
@@ -931,22 +1035,7 @@ const AreaList = () => {
                         )
                       );
                       // Lấy central_meridian từ province
-                      try {
-                        const province = regionList.find(p => p.id === value);
-                        if (province?.central_meridian) {
-                          setProvinceCentralMeridian(province.central_meridian);
-                        } else {
-                          setProvinceCentralMeridian(null);
-                        }
-                        // Nếu không có central_meridian và đang dùng vn2000, chuyển về wgs84
-                        if (!province?.central_meridian && coordinateType === 'vn2000') {
-                          setCoordinateType('wgs84');
-                          message.warning('Tỉnh này chưa có kinh tuyến trục, chỉ có thể sử dụng WGS84');
-                        }
-                      } catch (error) {
-                        console.error('Error getting province central_meridian:', error);
-                        setProvinceCentralMeridian(null);
-                      }
+                      setCentralMeridianFromProvince(value);
                     }}
                   >
                     {regionList.map((region) => (
@@ -1003,10 +1092,52 @@ const AreaList = () => {
                       <Input disabled value={`Kinh tuyến trục: ${provinceCentralMeridian}°`} />
                     </Form.Item>
                     <Form.Item label="VN2000 X (Easting, m)" name="vn2000_x" rules={[{ required: true }]}>
-                      <Input type="number" />
+                      <Input
+                        type="number"
+                        onBlur={(e) => {
+                          const x = parseFloat(e.target.value);
+                          const y = parseFloat(form.getFieldValue('vn2000_y'));
+                          if (!isNaN(x) && !isNaN(y) && provinceCentralMeridian) {
+                            const res = convertVN2000ToWGS84(x, y, provinceCentralMeridian);
+                            if (res) {
+                              form.setFieldsValue({
+                                latitude: res.lat,
+                                longitude: res.lon
+                              });
+                              // Kéo map đến tọa độ đã chuyển đổi
+                              const newCenter = [res.lat, res.lon];
+                              setMapCenter(newCenter);
+                              if (map) {
+                                map.setView(newCenter, map.getZoom() || 10);
+                              }
+                            }
+                          }
+                        }}
+                      />
                     </Form.Item>
                     <Form.Item label="VN2000 Y (Northing, m)" name="vn2000_y" rules={[{ required: true }]}>
-                      <Input type="number" />
+                      <Input
+                        type="number"
+                        onBlur={(e) => {
+                          const y = parseFloat(e.target.value);
+                          const x = parseFloat(form.getFieldValue('vn2000_x'));
+                          if (!isNaN(x) && !isNaN(y) && provinceCentralMeridian) {
+                            const res = convertVN2000ToWGS84(x, y, provinceCentralMeridian);
+                            if (res) {
+                              form.setFieldsValue({
+                                latitude: res.lat,
+                                longitude: res.lon
+                              });
+                              // Kéo map đến tọa độ đã chuyển đổi
+                              const newCenter = [res.lat, res.lon];
+                              setMapCenter(newCenter);
+                              if (map) {
+                                map.setView(newCenter, map.getZoom() || 10);
+                              }
+                            }
+                          }
+                        }}
+                      />
                     </Form.Item>
                   </>
                 )}
