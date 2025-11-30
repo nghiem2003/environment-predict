@@ -11,6 +11,7 @@ const {
   getAllPredictionChartData,
   createBatchPredictionFromExcel2,
   getLatestPredictionStats,
+  exportPredictionsToExcel,
 } = require('../controllers/predictionController');
 const { authenticate, authorize } = require('../middlewares/authMiddleware');
 const multer = require('multer');
@@ -284,6 +285,81 @@ router.post(
   authenticate,
   authorize(['expert']),
   createPrediction
+);
+
+/**
+ * @swagger
+ * /predictions/admin/export-excel:
+ *   get:
+ *     summary: Export predictions to Excel (Admin/Manager only)
+ *     tags: [Predictions]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: areaId
+ *         schema:
+ *           type: integer
+ *         description: Filter by area ID
+ *       - in: query
+ *         name: userId
+ *         schema:
+ *           type: integer
+ *         description: Filter by user ID
+ *       - in: query
+ *         name: predictionResult
+ *         schema:
+ *           type: integer
+ *           enum: [-1, 0, 1]
+ *         description: Filter by prediction result (-1=Poor, 0=Average, 1=Good)
+ *       - in: query
+ *         name: areaType
+ *         schema:
+ *           type: string
+ *           enum: [oyster, cobia]
+ *         description: Filter by area type
+ *       - in: query
+ *         name: province
+ *         schema:
+ *           type: string
+ *         description: Filter by province UUID
+ *       - in: query
+ *         name: district
+ *         schema:
+ *           type: string
+ *         description: Filter by district UUID
+ *       - in: query
+ *         name: startDate
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: Filter by start date
+ *       - in: query
+ *         name: endDate
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: Filter by end date
+ *     responses:
+ *       200:
+ *         description: Excel file download
+ *         content:
+ *           application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+ *             schema:
+ *               type: string
+ *               format: binary
+ *       403:
+ *         description: Forbidden
+ *       404:
+ *         description: No predictions found
+ *       500:
+ *         description: Server error
+ */
+router.get(
+  '/admin/export-excel',
+  authenticate,
+  authorize(['admin', 'manager']),
+  exportPredictionsToExcel
 );
 
 /**

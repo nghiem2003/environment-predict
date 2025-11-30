@@ -1264,3 +1264,430 @@ function getTimeAgo(date) {
     return `${days} ngày trước`;
   }
 }
+
+// Export predictions to Excel with filters
+exports.exportPredictionsToExcel = async (req, res) => {
+  try {
+    const ExcelJS = require('exceljs');
+    logger.info('Starting Excel export', { query: req.query });
+
+    // Check user role
+    if (req.user.role !== 'admin' && req.user.role !== 'manager') {
+      return res.status(403).json({ error: 'Access denied. Admins and managers only.' });
+    }
+
+    const {
+      userId = undefined,
+      areaId = undefined,
+      predictionResult = undefined, // -1, 0, 1
+      areaType = undefined, // oyster, cobia
+      province = undefined,
+      district = undefined,
+      startDate = undefined,
+      endDate = undefined,
+    } = req.query;
+
+    // Build query options
+    const options = {
+      attributes: ['id', 'user_id', 'area_id', 'prediction_text', 'createdAt', 'updatedAt'],
+      include: [
+        {
+          model: User,
+          attributes: ['id', 'username', 'email', 'role'],
+        },
+        {
+          model: Area,
+          attributes: [
+            'id',
+            'name',
+            'latitude',
+            'longitude',
+            'area',
+            'area_type',
+            'province',
+            'district',
+          ],
+          include: [
+            {
+              model: Province,
+              attributes: ['id', 'name'],
+            },
+            {
+              model: District,
+              attributes: ['id', 'name'],
+            },
+          ],
+        },
+        {
+          model: NatureElement,
+          through: {
+            attributes: ['value'],
+          },
+          attributes: ['id', 'name', 'description', 'unit', 'category'],
+          required: false,
+        },
+      ],
+      order: [['createdAt', 'DESC']],
+    };
+
+    const where = {};
+    
+    // Filter by userId
+    if (userId) where.user_id = parseInt(userId, 10);
+    
+    // Filter by areaId
+    if (areaId) where.area_id = parseInt(areaId, 10);
+    
+    // Filter by prediction result
+    if (predictionResult !== undefined && predictionResult !== '') {
+      where.prediction_text = parseInt(predictionResult, 10);
+    }
+    
+    // Filter by date range
+    if (startDate || endDate) {
+      where.createdAt = {};
+      if (startDate) {
+        where.createdAt[Op.gte] = new Date(startDate);
+      }
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        where.createdAt[Op.lte] = end;
+      }
+    }
+
+    // Filter by area type
+    if (areaType) {
+      where['$Area.area_type$'] = areaType;
+      options.include[1].required = true;
+    }
+
+    // Filter by province/district
+    if (province) {
+      where['$Area.province$'] = province;
+      options.include[1].required = true;
+    }
+    if (district) {
+      where['$Area.district$'] = district;
+      options.include[1].required = true;
+    }
+
+    // Manager role restrictions
+    if (req.user.role === 'manager') {
+      const userProvince = req.user.province;
+      const userDistrict = req.user.district;
+
+      if (userDistrict) {
+        where['$Area.district$'] = userDistrict;
+        options.include[1].required = true;
+      } else if (userProvince) {
+        where['$Area.province$'] = userProvince;
+        options.include[1].required = true;
+      } else {
+        return res.status(403).json({
+          error: 'Manager must be assigned to a province or district.',
+        });
+      }
+    }
+
+    options.where = where;
+
+    // Fetch all predictions (no limit/offset for export)
+    const predictions = await Prediction.findAll(options);
+
+    if (!predictions || predictions.length === 0) {
+      logger.warn('[Excel Export] No predictions found with filters', { query: req.query });
+      return res.status(404).json({ error: 'No predictions found with the specified filters' });
+    }
+
+    logger.info(`[Excel Export] Found ${predictions.length} predictions for export`, { 
+      filters: { areaId, predictionResult, areaType, province, district, startDate, endDate }
+    });
+
+    // Create Excel workbook
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'Environment Prediction System';
+    workbook.created = new Date();
+    
+    // Sheet 1: Detailed Report
+    const worksheet = workbook.addWorksheet('Báo cáo dự đoán', {
+      views: [{ state: 'frozen', xSplit: 0, ySplit: 1 }]
+    });
+
+    // Define columns
+    const columns = [
+      { header: 'STT', key: 'stt', width: 8 },
+      { header: 'Mã dự đoán', key: 'id', width: 12 },
+      { header: 'Ngày tạo', key: 'createdAt', width: 20 },
+      { header: 'Quý', key: 'quarter', width: 10 },
+      { header: 'Tháng', key: 'month', width: 10 },
+      { header: 'Tên khu vực', key: 'areaName', width: 25 },
+      { header: 'Loại khu vực', key: 'areaType', width: 15 },
+      { header: 'Tỉnh/Thành phố', key: 'province', width: 20 },
+      { header: 'Quận/Huyện', key: 'district', width: 20 },
+      { header: 'Diện tích (ha)', key: 'areaSize', width: 15 },
+      { header: 'Vĩ độ', key: 'latitude', width: 12 },
+      { header: 'Kinh độ', key: 'longitude', width: 12 },
+      { header: 'Kết quả số', key: 'predictionValue', width: 12 },
+      { header: 'Đánh giá', key: 'predictionText', width: 15 },
+      { header: 'Tên người dùng', key: 'username', width: 18 },
+      { header: 'Email', key: 'email', width: 25 },
+      { header: 'Vai trò', key: 'role', width: 12 },
+    ];
+
+    // Add environment indicator columns
+    const indicators = ['R_PO4', 'O2Sat', 'O2ml_L', 'STheta', 'Salnty', 'R_DYNHT', 'T_degC', 
+                       'R_Depth', 'Distance', 'Wind_Spd', 'Wave_Ht', 'Wave_Prd', 'IntChl', 'Dry_T'];
+    
+    indicators.forEach(indicator => {
+      columns.push({
+        header: indicator,
+        key: indicator,
+        width: 12
+      });
+    });
+
+    worksheet.columns = columns;
+
+    // Style header row
+    const headerRow = worksheet.getRow(1);
+    headerRow.height = 25;
+    headerRow.font = { bold: true, size: 11, color: { argb: 'FFFFFFFF' } };
+    headerRow.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF1F4E78' }
+    };
+    headerRow.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+    headerRow.border = {
+      top: { style: 'thin' },
+      left: { style: 'thin' },
+      bottom: { style: 'thin' },
+      right: { style: 'thin' }
+    };
+
+    // Add data rows with comprehensive error handling
+    let successfulRows = 0;
+    let failedRows = 0;
+    
+    predictions.forEach((prediction, index) => {
+      try {
+        // Safely handle date with fallback
+        const date = prediction.createdAt ? new Date(prediction.createdAt) : null;
+        const quarter = date ? Math.ceil((date.getMonth() + 1) / 3) : 0;
+        const month = date ? date.getMonth() + 1 : 0;
+
+        // Map prediction value to text with proper handling
+        let predictionText = 'Không xác định';
+        let predictionColor = 'FFFFFF00'; // Yellow
+        
+        // Safely parse prediction_text
+        const predValue = prediction.prediction_text !== null && prediction.prediction_text !== undefined 
+          ? parseInt(prediction.prediction_text, 10) 
+          : NaN;
+        
+        if (!isNaN(predValue)) {
+          if (predValue === 1) {
+            predictionText = 'Tốt';
+            predictionColor = 'FF52C41A'; // Green
+          } else if (predValue === 0) {
+            predictionText = 'Trung bình';
+            predictionColor = 'FFFAAD14'; // Orange
+          } else if (predValue === -1) {
+            predictionText = 'Kém';
+            predictionColor = 'FFFF4D4F'; // Red
+          }
+        }
+
+        const rowData = {
+          stt: index + 1,
+          id: prediction.id || '-',
+          createdAt: prediction.createdAt ? date.toLocaleString('vi-VN', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+          }) : '-',
+          quarter: prediction.createdAt ? `Quý ${quarter}` : '-',
+          month: prediction.createdAt ? `Tháng ${month}` : '-',
+          areaName: prediction.Area?.name || '-',
+          // Use snake_case area_type from database
+          areaType: prediction.Area?.area_type === 'oyster' ? 'Hàu' : prediction.Area?.area_type === 'cobia' ? 'Cá bớp' : '-',
+          province: prediction.Area?.Province?.name || '-',
+          district: prediction.Area?.District?.name || '-',
+          areaSize: (prediction.Area?.area !== null && prediction.Area?.area !== undefined) ? prediction.Area.area : '-',
+          latitude: (prediction.Area?.latitude !== null && prediction.Area?.latitude !== undefined) ? prediction.Area.latitude : '-',
+          longitude: (prediction.Area?.longitude !== null && prediction.Area?.longitude !== undefined) ? prediction.Area.longitude : '-',
+          // Use snake_case prediction_text from database
+          predictionValue: !isNaN(predValue) ? predValue : '-',
+          predictionText: predictionText,
+          username: prediction.User?.username || '-',
+          email: prediction.User?.email || '-',
+          role: prediction.User?.role || '-',
+        };
+
+        // Add indicator values with proper fallback handling
+        indicators.forEach(indicator => {
+          try {
+            const element = prediction.NatureElements?.find(ne => ne.name === indicator);
+            const value = element?.PredictionNatureElement?.value;
+            // Keep 0 as valid value, only fallback for null/undefined
+            rowData[indicator] = (value !== null && value !== undefined) ? value : '-';
+          } catch (err) {
+            logger.warn(`[Excel Export] Error processing indicator ${indicator} for prediction ${prediction.id}:`, err.message);
+            rowData[indicator] = '-';
+          }
+        });
+
+        const row = worksheet.addRow(rowData);
+        
+        // Style prediction result cell with color
+        const predictionTextCell = row.getCell('predictionText');
+        predictionTextCell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: predictionColor }
+        };
+        predictionTextCell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+        predictionTextCell.alignment = { horizontal: 'center', vertical: 'middle' };
+
+        // Apply borders to all cells
+        row.eachCell({ includeEmpty: true }, (cell) => {
+          cell.border = {
+            top: { style: 'thin', color: { argb: 'FFD0D0D0' } },
+            left: { style: 'thin', color: { argb: 'FFD0D0D0' } },
+            bottom: { style: 'thin', color: { argb: 'FFD0D0D0' } },
+            right: { style: 'thin', color: { argb: 'FFD0D0D0' } }
+          };
+          cell.alignment = { vertical: 'middle' };
+        });
+        
+        successfulRows++;
+      } catch (rowError) {
+        failedRows++;
+        logger.error(`[Excel Export] Error processing prediction row ${index + 1} (ID: ${prediction?.id}):`, {
+          error: rowError.message,
+          stack: rowError.stack
+        });
+        // Continue with next row instead of breaking the entire export
+      }
+    });
+    
+    logger.info(`[Excel Export] Processed rows: ${successfulRows} successful, ${failedRows} failed`);
+
+    // Sheet 2: Summary Statistics
+    const summarySheet = workbook.addWorksheet('Thống kê tổng hợp');
+    
+    summarySheet.mergeCells('A1:B1');
+    const titleCell = summarySheet.getCell('A1');
+    titleCell.value = 'THỐNG KÊ TỔNG HỢP DỰ ĐOÁN';
+    titleCell.font = { bold: true, size: 16, color: { argb: 'FF1F4E78' } };
+    titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    summarySheet.getRow(1).height = 30;
+
+    // Statistics data
+    const totalPredictions = predictions.length;
+    const goodCount = predictions.filter(p => parseInt(p.prediction_text) === 1).length;
+    const averageCount = predictions.filter(p => parseInt(p.prediction_text) === 0).length;
+    const poorCount = predictions.filter(p => parseInt(p.prediction_text) === -1).length;
+
+    const statsData = [
+      ['', ''],
+      ['Tổng số dự đoán', totalPredictions],
+      ['Số dự đoán Tốt', goodCount],
+      ['Số dự đoán Trung bình', averageCount],
+      ['Số dự đoán Kém', poorCount],
+      ['', ''],
+      ['Tỷ lệ Tốt (%)', totalPredictions > 0 ? ((goodCount / totalPredictions) * 100).toFixed(2) : 0],
+      ['Tỷ lệ Trung bình (%)', totalPredictions > 0 ? ((averageCount / totalPredictions) * 100).toFixed(2) : 0],
+      ['Tỷ lệ Kém (%)', totalPredictions > 0 ? ((poorCount / totalPredictions) * 100).toFixed(2) : 0],
+    ];
+
+    statsData.forEach((row, index) => {
+      const excelRow = summarySheet.addRow(row);
+      if (index > 0 && row[0]) {
+        excelRow.getCell(1).font = { bold: true };
+        excelRow.getCell(1).fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FFF0F0F0' }
+        };
+      }
+    });
+
+    summarySheet.getColumn(1).width = 25;
+    summarySheet.getColumn(2).width = 20;
+
+    // Sheet 3: Notes
+    const notesSheet = workbook.addWorksheet('Ghi chú');
+    
+    notesSheet.mergeCells('A1:B1');
+    const notesTitleCell = notesSheet.getCell('A1');
+    notesTitleCell.value = 'GIẢI THÍCH CÁC CHỈ SỐ MÔI TRƯỜNG';
+    notesTitleCell.font = { bold: true, size: 14, color: { argb: 'FF1F4E78' } };
+    notesTitleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    notesSheet.getRow(1).height = 25;
+
+    const indicatorNotes = [
+      ['', ''],
+      ['Chỉ số', 'Mô tả'],
+      ['R_PO4', 'Phosphate (µmol/L)'],
+      ['O2Sat', 'Độ bão hòa oxy (%)'],
+      ['O2ml_L', 'Oxy hoà tan (ml/L)'],
+      ['STheta', 'Mật độ tiềm năng nước biển (kg/m³)'],
+      ['Salnty', 'Độ mặn (PSU)'],
+      ['R_DYNHT', 'Độ cao động lực (m)'],
+      ['T_degC', 'Nhiệt độ nước biển (°C)'],
+      ['R_Depth', 'Độ sâu (m)'],
+      ['Distance', 'Khoảng cách (km)'],
+      ['Wind_Spd', 'Tốc độ gió (m/s)'],
+      ['Wave_Ht', 'Chiều cao sóng (m)'],
+      ['Wave_Prd', 'Chu kỳ sóng (s)'],
+      ['IntChl', 'Chlorophyll tích hợp (mg/m²)'],
+      ['Dry_T', 'Nhiệt độ không khí (°C)'],
+    ];
+
+    indicatorNotes.forEach((row, index) => {
+      const excelRow = notesSheet.addRow(row);
+      if (index === 2) {
+        excelRow.font = { bold: true };
+        excelRow.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FF1F4E78' }
+        };
+        excelRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      }
+    });
+
+    notesSheet.getColumn(1).width = 20;
+    notesSheet.getColumn(2).width = 40;
+
+    // Generate filename
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+    const filename = `BaoCaoDuDoan_${timestamp}.xlsx`;
+
+    // Set response headers
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+
+    // Write to response
+    await workbook.xlsx.write(res);
+    
+    logger.info('Excel export completed successfully', { 
+      filename, 
+      recordCount: predictions.length,
+      user: req.user.username 
+    });
+
+  } catch (error) {
+    logger.error('Export Predictions to Excel Error:', {
+      message: error.message,
+      stack: error.stack,
+      query: req.query,
+    });
+    res.status(500).json({ error: 'Internal server error while exporting Excel' });
+  }
+};

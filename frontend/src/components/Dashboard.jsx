@@ -22,8 +22,10 @@ import {
   message,
   Tooltip,
   Select,
+  DatePicker,
 } from 'antd';
-import { MailOutlined, EyeOutlined, CloseOutlined, SendOutlined } from '@ant-design/icons';
+import { MailOutlined, EyeOutlined, CloseOutlined, SendOutlined, DownloadOutlined, FilterOutlined } from '@ant-design/icons';
+import dayjs from 'dayjs';
 import PredictionBadge from './PredictionBadge';
 
 const { Title } = Typography;
@@ -50,6 +52,20 @@ const Dashboard = () => {
   const [selectedAreaId, setSelectedAreaId] = useState(null);
   const [isLoadingAreas, setIsLoadingAreas] = useState(false);
   const [loading, setLoading] = useState(false);
+  
+  // Extended filters
+  const [selectedPredictionResult, setSelectedPredictionResult] = useState(undefined);
+  const [selectedAreaType, setSelectedAreaType] = useState(undefined);
+  const [selectedProvince, setSelectedProvince] = useState(undefined);
+  const [selectedDistrict, setSelectedDistrict] = useState(undefined);
+  const [startDate, setStartDate] = useState(null);
+  const [endDate, setEndDate] = useState(null);
+  const [provinces, setProvinces] = useState([]);
+  const [districts, setDistricts] = useState([]);
+  const [isLoadingProvinces, setIsLoadingProvinces] = useState(false);
+  const [isLoadingDistricts, setIsLoadingDistricts] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   // Load areas list for filter
   useEffect(() => {
@@ -87,6 +103,47 @@ const Dashboard = () => {
     }
   }, [token]);
 
+  // Load provinces for filter (only for admin)
+  useEffect(() => {
+    if (token && userRole === 'admin') {
+      setIsLoadingProvinces(true);
+      axios
+        .get('/api/express/areas/provinces')
+        .then((response) => {
+          const provincesData = response.data?.provinces || [];
+          setProvinces(Array.isArray(provincesData) ? provincesData : []);
+        })
+        .catch((error) => {
+          console.error('Error fetching provinces:', error);
+        })
+        .finally(() => {
+          setIsLoadingProvinces(false);
+        });
+    }
+  }, [token, userRole]);
+
+  // Load districts when province is selected (only for admin)
+  useEffect(() => {
+    if (selectedProvince && userRole === 'admin') {
+      setIsLoadingDistricts(true);
+      axios
+        .get(`/api/express/areas/districts/${selectedProvince}`)
+        .then((response) => {
+          const districtsData = response.data?.districts || [];
+          setDistricts(Array.isArray(districtsData) ? districtsData : []);
+        })
+        .catch((error) => {
+          console.error('Error fetching districts:', error);
+        })
+        .finally(() => {
+          setIsLoadingDistricts(false);
+        });
+    } else if (userRole === 'admin') {
+      setDistricts([]);
+      setSelectedDistrict(undefined);
+    }
+  }, [selectedProvince, userRole]);
+
   useEffect(() => {
     if (token) {
       setLoading(true);
@@ -102,13 +159,22 @@ const Dashboard = () => {
 
           const params = {
             limit: predictionsPerPage, // Limit number of results per page
-            offset: currentPage * 10,
+            offset: currentPage * predictionsPerPage,
           };
 
-          // Add areaId filter if selected
-          if (selectedAreaId) {
-            params.areaId = selectedAreaId;
+          // Add filters
+          if (selectedAreaId) params.areaId = selectedAreaId;
+          if (selectedPredictionResult !== undefined && selectedPredictionResult !== '') {
+            params.predictionResult = selectedPredictionResult;
           }
+          if (selectedAreaType) params.areaType = selectedAreaType;
+          // For admin, use selected filters. For manager, backend will auto-apply their province/district
+          if (userRole === 'admin') {
+            if (selectedProvince) params.province = selectedProvince;
+            if (selectedDistrict) params.district = selectedDistrict;
+          }
+          if (startDate) params.startDate = startDate.format('YYYY-MM-DD');
+          if (endDate) params.endDate = endDate.format('YYYY-MM-DD');
 
           axios
             .get(`/api/express/predictions/admin`, { params })
@@ -126,13 +192,11 @@ const Dashboard = () => {
         } else {
           const params = {
             limit: predictionsPerPage, // Limit number of results per page
-            offset: currentPage * 10,
+            offset: currentPage * predictionsPerPage,
           };
 
-          // Add areaId filter if selected
-          if (selectedAreaId) {
-            params.areaId = selectedAreaId;
-          }
+          // Add filters
+          if (selectedAreaId) params.areaId = selectedAreaId;
 
           axios
             .get(`/api/express/predictions/user/${decodedToken.id}`, { params })
@@ -161,7 +225,8 @@ const Dashboard = () => {
         setLoading(false);
       }
     }
-  }, [currentPage, selectedAreaId, predictionsPerPage]);
+  }, [currentPage, selectedAreaId, predictionsPerPage, selectedPredictionResult, selectedAreaType, 
+      selectedProvince, selectedDistrict, startDate, endDate]);
 
   useEffect(() => { }, [predictionList]);
 
@@ -267,6 +332,72 @@ const Dashboard = () => {
     setSelectedEmails([]);
   };
 
+  // Clear all filters
+  const clearAllFilters = () => {
+    setSelectedAreaId(null);
+    setSelectedPredictionResult(undefined);
+    setSelectedAreaType(undefined);
+    // Only clear province/district for admin (manager's are fixed)
+    if (userRole === 'admin') {
+      setSelectedProvince(undefined);
+      setSelectedDistrict(undefined);
+    }
+    setStartDate(null);
+    setEndDate(null);
+    setCurrentPage(0);
+  };
+
+  // Export to Excel
+  const handleExportExcel = async () => {
+    try {
+      setIsExporting(true);
+      
+      const params = {};
+      
+      // Add all active filters (no limit/offset for export)
+      if (selectedAreaId) params.areaId = selectedAreaId;
+      if (selectedPredictionResult !== undefined && selectedPredictionResult !== '') {
+        params.predictionResult = selectedPredictionResult;
+      }
+      if (selectedAreaType) params.areaType = selectedAreaType;
+      // For admin, use selected filters. For manager, backend will auto-apply their province/district
+      if (userRole === 'admin') {
+        if (selectedProvince) params.province = selectedProvince;
+        if (selectedDistrict) params.district = selectedDistrict;
+      }
+      if (startDate) params.startDate = startDate.format('YYYY-MM-DD');
+      if (endDate) params.endDate = endDate.format('YYYY-MM-DD');
+
+      const response = await axios.get('/api/express/predictions/admin/export-excel', {
+        params,
+        responseType: 'blob', // Important for file download
+      });
+
+      // Create download link
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      
+      // Generate filename with timestamp
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+      link.setAttribute('download', `BaoCaoDuDoan_${timestamp}.xlsx`);
+      
+      document.body.appendChild(link);
+      link.click();
+      
+      // Cleanup
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      message.success('Xuất báo cáo Excel thành công!');
+    } catch (error) {
+      console.error('Export Excel error:', error);
+      message.error('Xuất báo cáo Excel thất bại: ' + (error.response?.data?.error || error.message));
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
     <div style={{ width: '100%', padding: 0, margin: 0 }}>
       <Card
@@ -277,30 +408,195 @@ const Dashboard = () => {
         }}
         styles={{ body: { padding: 24 } }}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-          <Title level={3} style={{ marginBottom: 0 }}>
-            {t('dashboard.title')}
-          </Title>
-          {(
-            <Select
-              placeholder="Lọc theo khu vực"
-              allowClear
-              style={{ width: 300 }}
-              value={selectedAreaId}
-              onChange={(value) => {
-                setSelectedAreaId(value);
-                setCurrentPage(0); // Reset to first page when filter changes
-              }}
-              loading={isLoadingAreas}
-              showSearch
-              filterOption={(input, option) =>
-                (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
-              }
-              options={areas.map((area) => ({
-                value: area.id,
-                label: area.name,
-              }))}
-            />
+        <div style={{ marginBottom: 24 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <Title level={3} style={{ marginBottom: 0 }}>
+              {t('dashboard.title')}
+            </Title>
+            <Space>
+              <Button
+                icon={<FilterOutlined />}
+                onClick={() => setShowFilters(!showFilters)}
+              >
+                {showFilters ? 'Ẩn bộ lọc' : 'Hiện bộ lọc'}
+              </Button>
+              {(userRole === 'admin' || userRole === 'manager') && (
+                <Button
+                  type="primary"
+                  icon={<DownloadOutlined />}
+                  onClick={handleExportExcel}
+                  loading={isExporting}
+                  disabled={predictionList.length === 0}
+                >
+                  Xuất Excel
+                </Button>
+              )}
+            </Space>
+          </div>
+          
+          {showFilters && (
+            <Card size="small" style={{ marginBottom: 16, backgroundColor: '#f5f5f5' }}>
+              <Row gutter={[16, 16]}>
+                <Col xs={24} sm={12} md={8} lg={6}>
+                  <div style={{ marginBottom: 4 }}>
+                    <strong>Khu vực</strong>
+                  </div>
+                  <Select
+                    placeholder="Tất cả khu vực"
+                    allowClear
+                    style={{ width: '100%' }}
+                    value={selectedAreaId}
+                    onChange={(value) => {
+                      setSelectedAreaId(value);
+                      setCurrentPage(0);
+                    }}
+                    loading={isLoadingAreas}
+                    showSearch
+                    filterOption={(input, option) =>
+                      (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                    }
+                    options={areas.map((area) => ({
+                      value: area.id,
+                      label: area.name,
+                    }))}
+                  />
+                </Col>
+
+                <Col xs={24} sm={12} md={8} lg={6}>
+                  <div style={{ marginBottom: 4 }}>
+                    <strong>Kết quả dự đoán</strong>
+                  </div>
+                  <Select
+                    placeholder="Tất cả kết quả"
+                    allowClear
+                    style={{ width: '100%' }}
+                    value={selectedPredictionResult}
+                    onChange={(value) => {
+                      setSelectedPredictionResult(value);
+                      setCurrentPage(0);
+                    }}
+                    options={[
+                      { value: 1, label: '✅ Tốt' },
+                      { value: 0, label: '⚠️ Trung bình' },
+                      { value: -1, label: '❌ Kém' },
+                    ]}
+                  />
+                </Col>
+
+                <Col xs={24} sm={12} md={8} lg={6}>
+                  <div style={{ marginBottom: 4 }}>
+                    <strong>Loại khu vực</strong>
+                  </div>
+                  <Select
+                    placeholder="Tất cả loại"
+                    allowClear
+                    style={{ width: '100%' }}
+                    value={selectedAreaType}
+                    onChange={(value) => {
+                      setSelectedAreaType(value);
+                      setCurrentPage(0);
+                    }}
+                    options={[
+                      { value: 'oyster', label: '🦪 Hàu' },
+                      { value: 'cobia', label: '🐟 Cá bớp' },
+                    ]}
+                  />
+                </Col>
+
+                {(userRole === 'admin') && (
+                  <>
+                    <Col xs={24} sm={12} md={8} lg={6}>
+                      <div style={{ marginBottom: 4 }}>
+                        <strong>Tỉnh/Thành phố</strong>
+                      </div>
+                      <Select
+                        placeholder="Tất cả tỉnh"
+                        allowClear
+                        style={{ width: '100%' }}
+                        value={selectedProvince}
+                        onChange={(value) => {
+                          setSelectedProvince(value);
+                          setCurrentPage(0);
+                        }}
+                        loading={isLoadingProvinces}
+                        showSearch
+                        filterOption={(input, option) =>
+                          (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                        }
+                        options={provinces.map((province) => ({
+                          value: province.id,
+                          label: province.name,
+                        }))}
+                      />
+                    </Col>
+
+                    <Col xs={24} sm={12} md={8} lg={6}>
+                      <div style={{ marginBottom: 4 }}>
+                        <strong>Quận/Huyện</strong>
+                      </div>
+                      <Select
+                        placeholder="Chọn tỉnh trước"
+                        allowClear
+                        style={{ width: '100%' }}
+                        value={selectedDistrict}
+                        onChange={(value) => {
+                          setSelectedDistrict(value);
+                          setCurrentPage(0);
+                        }}
+                        loading={isLoadingDistricts}
+                        disabled={!selectedProvince}
+                        showSearch
+                        filterOption={(input, option) =>
+                          (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                        }
+                        options={districts.map((district) => ({
+                          value: district.id,
+                          label: district.name,
+                        }))}
+                      />
+                    </Col>
+                  </>
+                )}
+
+                <Col xs={24} sm={12} md={8} lg={6}>
+                  <div style={{ marginBottom: 4 }}>
+                    <strong>Từ ngày</strong>
+                  </div>
+                  <DatePicker
+                    placeholder="Chọn ngày bắt đầu"
+                    style={{ width: '100%' }}
+                    value={startDate}
+                    onChange={(date) => {
+                      setStartDate(date);
+                      setCurrentPage(0);
+                    }}
+                    format="DD/MM/YYYY"
+                  />
+                </Col>
+
+                <Col xs={24} sm={12} md={8} lg={6}>
+                  <div style={{ marginBottom: 4 }}>
+                    <strong>Đến ngày</strong>
+                  </div>
+                  <DatePicker
+                    placeholder="Chọn ngày kết thúc"
+                    style={{ width: '100%' }}
+                    value={endDate}
+                    onChange={(date) => {
+                      setEndDate(date);
+                      setCurrentPage(0);
+                    }}
+                    format="DD/MM/YYYY"
+                  />
+                </Col>
+
+                <Col xs={24}>
+                  <Button onClick={clearAllFilters} style={{ marginTop: 4 }}>
+                    🔄 Xóa tất cả bộ lọc
+                  </Button>
+                </Col>
+              </Row>
+            </Card>
           )}
         </div>
         <Spin spinning={loading}>
