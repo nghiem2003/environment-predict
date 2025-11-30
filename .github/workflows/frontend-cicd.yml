@@ -1,0 +1,79 @@
+name: Frontend CI/CD
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'frontend/**'
+      - 'docker-compose.yaml'
+      - '.github/workflows/frontend-cicd.yml'
+  pull_request:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'frontend/**'
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Sync files to server
+        run: |
+          rsync -avz --progress \
+            --exclude='node_modules/' \
+            --exclude='.vscode/' \
+            --exclude='.git/' \
+            --exclude='.gitignore' \
+            --exclude='dist/' \
+            --exclude='build/' \
+            --exclude='backend-express/' \
+            --exclude='backend-flask/' \
+            --exclude='*.log' \
+            --exclude='.env*' \
+            ./ ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:${{ secrets.SERVER_PATH }}
+
+      - name: Clean old containers and images
+        run: |
+          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
+            # Stop and remove old frontend container
+            sudo docker ps -a --filter "name=frontend" --format "{{.Names}}" | xargs -r sudo docker stop
+            sudo docker ps -a --filter "name=frontend" --format "{{.Names}}" | xargs -r sudo docker rm
+            
+            # Remove old frontend images
+            sudo docker images --filter "reference=complete-frontend*" --format "{{.ID}}" | xargs -r sudo docker rmi
+            
+            # Remove unused volumes (be careful with this)
+            sudo docker volume prune -f
+          EOF
+
+      - name: Deploy with Docker Compose
+        run: |
+          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
+            cd ${{ secrets.SERVER_PATH }}
+            sudo docker compose up -d --build frontend
+          EOF
+
+      - name: Health check
+        run: |
+          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
+            sleep 10
+            sudo docker ps --filter "name=frontend" --format "table {{.Names}}\t{{.Status}}"
+          EOF
+

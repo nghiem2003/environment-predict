@@ -1,0 +1,121 @@
+stages:
+  - build
+  - deploy
+
+variables:
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: "/certs"
+
+# Backend deployment job
+deploy-backend:
+  stage: deploy
+  image: docker:latest
+  services:
+    - docker:dind
+  only:
+    changes:
+      - backend-express/**/*
+      - backend-flask/**/*
+      - docker-compose.yaml
+  before_script:
+    - apk add --no-cache openssh-client rsync
+    - mkdir -p ~/.ssh
+    - echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+    - chmod 600 ~/.ssh/id_rsa
+    - ssh-keyscan -H $SERVER_HOST >> ~/.ssh/known_hosts
+  script:
+    # Sync files to server
+    - |
+      rsync -avz --progress \
+        --exclude='node_modules/' \
+        --exclude='.vscode/' \
+        --exclude='.git/' \
+        --exclude='.gitignore' \
+        --exclude='backend-flask/data/' \
+        --exclude='backend-flask/venv/' \
+        --exclude='backend-flask/model/' \
+        --exclude='backend-flask/copernicus_temp_data/' \
+        --exclude='backend-flask/export_full_raw.csv' \
+        --exclude='backend-flask/notebook.ipynb' \
+        --exclude='backend-flask/prediction_module/__pycache__/' \
+        --exclude='backend-flask/__pycache__/' \
+        --exclude='*.log' \
+        --exclude='.env*' \
+        --exclude='dist/' \
+        --exclude='build/' \
+        --exclude='frontend/' \
+        ./ $SERVER_USER@$SERVER_HOST:$SERVER_PATH
+    # Clean old containers and images
+    - |
+      ssh $SERVER_USER@$SERVER_HOST << 'EOF'
+        sudo docker ps -a --filter "name=express_backend" --filter "name=flask_backend" --format "{{.Names}}" | xargs -r sudo docker stop
+        sudo docker ps -a --filter "name=express_backend" --filter "name=flask_backend" --format "{{.Names}}" | xargs -r sudo docker rm
+        sudo docker images --filter "reference=complete-express_backend*" --format "{{.ID}}" | xargs -r sudo docker rmi
+        sudo docker images --filter "reference=complete-flask_backend*" --format "{{.ID}}" | xargs -r sudo docker rmi
+        sudo docker volume prune -f
+      EOF
+    # Deploy with Docker Compose
+    - |
+      ssh $SERVER_USER@$SERVER_HOST << 'EOF'
+        cd $SERVER_PATH
+        sudo docker compose up -d --build express_backend flask_backend postgres_db
+      EOF
+    # Health check
+    - |
+      ssh $SERVER_USER@$SERVER_HOST << 'EOF'
+        sleep 10
+        sudo docker ps --filter "name=express_backend" --filter "name=flask_backend" --format "table {{.Names}}\t{{.Status}}"
+      EOF
+
+# Frontend deployment job
+deploy-frontend:
+  stage: deploy
+  image: docker:latest
+  services:
+    - docker:dind
+  only:
+    changes:
+      - frontend/**/*
+      - docker-compose.yaml
+  before_script:
+    - apk add --no-cache openssh-client rsync
+    - mkdir -p ~/.ssh
+    - echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+    - chmod 600 ~/.ssh/id_rsa
+    - ssh-keyscan -H $SERVER_HOST >> ~/.ssh/known_hosts
+  script:
+    # Sync files to server
+    - |
+      rsync -avz --progress \
+        --exclude='node_modules/' \
+        --exclude='.vscode/' \
+        --exclude='.git/' \
+        --exclude='.gitignore' \
+        --exclude='dist/' \
+        --exclude='build/' \
+        --exclude='backend-express/' \
+        --exclude='backend-flask/' \
+        --exclude='*.log' \
+        --exclude='.env*' \
+        ./ $SERVER_USER@$SERVER_HOST:$SERVER_PATH
+    # Clean old containers and images
+    - |
+      ssh $SERVER_USER@$SERVER_HOST << 'EOF'
+        sudo docker ps -a --filter "name=frontend" --format "{{.Names}}" | xargs -r sudo docker stop
+        sudo docker ps -a --filter "name=frontend" --format "{{.Names}}" | xargs -r sudo docker rm
+        sudo docker images --filter "reference=complete-frontend*" --format "{{.ID}}" | xargs -r sudo docker rmi
+        sudo docker volume prune -f
+      EOF
+    # Deploy with Docker Compose
+    - |
+      ssh $SERVER_USER@$SERVER_HOST << 'EOF'
+        cd $SERVER_PATH
+        sudo docker compose up -d --build frontend
+      EOF
+    # Health check
+    - |
+      ssh $SERVER_USER@$SERVER_HOST << 'EOF'
+        sleep 10
+        sudo docker ps --filter "name=frontend" --format "table {{.Names}}\t{{.Status}}"
+      EOF
+
