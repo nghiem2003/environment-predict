@@ -67,6 +67,11 @@ const UserList = () => {
     total: 0,
   });
   const [loading, setLoading] = useState(false);
+  const [loginNameValue, setLoginNameValue] = useState('');
+  const [loginNameError, setLoginNameError] = useState(false);
+  const [loginNameErrorMessage, setLoginNameErrorMessage] = useState('');
+  const [checkingLoginName, setCheckingLoginName] = useState(false);
+  const debouncedLoginName = useDebouncedValue(loginNameValue, 500);
   const debouncedSearchTerm = useDebouncedValue(searchTerm, 500);
 
   // Fetch users from the API
@@ -141,6 +146,68 @@ const UserList = () => {
     fetchUsers(1, pagination.usersPerPage);
   }, [debouncedSearchTerm]);
 
+  // Check login name availability when debounced value changes
+  useEffect(() => {
+    const checkLoginNameAvailability = async () => {
+      // Check if value is not empty and modal is open
+      if (debouncedLoginName && debouncedLoginName.trim() !== '' && isUserPopupOpen) {
+        // Validate format first
+        if (!/^[a-zA-Z0-9_]+$/.test(debouncedLoginName)) {
+          setCheckingLoginName(true);
+          setLoginNameErrorMessage(t('userList.loginNameValid') || 'Tên đăng nhập hợp lệ');
+          setLoginNameError(false);
+          setCheckingLoginName(false);
+          return;
+        }
+        else if (debouncedLoginName.length < 3) {
+          setCheckingLoginName(true);
+          console.log('login name is too short');
+          setLoginNameErrorMessage(t('userList.shortLoginName') || 'Tên đăng nhập phải có ít nhất 3 ký tự');
+          setLoginNameError(true);
+          setCheckingLoginName(false);
+
+        } else {
+
+          setCheckingLoginName(true);
+          setLoginNameErrorMessage('');
+          setLoginNameError(false);
+
+          try {
+            const params = { login_name: debouncedLoginName.trim() };
+            // If editing, exclude current user from check
+            if (userPopupData.id) {
+              params.exclude_id = userPopupData.id;
+            }
+
+            const response = await axios.get('/api/express/auth/check-login-name', {
+              params
+            });
+
+            if (!response.data.available) {
+              setLoginNameError(true);
+              setLoginNameErrorMessage(t('userList.loginNameUsed') || 'Tên đăng nhập đã được sử dụng');
+            } else {
+              setLoginNameError(false);
+              setLoginNameErrorMessage(t('userList.loginNameValid') || 'Tên đăng nhập có thể sử dụng');
+            }
+          } catch (error) {
+            console.error('Error checking login name:', error);
+            // Don't set error on network/server errors, just log
+          } finally {
+            setCheckingLoginName(false);
+          }
+        }
+      } else {
+        // Reset when value is empty or modal is closed
+        setLoginNameErrorMessage('');
+        setLoginNameError(false);
+        setCheckingLoginName(false);
+      }
+    };
+
+    checkLoginNameAvailability();
+  }, [debouncedLoginName, userPopupData.id, isUserPopupOpen, t]);
+
   // Always load provinces/districts once token is available
   useEffect(() => {
     if (token) {
@@ -187,6 +254,31 @@ const UserList = () => {
   // Submit handler for creating/updating a user
   const handleUserPopupSubmit = async (values) => {
     try {
+      // Auto-assign role for manager creating users
+      try {
+        const decoded = jwtDecode(token);
+        if (decoded.role === 'manager' && !values.role) {
+          // If manager cấp tỉnh (có province nhưng không có district) tạo tài khoản với district
+          // thì tự động gán role là district_manager (sẽ được convert thành 'manager' khi submit)
+          if (values.district) {
+            values.role = 'district_manager';
+          } else if (values.province && !values.district) {
+            // Nếu chỉ có province, có thể là province_manager (nhưng manager không thể tạo province_manager)
+            // Nên để trống hoặc yêu cầu chọn district
+            message.error('Vui lòng chọn quận/huyện để tạo tài khoản quản lý cấp quận');
+            return;
+          }
+        }
+      } catch (e) {
+        // ignore decode errors
+      }
+
+      // Check if login name is available (for new users only)
+      if (!userPopupData.id && loginNameError) {
+        message.error('Vui lòng chọn tên đăng nhập khác');
+        return;
+      }
+
       const basicFields = ['name', 'email', 'address', 'phone', 'role'];
       const missingBasicField = basicFields.some((field) => !values[field]);
       if (missingBasicField) {
@@ -257,6 +349,7 @@ const UserList = () => {
 
       setIsUserPopupOpen(false);
       fetchUsers();
+      // Reset all state
       setUserPopupData({
         id: null,
         name: '',
@@ -265,8 +358,13 @@ const UserList = () => {
         address: '',
         phone: '',
         password: '',
+        province: '',
+        district: '',
         role: '',
       });
+      form.resetFields();
+      setSelectedRegionName('');
+      setFilteredDistrictList(districtList);
     } catch (error) {
       console.error('Error saving user:', error);
       message.error('Có lỗi xảy ra khi lưu thông tin người dùng');
@@ -275,6 +373,11 @@ const UserList = () => {
 
   // Modify user popup
   const handleModifyUser = (user) => {
+    // Set login name value when editing to trigger check
+    setLoginNameValue(user.login_name || '');
+    setLoginNameErrorMessage('');
+    setLoginNameError(false);
+    setCheckingLoginName(false);
     const regionName = getRegionNameFromId(user.province);
     console.log(user);
 
@@ -370,9 +473,10 @@ const UserList = () => {
   // Update the modal open handler to reset region name
   const handleAddUser = () => {
     setSelectedRegionName('');
-    setUserPopupData({
+    const emptyData = {
       id: null,
       name: '',
+      login_name: '',
       email: '',
       address: '',
       phone: '',
@@ -380,10 +484,18 @@ const UserList = () => {
       province: '',
       district: '',
       role: '',
-    });
+    };
+    setUserPopupData(emptyData);
 
-    // Reset form completely
+    // Reset login name validation state
+    setLoginNameValue('');
+    setLoginNameErrorMessage('');
+    setLoginNameError(false);
+    setCheckingLoginName(false);
+
+    // Reset form completely and set values
     form.resetFields();
+    form.setFieldsValue(emptyData);
 
     // Pre-fill province/district for managers (especially district managers)
     try {
@@ -614,14 +726,31 @@ const UserList = () => {
         open={isUserPopupOpen}
         onCancel={() => {
           setIsUserPopupOpen(false);
-          form.resetFields();
+        }}
+        afterClose={() => {
+          // Reset all state after modal is completely closed
           setSelectedRegionName('');
+          setUserPopupData({
+            id: null,
+            name: '',
+            login_name: '',
+            email: '',
+            address: '',
+            phone: '',
+            password: '',
+            province: '',
+            district: '',
+            role: '',
+          });
+          setFilteredDistrictList(districtList);
+          // Form will be reset when modal opens next time via initialValues
         }}
         footer={null}
         styles={{ body: { maxHeight: '70vh', overflowY: 'auto' } }}
         width={700}
       >
         <Form
+          key={userPopupData.id || 'new-user'}
           form={form}
           layout="vertical"
           initialValues={userPopupData}
@@ -639,16 +768,36 @@ const UserList = () => {
           <Form.Item
             name="login_name"
             label="Tên đăng nhập"
+            validateStatus={loginNameError ? 'error' : checkingLoginName ? 'validating' : 'success'}
+            help={loginNameErrorMessage || (checkingLoginName ? 'Đang kiểm tra...' : '')}
             rules={[
               { required: true, message: 'Vui lòng nhập tên đăng nhập' },
               {
                 pattern: /^[a-zA-Z0-9_]+$/,
                 message: 'Tên đăng nhập chỉ được chứa chữ cái, số và dấu gạch dưới'
               },
+              () => ({
+                validator(_, value) {
+                  if (loginNameError) {
+                    return Promise.reject(new Error(loginNameErrorMessage));
+                  }
+                  return Promise.resolve();
+                },
+              }),
             ]}
             tooltip="Tên đăng nhập sẽ được sử dụng để đăng nhập vào hệ thống"
           >
-            <Input size='large' placeholder="Ví dụ: john_doe" />
+            <Input
+              size='large'
+              placeholder="Ví dụ: john_doe"
+              onChange={(e) => {
+                setLoginNameValue(e.target.value);
+                if (loginNameError) {
+                  setLoginNameErrorMessage('');
+                  setLoginNameError(false);
+                }
+              }}
+            />
           </Form.Item>
 
           <Form.Item
@@ -798,7 +947,8 @@ const UserList = () => {
               {
                 required:
                   form.getFieldValue('role') === 'expert' ||
-                  form.getFieldValue('role') === 'district_manager',
+                  form.getFieldValue('role') === 'district_manager' ||
+                  (jwtDecode(token)?.role === 'manager' && !form.getFieldValue('role')),
                 message: t('userList.required'),
               },
             ]}
@@ -818,6 +968,17 @@ const UserList = () => {
                   .toLowerCase()
                   .includes(input.toLowerCase())
               }
+              onChange={(value) => {
+                // Auto-assign district_manager role when manager selects district
+                try {
+                  const decoded = jwtDecode(token);
+                  if (decoded.role === 'manager' && value && !form.getFieldValue('role')) {
+                    form.setFieldsValue({ role: 'district_manager' });
+                  }
+                } catch (e) {
+                  // ignore decode errors
+                }
+              }}
               options={filteredDistrictList.map((region) => ({
                 value: region.id,
                 label: `${region.name}`,

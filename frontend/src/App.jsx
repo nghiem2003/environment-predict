@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Routes,
   Route,
@@ -43,6 +43,7 @@ import {
   Col,
   Grid,
   Dropdown,
+  Tooltip,
 } from 'antd';
 import {
   ArrowLeftOutlined,
@@ -71,8 +72,29 @@ const App = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const location = useLocation();
-  const { user, token, role } = useSelector((state) => state.auth);
+  const { token, role } = useSelector((state) => state.auth);
+
+  // Get user name from token with character limit based on screen size
+  // iPad (md): 25 chars, larger screens: 50 chars
   const screens = useBreakpoint();
+  const userName = token ? (() => {
+    try {
+      const decodedToken = jwtDecode(token);
+      const name = decodedToken.name || decodedToken.username || '';
+      if (!name) return '';
+      // iPad (md) and up: show name, limit based on screen size
+      console.log('name', name)
+      if (screens.md || screens.lg || screens.xl || screens.xxl) {
+        const maxLength = screens.md && !screens.lg ? 25 : 50; // iPad: 25, larger: 50
+        console.log('max', maxLength)
+        return name.length > maxLength ? name.substring(0, maxLength) + '...' : name;
+      }
+      return ''; // Don't show on small screens
+    } catch (e) {
+      return '';
+    }
+  })() : '';
+
   const {
     token: { colorBgContainer, borderRadiusLG },
   } = theme.useToken();
@@ -176,28 +198,76 @@ const App = () => {
     return commonItems;
   };
 
-  const userMenuItems = [
-    ...(role === 'admin' || role === 'expert'
-      ? [{
+  // Build user menu items dynamically based on responsive and location
+  const userMenuItems = useMemo(() => {
+    const isSmallScreen = screens.xs || screens.sm;
+    const items = [];
+
+    // Add Map/Management to dropdown only on small screens
+    if (isSmallScreen && token) {
+      if (location.pathname !== '/interactive-map') {
+        items.push({
+          key: 'map',
+          icon: <EnvironmentOutlined />,
+          label: t('common.goToMap'),
+          title: t('common.goToMap'),
+          onClick: () => navigate('/interactive-map'),
+        });
+      } else {
+        try {
+          const decodedToken = jwtDecode(token);
+          const currentTime = Math.floor(Date.now() / 1000);
+          const isTokenValid = decodedToken.exp && decodedToken.exp > currentTime;
+          if (isTokenValid && (role === 'admin' || role === 'expert' || role === 'manager')) {
+            items.push({
+              key: 'management',
+              icon: <DashboardOutlined />,
+              label: t('common.goToManagement'),
+              title: t('common.goToManagement'),
+              onClick: () => {
+                if (role === 'admin') {
+                  navigate('/admin-stats');
+                } else if (role === 'expert') {
+                  navigate('/dashboard');
+                } else if (role === 'manager') {
+                  navigate('/admin-stats');
+                }
+              },
+            });
+          }
+        } catch (e) {
+          // Ignore error
+        }
+      }
+    }
+
+    // Add other menu items
+    if (role === 'admin' || role === 'expert') {
+      items.push({
         key: 'jobs',
         icon: <ApiOutlined />,
         label: 'Jobs',
         onClick: () => navigate('/jobs'),
-      }]
-      : []),
-    {
-      key: 'profile',
-      icon: <ProfileOutlined />,
-      label: t('profile.title'),
-      onClick: () => navigate('/profile'),
-    },
-    {
-      key: 'logout',
-      icon: <LogoutOutlined />,
-      label: t('sidebar.logout'),
-      onClick: handleLogout,
-    },
-  ];
+      });
+    }
+
+    items.push(
+      {
+        key: 'profile',
+        icon: <ProfileOutlined />,
+        label: t('profile.title'),
+        onClick: () => navigate('/profile'),
+      },
+      {
+        key: 'logout',
+        icon: <LogoutOutlined />,
+        label: t('sidebar.logout'),
+        onClick: handleLogout,
+      }
+    );
+
+    return items;
+  }, [token, role, location.pathname, screens.xs, screens.sm, navigate, t]);
 
   const renderHeader = () => (
     <Header
@@ -207,18 +277,12 @@ const App = () => {
         padding: screens.xs ? '0 12px' : '0 24px',
         position: 'sticky',
         top: 0,
-        zIndex: 1000,
+        zIndex: 1,
         width: '100%',
       }}
     >
-      <Row align="large" justify="start" style={{ height: '100%' }}>
-        <Col
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            width: 'max-content',
-          }}
-        >
+      <Row align="middle" justify="space-between" style={{ height: '100%', width: '100%', flexWrap: 'nowrap' }}>
+        <Col flex="none">
           {isSidebarVisible && screens.xs && (
             <Button
               type="text"
@@ -236,7 +300,7 @@ const App = () => {
             />
           )}
         </Col>
-        <Col xs={12} sm={16} md={18}>
+        <Col flex="auto" style={{ minWidth: 0, overflow: 'hidden' }}>
           <Title
             level={4}
             style={{
@@ -245,15 +309,19 @@ const App = () => {
               cursor: 'pointer',
               lineHeight: '64px',
               fontSize: screens.xs ? '18px' : '24px',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
             }}
           >
             Prediction System
           </Title>
         </Col>
-        <Col xs={6} sm={8} md={6}>
+        <Col flex="none" style={{ minWidth: 0 }}>
           <Space
             size={screens.xs ? 'small' : 'middle'}
-            style={{ justifyContent: 'flex-end' }}
+            style={{ justifyContent: 'flex-end', flexWrap: 'nowrap' }}
+            wrap={false}
           >
             <Space.Compact size={screens.xs ? 'small' : 'middle'}>
               <Button
@@ -279,26 +347,101 @@ const App = () => {
                 VN
               </Button>
             </Space.Compact>
-            {token ? (
-              <Dropdown
-                menu={{ items: userMenuItems }}
-                placement="bottomRight"
-                arrow
-              >
+            {/* Map/Management buttons - only show on iPad and larger screens, icon only with tooltip */}
+            {token && (screens.md || screens.lg || screens.xl || screens.xxl) && location.pathname !== '/interactive-map' && (
+              <Tooltip title={t('common.goToMap')}>
                 <Button
                   type="default"
-                  size={screens.xs ? 'small' : 'middle'}
-                  icon={<UserOutlined />}
+                  size="middle"
+                  icon={<EnvironmentOutlined />}
+                  onClick={() => navigate('/interactive-map')}
                   style={{
                     background: '#007bff',
                     borderColor: '#007bff',
                     color: '#fff',
                     fontWeight: 'bold',
                   }}
+                />
+              </Tooltip>
+            )}
+            {token && (screens.md || screens.lg || screens.xl || screens.xxl) && location.pathname === '/interactive-map' && (() => {
+              try {
+                const decodedToken = jwtDecode(token);
+                const currentTime = Math.floor(Date.now() / 1000);
+                const isTokenValid = decodedToken.exp && decodedToken.exp > currentTime;
+                if (isTokenValid && (role === 'admin' || role === 'expert' || role === 'manager')) {
+                  return (
+                    <Tooltip title={t('common.goToManagement')}>
+                      <Button
+                        type="default"
+                        size="middle"
+                        icon={<DashboardOutlined />}
+                        onClick={() => {
+                          if (role === 'admin') {
+                            navigate('/admin-stats');
+                          } else if (role === 'expert') {
+                            navigate('/dashboard');
+                          } else if (role === 'manager') {
+                            navigate('/admin-stats');
+                          }
+                        }}
+                        style={{
+                          background: '#007bff',
+                          borderColor: '#007bff',
+                          color: '#fff',
+                          fontWeight: 'bold',
+                        }}
+                      />
+                    </Tooltip>
+                  );
+                }
+              } catch (e) {
+                return null;
+              }
+              return null;
+            })()}
+            {token ? (
+              <Space>
+
+                <Dropdown
+                  menu={{ items: userMenuItems }}
+                  placement="bottomRight"
+                  arrow
                 >
-                  {screens.xs || screens.sm ? '' : t('profile.title')}
-                </Button>
-              </Dropdown>
+                  <Button
+                    type="default"
+                    size={screens.xs ? 'small' : 'middle'}
+                    icon={<UserOutlined />}
+                    style={{
+                      background: '#007bff',
+                      borderColor: '#007bff',
+                      color: '#fff',
+                      fontWeight: 'bold',
+                      flexShrink: 0,
+                    }}
+                  >
+                    {userName && (screens.md || screens.lg || screens.xl || screens.xxl) && (
+                      <Typography.Text
+                        style={{
+                          color: '#fff',
+                          fontWeight: 'bold',
+                          fontSize: screens.md && !screens.lg ? '13px' : '14px',
+                          marginRight: 8,
+                          maxWidth: screens.md && !screens.lg ? '120px' : '200px',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          display: 'inline-block',
+                        }}
+                        title={userName}
+                      >
+                        {userName}
+                      </Typography.Text>
+                    )}
+                    {screens.xs || screens.sm ? '' : t('profile.title')}
+                  </Button>
+                </Dropdown>
+              </Space>
             ) : (
               <Button
                 type="primary"
@@ -311,6 +454,7 @@ const App = () => {
                 }}
                 onClick={() => navigate('/Login')}
               >
+
                 {t('login.button')}
               </Button>
             )}
@@ -370,7 +514,7 @@ const App = () => {
             left: 0,
             top: 0,
             bottom: 0,
-            zIndex: 2,
+            zIndex: 100,
             background: '#fff',
             boxShadow: '2px 0 8px rgba(0,0,0,0.08)',
             scrollbarWidth: 'thin',
@@ -430,7 +574,11 @@ const App = () => {
           transition: 'all 0.2s',
         }}
       >
-        {(location.pathname !== '/Login' && location.pathname !== '/swagger') && renderHeader()}
+        {(location.pathname !== '/Login' && location.pathname !== '/swagger') && (
+          <div style={{ position: 'relative', zIndex: 1 }}>
+            {renderHeader()}
+          </div>
+        )}
         <Content
           style={{
             margin: location.pathname === '/interactive-map' ? 0 : (screens.xs ? '12px 8px' : '24px 16px'),
@@ -447,7 +595,11 @@ const App = () => {
               path="/"
               element={
                 token ? (
-                  <Navigate to="/dashboard" replace />
+                  (role === 'admin' || role === 'manager') ? (
+                    <Navigate to="/admin-stats" replace />
+                  ) : (
+                    <Navigate to="/dashboard" replace />
+                  )
                 ) : (
                   <Navigate to="/interactive-map" replace />
                 )

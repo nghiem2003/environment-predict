@@ -5,6 +5,9 @@
     "searchPlaceholder": "Tìm kiếm khu vực..."
   },
   "userList": {
+    "loginNameUsed": "Tên đăng nhập đã được sử dụng",
+    "loginNameValid": "Tên đăng nhập hợp lệ",
+    "shortLoginName": "Tên đăng nhập phải có ít nhất 3 ký tự",
     "selectRole": "Chọn vai trò",
     "title": "Danh sách người dùng",
     "updateSuccess": "Cập nhật người dùng thành công",
@@ -214,6 +217,7 @@
     "unknownProvince": "Không rõ tỉnh/thành"
   },
   "common": {
+    "loading": "Đang tải...",
     "showSidebar": "Hiện thanh bên",
     "hideSidebar": "Ẩn thanh bên",
     "hide":"Ẩn",
@@ -228,7 +232,13 @@
     "hideDetails": "Ẩn chi tiết",
     "cancel": "Hủy",
     "close": "Đóng",
-    "selectFile": "Chọn file"
+    "selectFile": "Chọn file",
+    "map": "Bản đồ",
+    "management": "Quản lý",
+    "goToMap": "Đi tới bản đồ",
+    "goToManagement": "Đi tới quản lý",
+    "updateArea": "Cập nhật khu vực",
+    "createPrediction": "Tạo dự đoán mới"
   },
   "logout": {
     "success": "Đăng xuất thành công"

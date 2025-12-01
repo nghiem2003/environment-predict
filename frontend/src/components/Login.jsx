@@ -55,7 +55,13 @@ const Login = () => {
           dispatch(logout());
           navigate('/');
         }
-        navigate('/dashboard');
+        // Navigate based on role
+        const decodedRole = decodedToken.role;
+        if (decodedRole === 'admin' || decodedRole === 'manager') {
+          navigate('/admin-stats');
+        } else {
+          navigate('/dashboard');
+        }
       } catch (error) {
         console.error('Error decoding token:', error);
         toast.error(t('login.invalidToken'));
@@ -91,8 +97,12 @@ const Login = () => {
 
       message.success(t('login.success') || 'Đăng nhập thành công!');
 
-      // Navigate to the dashboard after successful login
-      navigate('/dashboard');
+      // Navigate based on role after successful login
+      if (role === 'admin' || role === 'manager') {
+        navigate('/admin-stats');
+      } else {
+        navigate('/dashboard');
+      }
     } catch (error) {
       console.error('Login error:', error);
 

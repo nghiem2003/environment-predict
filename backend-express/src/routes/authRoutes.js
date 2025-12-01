@@ -11,6 +11,7 @@ const {
   getUserById,
   changePassword,
   getUserStats,
+  checkLoginName,
   //createAdminUser,
 } = require('../controllers/authController');
 const { authenticate, authorize } = require('../middlewares/authMiddleware');
@@ -113,6 +114,60 @@ const router = express.Router();
  *               $ref: '#/components/schemas/Error'
  */
 router.post('/login', login);
+
+/**
+ * @swagger
+ * /auth/check-login-name:
+ *   get:
+ *     summary: Check if login name is available
+ *     description: Check if a login name is already taken. Can exclude a user ID when updating.
+ *     tags: [Authentication]
+ *     security: []
+ *     parameters:
+ *       - in: query
+ *         name: login_name
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Login name to check
+ *         example: "john_doe"
+ *       - in: query
+ *         name: exclude_id
+ *         required: false
+ *         schema:
+ *           type: string
+ *         description: User ID to exclude from check (useful when updating existing user)
+ *         example: "123e4567-e89b-12d3-a456-426614174000"
+ *     responses:
+ *       200:
+ *         description: Check result
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 available:
+ *                   type: boolean
+ *                   description: Whether the login name is available
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   description: Status message
+ *                   example: "Tên đăng nhập có thể sử dụng"
+ *       400:
+ *         description: Bad request - login_name is required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+router.get('/check-login-name', checkLoginName);
 
 /**
  * @swagger

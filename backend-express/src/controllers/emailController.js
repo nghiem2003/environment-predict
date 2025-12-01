@@ -59,6 +59,7 @@ exports.getAllEmailSubscriptions = async (req, res) => {
         },
       ],
       order: [['created_at', 'DESC']],
+      distinct: true,
     };
 
     if (limit) {
@@ -68,17 +69,8 @@ exports.getAllEmailSubscriptions = async (req, res) => {
       options.offset = parseInt(offset, 10);
     }
 
-    const subscriptions = await Email.findAll(options);
-
-    // Count with same scope (manager should only see scoped total)
-    const countOptions = {
-      where: query,
-      include: options.include,
-      distinct: true,
-      col: 'Email.id',
-      subQuery: false,
-    };
-    const total = await Email.count(countOptions);
+    // Use findAndCountAll to avoid SQL errors with count + include
+    const { rows: subscriptions, count: total } = await Email.findAndCountAll(options);
 
     res.status(200).json({ subscriptions, total });
   } catch (error) {
