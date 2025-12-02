@@ -30,6 +30,7 @@ import {
   UserAddOutlined,
   SaveOutlined,
   CloseOutlined,
+  KeyOutlined,
 } from '@ant-design/icons';
 const { Title } = Typography;
 
@@ -50,6 +51,9 @@ const UserList = () => {
   const [isShowPasswordPopupOpen, setIsShowPasswordPopupOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [adminPassword, setAdminPassword] = useState('');
+  const [isResetPasswordModalOpen, setIsResetPasswordModalOpen] = useState(false);
+  const [resetPasswordForm] = Form.useForm();
+  const [loadingResetPassword, setLoadingResetPassword] = useState(false);
   const [userPopupData, setUserPopupData] = useState({
     id: null,
     name: '',
@@ -470,6 +474,37 @@ const UserList = () => {
     setRevealedPassword('dummy_password');
   };
 
+  // Admin reset password for user
+  const handleOpenResetPasswordModal = (user) => {
+    setSelectedUser(user);
+    resetPasswordForm.resetFields();
+    setIsResetPasswordModalOpen(true);
+  };
+
+  const handleAdminResetPassword = async (values) => {
+    if (!selectedUser) return;
+    
+    if (values.newPassword !== values.confirmPassword) {
+      message.error('Mật khẩu xác nhận không khớp');
+      return;
+    }
+
+    setLoadingResetPassword(true);
+    try {
+      await axios.post(`/api/express/auth/admin-reset-password/${selectedUser.id}`, {
+        newPassword: values.newPassword,
+      });
+      message.success(`Đã đặt lại mật khẩu cho ${selectedUser.username} thành công`);
+      setIsResetPasswordModalOpen(false);
+      resetPasswordForm.resetFields();
+    } catch (error) {
+      console.error('Reset password error:', error);
+      message.error(error.response?.data?.error || 'Đặt lại mật khẩu thất bại');
+    } finally {
+      setLoadingResetPassword(false);
+    }
+  };
+
   // Update the modal open handler to reset region name
   const handleAddUser = () => {
     setSelectedRegionName('');
@@ -679,18 +714,29 @@ const UserList = () => {
                       ) : null}
                       {jwtDecode(token).role === 'admin' &&
                         user.role !== 'admin' && (
-                          <Tooltip title={t('userList.deleteUser') || 'Xoá'}>
-                            <Button
-                              danger
-                              type="default"
-                              icon={<DeleteOutlined />}
-                              size="middle"
-                              onClick={() => {
-                                setSelectedUser(user);
-                                setIsDeleteConfirmOpen(true);
-                              }}
-                            />
-                          </Tooltip>
+                          <>
+                            <Tooltip title="Đặt lại mật khẩu">
+                              <Button
+                                type="default"
+                                icon={<KeyOutlined />}
+                                size="middle"
+                                onClick={() => handleOpenResetPasswordModal(user)}
+                                style={{ color: '#faad14', borderColor: '#faad14' }}
+                              />
+                            </Tooltip>
+                            <Tooltip title={t('userList.deleteUser') || 'Xoá'}>
+                              <Button
+                                danger
+                                type="default"
+                                icon={<DeleteOutlined />}
+                                size="middle"
+                                onClick={() => {
+                                  setSelectedUser(user);
+                                  setIsDeleteConfirmOpen(true);
+                                }}
+                              />
+                            </Tooltip>
+                          </>
                         )}
                     </div>
                   ),
@@ -1037,6 +1083,86 @@ const UserList = () => {
           {t('userList.deleteConfirmMessage') ||
             'Bạn có chắc chắn muốn xóa người dùng này? Hành động này không thể hoàn tác.'}
         </p>
+      </Modal>
+
+      {/* Admin Reset Password Modal */}
+      <Modal
+        title={
+          <Space>
+            <KeyOutlined style={{ color: '#faad14' }} />
+            <span>Đặt lại mật khẩu cho {selectedUser?.username}</span>
+          </Space>
+        }
+        open={isResetPasswordModalOpen}
+        onCancel={() => {
+          setIsResetPasswordModalOpen(false);
+          resetPasswordForm.resetFields();
+        }}
+        footer={null}
+        width={450}
+      >
+        <div style={{ marginBottom: 16, padding: '12px', background: '#fff7e6', borderRadius: '8px', border: '1px solid #ffd591' }}>
+          <p style={{ margin: 0, color: '#ad6800' }}>
+            ⚠️ <strong>Lưu ý:</strong> Bạn đang đặt lại mật khẩu cho người dùng <strong>{selectedUser?.username}</strong> ({selectedUser?.email}).
+          </p>
+        </div>
+        <Form
+          form={resetPasswordForm}
+          layout="vertical"
+          onFinish={handleAdminResetPassword}
+        >
+          <Form.Item
+            name="newPassword"
+            label="Mật khẩu mới"
+            rules={[
+              { required: true, message: 'Vui lòng nhập mật khẩu mới' },
+              { min: 6, message: 'Mật khẩu phải có ít nhất 6 ký tự' },
+            ]}
+          >
+            <Input.Password 
+              size="large" 
+              placeholder="Nhập mật khẩu mới"
+              prefix={<KeyOutlined style={{ color: '#faad14' }} />}
+            />
+          </Form.Item>
+          <Form.Item
+            name="confirmPassword"
+            label="Xác nhận mật khẩu mới"
+            dependencies={['newPassword']}
+            rules={[
+              { required: true, message: 'Vui lòng xác nhận mật khẩu' },
+              ({ getFieldValue }) => ({
+                validator(_, value) {
+                  if (!value || getFieldValue('newPassword') === value) {
+                    return Promise.resolve();
+                  }
+                  return Promise.reject(new Error('Mật khẩu xác nhận không khớp'));
+                },
+              }),
+            ]}
+          >
+            <Input.Password 
+              size="large" 
+              placeholder="Nhập lại mật khẩu mới"
+              prefix={<KeyOutlined style={{ color: '#faad14' }} />}
+            />
+          </Form.Item>
+          <Form.Item style={{ marginBottom: 0 }}>
+            <Space style={{ width: '100%', justifyContent: 'flex-end' }}>
+              <Button onClick={() => setIsResetPasswordModalOpen(false)}>
+                Hủy
+              </Button>
+              <Button 
+                type="primary" 
+                htmlType="submit" 
+                loading={loadingResetPassword}
+                style={{ background: '#faad14', borderColor: '#faad14' }}
+              >
+                Đặt lại mật khẩu
+              </Button>
+            </Space>
+          </Form.Item>
+        </Form>
       </Modal>
     </div>
   );
