@@ -12,6 +12,9 @@ const {
   changePassword,
   getUserStats,
   checkLoginName,
+  adminResetPassword,
+  sendResetPasswordOTP,
+  verifyOTPAndResetPassword,
   //createAdminUser,
 } = require('../controllers/authController');
 const { authenticate, authorize } = require('../middlewares/authMiddleware');
@@ -597,19 +600,12 @@ router.delete(
 
 /**
  * @swagger
- * /auth/change-password/{id}:
+ * /auth/change-password:
  *   post:
- *     summary: Change user password
+ *     summary: Change current user's password (requires old password)
  *     tags: [Users]
  *     security:
  *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: integer
- *         description: User ID
  *     requestBody:
  *       required: true
  *       content:
@@ -617,10 +613,10 @@ router.delete(
  *           schema:
  *             type: object
  *             required:
- *               - currentPassword
+ *               - oldPassword
  *               - newPassword
  *             properties:
- *               currentPassword:
+ *               oldPassword:
  *                 type: string
  *                 example: "oldpassword123"
  *               newPassword:
@@ -637,10 +633,139 @@ router.delete(
  *       400:
  *         description: Bad request
  *       401:
- *         description: Unauthorized
+ *         description: Unauthorized - Invalid old password
+ */
+router.post('/change-password', authenticate, changePassword);
+
+/**
+ * @swagger
+ * /auth/admin-reset-password/{id}:
+ *   post:
+ *     summary: Admin force reset password for a user (Admin only)
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Target User ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - newPassword
+ *             properties:
+ *               newPassword:
+ *                 type: string
+ *                 minLength: 6
+ *                 example: "newpassword123"
+ *     responses:
+ *       200:
+ *         description: Password reset successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Success'
+ *       400:
+ *         description: Bad request
+ *       403:
+ *         description: Forbidden - Cannot reset admin password
  *       404:
  *         description: User not found
  */
-router.post('/change-password/:id', authenticate, changePassword);
+router.post(
+  '/admin-reset-password/:id',
+  authenticate,
+  authorize(['admin']),
+  adminResetPassword
+);
+
+/**
+ * @swagger
+ * /auth/forgot-password:
+ *   post:
+ *     summary: Request password reset OTP (Forgot Password)
+ *     tags: [Authentication]
+ *     security: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: "user@example.com"
+ *     responses:
+ *       200:
+ *         description: OTP sent to email if user exists
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Mã OTP đã được gửi đến email của bạn"
+ *                 email:
+ *                   type: string
+ *                   example: "user@example.com"
+ *       500:
+ *         description: Server error
+ */
+router.post('/forgot-password', sendResetPasswordOTP);
+
+/**
+ * @swagger
+ * /auth/reset-password:
+ *   post:
+ *     summary: Verify OTP and reset password
+ *     tags: [Authentication]
+ *     security: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - otp_code
+ *               - newPassword
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: "user@example.com"
+ *               otp_code:
+ *                 type: string
+ *                 example: "123456"
+ *               newPassword:
+ *                 type: string
+ *                 minLength: 6
+ *                 example: "newpassword123"
+ *     responses:
+ *       200:
+ *         description: Password reset successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Success'
+ *       400:
+ *         description: Invalid or expired OTP
+ *       404:
+ *         description: User not found
+ */
+router.post('/reset-password', verifyOTPAndResetPassword);
 
 module.exports = router;

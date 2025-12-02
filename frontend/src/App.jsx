@@ -29,6 +29,7 @@ import EmailList from './components/EmailList';
 import EmailSubscription from './components/EmailSubscription';
 import UnsubscribePage from './components/UnsubscribePage';
 import SwaggerViewer from './components/SwaggerViewer';
+import ForgotPassword from './components/ForgotPassword';
 import { useTranslation } from 'react-i18next';
 import LanguageSwitch from './components/LanguageSwitch';
 import {
@@ -606,6 +607,7 @@ const App = () => {
               }
             />
             <Route path="/Login" element={<Login />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route
               path="/admin-stats"
               element={

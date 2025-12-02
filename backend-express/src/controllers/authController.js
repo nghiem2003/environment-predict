@@ -500,14 +500,23 @@ exports.getUserById = async (req, res) => {
 
 exports.changePassword = async (req, res) => {
   try {
-    const { id } = req.params;
+    // Lấy user từ req.user (authenticate middleware) thay vì từ params
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
     const { oldPassword, newPassword } = req.body;
 
     if (!oldPassword || !newPassword) {
-      return res.status(400).json({ error: 'Missing required fields' });
+      return res.status(400).json({ error: 'Thiếu thông tin bắt buộc' });
     }
 
-    const user = await User.findOne({ where: { id } });
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: 'Mật khẩu mới phải có ít nhất 6 ký tự' });
+    }
+
+    const user = await User.findOne({ where: { id: userId } });
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     const isMatch = await bcrypt.compare(oldPassword, user.password);
@@ -519,12 +528,221 @@ exports.changePassword = async (req, res) => {
     user.password = hashedPassword;
     await user.save();
 
+    logger.info('Password changed successfully', { userId });
     return res.status(200).json({ message: 'Đổi mật khẩu thành công' });
   } catch (error) {
     logger.error('Change Password Error:', {
       message: error.message,
       stack: error.stack,
-      userId: req.params.id,
+      userId: req.user?.id,
+    });
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+// Admin force reset password cho user khác
+exports.adminResetPassword = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { newPassword } = req.body;
+
+    if (!newPassword) {
+      return res.status(400).json({ error: 'Mật khẩu mới là bắt buộc' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: 'Mật khẩu mới phải có ít nhất 6 ký tự' });
+    }
+
+    const user = await User.findOne({ where: { id } });
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Admin không thể reset password của admin khác (trừ chính mình)
+    if (user.role === 'admin' && user.id !== req.user.id) {
+      return res.status(403).json({ error: 'Không thể đặt lại mật khẩu của admin khác' });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedPassword;
+    await user.save();
+
+    logger.info('Admin reset password successfully', { 
+      adminId: req.user.id, 
+      targetUserId: id,
+      targetUsername: user.username 
+    });
+
+    return res.status(200).json({ 
+      message: `Đã đặt lại mật khẩu cho người dùng ${user.username} thành công` 
+    });
+  } catch (error) {
+    logger.error('Admin Reset Password Error:', {
+      message: error.message,
+      stack: error.stack,
+      adminId: req.user?.id,
+      targetUserId: req.params.id,
+    });
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+// Gửi OTP để reset password (quên mật khẩu)
+exports.sendResetPasswordOTP = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ error: 'Email là bắt buộc' });
+    }
+
+    // Tìm user với email
+    const user = await User.findOne({ where: { email } });
+    if (!user) {
+      // Không tiết lộ user có tồn tại hay không vì lý do bảo mật
+      return res.status(200).json({ 
+        message: 'Nếu email tồn tại trong hệ thống, bạn sẽ nhận được mã OTP' 
+      });
+    }
+
+    // Import Otp model
+    const { Otp } = require('../models');
+    const nodemailer = require('nodemailer');
+
+    // Generate OTP
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 phút
+
+    // Xóa OTP cũ cho email này (loại reset_password)
+    await Otp.destroy({
+      where: { 
+        email,
+        area_id: 0 // Sử dụng area_id = 0 để đánh dấu đây là OTP reset password
+      },
+    });
+
+    // Lưu OTP mới
+    await Otp.create({
+      email,
+      area_id: 0, // 0 = reset password OTP
+      otp_code: otpCode,
+      expires_at: expiresAt,
+      is_used: false,
+    });
+
+    // Gửi email
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.EMAIL_USER || 'your-email@gmail.com',
+        pass: process.env.EMAIL_PASS || 'your-app-password',
+      },
+    });
+
+    const mailOptions = {
+      from: process.env.EMAIL_USER || 'your-email@gmail.com',
+      to: email,
+      subject: 'Mã xác thực đặt lại mật khẩu - Hệ thống Dự đoán Nuôi trồng Thủy sản',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #2c3e50;">Đặt lại mật khẩu</h2>
+          <p>Xin chào <strong>${user.username}</strong>,</p>
+          <p>Bạn đã yêu cầu đặt lại mật khẩu cho tài khoản của mình.</p>
+          <div style="background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin: 20px 0; text-align: center;">
+            <h3 style="margin-top: 0; color: #2c3e50;">Mã xác thực của bạn:</h3>
+            <div style="font-size: 32px; font-weight: bold; color: #e74c3c; letter-spacing: 5px; padding: 10px;">
+              ${otpCode}
+            </div>
+            <p style="font-size: 14px; color: #666; margin-top: 10px;">
+              Mã này sẽ hết hạn sau 10 phút
+            </p>
+          </div>
+          <p>Vui lòng nhập mã này vào form đặt lại mật khẩu để tiếp tục.</p>
+          <p style="color: #e74c3c;"><strong>Nếu bạn không yêu cầu đặt lại mật khẩu, vui lòng bỏ qua email này và đảm bảo tài khoản của bạn an toàn.</strong></p>
+          <p>Trân trọng,<br>Hệ thống Dự đoán Nuôi trồng Thủy sản</p>
+        </div>
+      `,
+    };
+
+    await transporter.sendMail(mailOptions);
+
+    logger.info('Reset password OTP sent', { email, userId: user.id });
+
+    return res.status(200).json({ 
+      message: 'Mã OTP đã được gửi đến email của bạn',
+      email: email 
+    });
+  } catch (error) {
+    logger.error('Send Reset Password OTP Error:', {
+      message: error.message,
+      stack: error.stack,
+      email: req.body.email,
+    });
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+// Xác thực OTP và đặt lại mật khẩu
+exports.verifyOTPAndResetPassword = async (req, res) => {
+  try {
+    const { email, otp_code, newPassword } = req.body;
+
+    if (!email || !otp_code || !newPassword) {
+      return res.status(400).json({ error: 'Email, mã OTP và mật khẩu mới là bắt buộc' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: 'Mật khẩu mới phải có ít nhất 6 ký tự' });
+    }
+
+    // Import Otp model
+    const { Otp } = require('../models');
+
+    // Tìm OTP record
+    const otpRecord = await Otp.findOne({
+      where: { 
+        email, 
+        area_id: 0, // Reset password OTP
+        otp_code, 
+        is_used: false 
+      },
+    });
+
+    if (!otpRecord) {
+      return res.status(400).json({ error: 'Mã OTP không hợp lệ' });
+    }
+
+    // Kiểm tra hết hạn
+    if (new Date() > otpRecord.expires_at) {
+      return res.status(400).json({ error: 'Mã OTP đã hết hạn' });
+    }
+
+    // Tìm user
+    const user = await User.findOne({ where: { email } });
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Đánh dấu OTP đã sử dụng
+    otpRecord.is_used = true;
+    await otpRecord.save();
+
+    // Cập nhật mật khẩu mới
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedPassword;
+    await user.save();
+
+    logger.info('Password reset successfully via OTP', { userId: user.id, email });
+
+    return res.status(200).json({ 
+      message: 'Đặt lại mật khẩu thành công. Bạn có thể đăng nhập với mật khẩu mới.' 
+    });
+  } catch (error) {
+    logger.error('Verify OTP and Reset Password Error:', {
+      message: error.message,
+      stack: error.stack,
+      email: req.body.email,
     });
     return res.status(500).json({ error: 'Internal server error' });
   }
