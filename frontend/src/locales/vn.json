@@ -5,6 +5,7 @@
     "searchPlaceholder": "Tìm kiếm khu vực..."
   },
   "userList": {
+    "nameContainsOnlyLettersAndNumbers": "Tên đăng nhập chỉ được chứa chữ cái không dấu, số và dấu gạch dưới",
     "loginNameUsed": "Tên đăng nhập đã được sử dụng",
     "loginNameValid": "Tên đăng nhập hợp lệ",
     "shortLoginName": "Tên đăng nhập phải có ít nhất 3 ký tự",
@@ -85,6 +86,14 @@
     "subscribeEmail": "Đăng ký nhận thông báo Email"
   },
   "login": {
+    "forgotPassword": "Quên mật khẩu",
+    "forgotPasswordMessage": "Vui lòng nhập email để lấy lại mật khẩu",
+    "forgotPasswordButton": "Gửi",
+    "forgotPasswordSuccess": "Email đã được gửi. Vui lòng kiểm tra email để lấy lại mật khẩu",
+    "forgotPasswordFailed": "Email không tồn tại. Vui lòng kiểm tra lại",
+    "forgotPasswordInvalid": "Email không hợp lệ. Vui lòng kiểm tra lại",
+    "forgotPasswordRequired": "Vui lòng nhập email",
+    "forgotPasswordInvalidEmail": "Email không hợp lệ. Vui lòng kiểm tra lại",
     "title": "Đăng nhập",
     "email": "Email/Tên đăng nhập",
     "password": "Mật khẩu",

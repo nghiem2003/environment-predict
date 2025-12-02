@@ -96,7 +96,7 @@ exports.createManagerUser = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Determine login_name: use provided value, or fallback to email prefix
-    const finalLoginName = login_name || email.split('@')[0];
+    const finalLoginName = login_name || email.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '').toLowerCase();
     let dupCount = 0;
     while (await User.findOne({ where: { login_name: finalLoginName } })) {
       dupCount++;
@@ -568,14 +568,14 @@ exports.adminResetPassword = async (req, res) => {
     user.password = hashedPassword;
     await user.save();
 
-    logger.info('Admin reset password successfully', { 
-      adminId: req.user.id, 
+    logger.info('Admin reset password successfully', {
+      adminId: req.user.id,
       targetUserId: id,
-      targetUsername: user.username 
+      targetUsername: user.username
     });
 
-    return res.status(200).json({ 
-      message: `Đã đặt lại mật khẩu cho người dùng ${user.username} thành công` 
+    return res.status(200).json({
+      message: `Đã đặt lại mật khẩu cho người dùng ${user.username} thành công`
     });
   } catch (error) {
     logger.error('Admin Reset Password Error:', {
@@ -601,8 +601,8 @@ exports.sendResetPasswordOTP = async (req, res) => {
     const user = await User.findOne({ where: { email } });
     if (!user) {
       // Không tiết lộ user có tồn tại hay không vì lý do bảo mật
-      return res.status(200).json({ 
-        message: 'Nếu email tồn tại trong hệ thống, bạn sẽ nhận được mã OTP' 
+      return res.status(200).json({
+        message: 'Nếu email tồn tại trong hệ thống, bạn sẽ nhận được mã OTP'
       });
     }
 
@@ -616,7 +616,7 @@ exports.sendResetPasswordOTP = async (req, res) => {
 
     // Xóa OTP cũ cho email này (loại reset_password)
     await Otp.destroy({
-      where: { 
+      where: {
         email,
         area_id: 0 // Sử dụng area_id = 0 để đánh dấu đây là OTP reset password
       },
@@ -639,7 +639,6 @@ exports.sendResetPasswordOTP = async (req, res) => {
         pass: process.env.EMAIL_PASS || 'your-app-password',
       },
     });
-
     const mailOptions = {
       from: process.env.EMAIL_USER || 'your-email@gmail.com',
       to: email,
@@ -667,11 +666,10 @@ exports.sendResetPasswordOTP = async (req, res) => {
 
     await transporter.sendMail(mailOptions);
 
-    logger.info('Reset password OTP sent', { email, userId: user.id });
 
-    return res.status(200).json({ 
+    return res.status(200).json({
       message: 'Mã OTP đã được gửi đến email của bạn',
-      email: email 
+      email: email
     });
   } catch (error) {
     logger.error('Send Reset Password OTP Error:', {
@@ -701,11 +699,11 @@ exports.verifyOTPAndResetPassword = async (req, res) => {
 
     // Tìm OTP record
     const otpRecord = await Otp.findOne({
-      where: { 
-        email, 
+      where: {
+        email,
         area_id: 0, // Reset password OTP
-        otp_code, 
-        is_used: false 
+        otp_code,
+        is_used: false
       },
     });
 
@@ -735,8 +733,8 @@ exports.verifyOTPAndResetPassword = async (req, res) => {
 
     logger.info('Password reset successfully via OTP', { userId: user.id, email });
 
-    return res.status(200).json({ 
-      message: 'Đặt lại mật khẩu thành công. Bạn có thể đăng nhập với mật khẩu mới.' 
+    return res.status(200).json({
+      message: 'Đặt lại mật khẩu thành công. Bạn có thể đăng nhập với mật khẩu mới.'
     });
   } catch (error) {
     logger.error('Verify OTP and Reset Password Error:', {

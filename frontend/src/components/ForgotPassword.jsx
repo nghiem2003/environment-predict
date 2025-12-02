@@ -38,11 +38,11 @@ const ForgotPassword = () => {
   const handleSendOTP = async (values) => {
     setLoading(true);
     try {
-      await axios.post('/api/express/auth/forgot-password', {
+      const result = await axios.post('/api/express/auth/forgot-password', {
         email: values.email,
       });
       setEmail(values.email);
-      message.success('Mã OTP đã được gửi đến email của bạn');
+      message.success(result.data.message);
       setCurrentStep(1);
     } catch (error) {
       console.error('Send OTP error:', error);
@@ -203,7 +203,7 @@ const ForgotPassword = () => {
                   size="large"
                 >
                   <Text type="secondary" style={{ display: 'block', marginBottom: '16px' }}>
-                    Mã OTP đã được gửi đến <strong>{email}</strong>. 
+                    Mã OTP đã được gửi đến <strong>{email}</strong>.
                     Mã có hiệu lực trong 10 phút.
                   </Text>
 

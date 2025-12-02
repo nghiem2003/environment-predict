@@ -5,6 +5,7 @@
     "searchPlaceholder": "Search for an area..."
   },
   "userList": {
+    "nameContainsOnlyLettersAndNumbers": "Login name must contain only unsigned letters and numbers",
     "loginNameUsed": "Login name already used",
     "loginNameValid": "Login name is valid",
     "shortLoginName": "Login name must be at least 3 characters",
@@ -85,6 +86,14 @@
     "subscribeEmail": "Subscribe to Email Notifications"
   },
   "login": {
+    "forgotPassword": "Forgot Password",
+    "forgotPasswordMessage": "Please enter your email to reset your password",
+    "forgotPasswordButton": "Send",
+    "forgotPasswordSuccess": "Email has been sent. Please check your email to reset your password",
+    "forgotPasswordFailed": "Email does not exist. Please check again",
+    "forgotPasswordInvalid": "Invalid email. Please check again",
+    "forgotPasswordRequired": "Please enter your email",
+    "forgotPasswordInvalidEmail": "Invalid email. Please check again",
     "title": "Login",
     "email": "Email/Username",
     "password": "Password",
