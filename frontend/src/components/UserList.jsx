@@ -158,8 +158,8 @@ const UserList = () => {
         // Validate format first
         if (!/^[a-zA-Z0-9_]+$/.test(debouncedLoginName)) {
           setCheckingLoginName(true);
-          setLoginNameErrorMessage(t('userList.loginNameValid') || 'Tên đăng nhập hợp lệ');
-          setLoginNameError(false);
+          setLoginNameErrorMessage(t('userList.nameContainsOnlyLettersAndNumbers') || 'Tên đăng nhập chỉ được chứa chữ cái không dấu, số và dấu gạch dưới');
+          setLoginNameError(true);
           setCheckingLoginName(false);
           return;
         }
@@ -483,7 +483,7 @@ const UserList = () => {
 
   const handleAdminResetPassword = async (values) => {
     if (!selectedUser) return;
-    
+
     if (values.newPassword !== values.confirmPassword) {
       message.error('Mật khẩu xác nhận không khớp');
       return;
@@ -1119,8 +1119,8 @@ const UserList = () => {
               { min: 6, message: 'Mật khẩu phải có ít nhất 6 ký tự' },
             ]}
           >
-            <Input.Password 
-              size="large" 
+            <Input.Password
+              size="large"
               placeholder="Nhập mật khẩu mới"
               prefix={<KeyOutlined style={{ color: '#faad14' }} />}
             />
@@ -1141,8 +1141,8 @@ const UserList = () => {
               }),
             ]}
           >
-            <Input.Password 
-              size="large" 
+            <Input.Password
+              size="large"
               placeholder="Nhập lại mật khẩu mới"
               prefix={<KeyOutlined style={{ color: '#faad14' }} />}
             />
@@ -1152,9 +1152,9 @@ const UserList = () => {
               <Button onClick={() => setIsResetPasswordModalOpen(false)}>
                 Hủy
               </Button>
-              <Button 
-                type="primary" 
-                htmlType="submit" 
+              <Button
+                type="primary"
+                htmlType="submit"
                 loading={loadingResetPassword}
                 style={{ background: '#faad14', borderColor: '#faad14' }}
               >
