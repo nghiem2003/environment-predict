@@ -58,8 +58,6 @@ import {
 import axiosInstance from '../axios';
 
 const { Title, Text, Paragraph } = Typography;
-const { Panel } = Collapse;
-const { TabPane } = Tabs;
 
 const SwaggerViewer = () => {
   const [swaggerData, setSwaggerData] = useState(null);
@@ -314,7 +312,6 @@ const SwaggerViewer = () => {
     }
 
     const jsonContent = content['application/json'];
-    console.log('Response content:', jsonContent);
 
     // Check if there are examples first
     if (jsonContent.examples) {
@@ -324,7 +321,6 @@ const SwaggerViewer = () => {
           Object.keys(jsonContent.examples)[0];
 
       if (exampleKey && jsonContent.examples[exampleKey] && jsonContent.examples[exampleKey].value) {
-        console.log('Using provided example:', jsonContent.examples[exampleKey].value);
         return jsonContent.examples[exampleKey].value;
       }
     }
@@ -335,7 +331,6 @@ const SwaggerViewer = () => {
     }
 
     const schema = jsonContent.schema;
-    console.log('Response schema:', schema);
 
     // Handle specific response patterns
     if (schema.properties) {
@@ -366,7 +361,6 @@ const SwaggerViewer = () => {
           }
         ];
         example.total = 25;
-        console.log('Generated areas example:', example);
         return example;
       }
 
@@ -467,7 +461,6 @@ const SwaggerViewer = () => {
         example[key] = generateExample(prop);
       });
 
-      console.log('Generated example from schema properties:', example);
       return example;
     }
 
@@ -478,7 +471,6 @@ const SwaggerViewer = () => {
 
     // Handle simple responses
     const simpleExample = generateExample(schema);
-    console.log('Generated simple example:', simpleExample);
     return simpleExample;
   };
 
@@ -486,10 +478,8 @@ const SwaggerViewer = () => {
   const getResponseExample = (content) => {
     try {
       const result = generateResponseExample(content);
-      console.log('Final response result:', result);
       return result;
     } catch (error) {
-      console.error('Error generating response example:', error);
       return {
         error: "Failed to generate response example",
         message: "Please check the API documentation for response format"
@@ -765,6 +755,157 @@ const SwaggerViewer = () => {
     }));
   };
 
+  const renderEndpointContent = (endpoint) => (
+    <div style={{ padding: 16, background: '#f5f5f5', borderRadius: 4 }}>
+      <Space direction="vertical" size="small" style={{ width: '100%' }}>
+        <div>
+          <Text strong>Summary:</Text>
+          <Text style={{ marginLeft: 8 }}>{endpoint.summary}</Text>
+        </div>
+
+        {endpoint.details.description && (
+          <div>
+            <Text strong>Description:</Text>
+            <Text style={{ marginLeft: 8 }}>{endpoint.details.description}</Text>
+          </div>
+        )}
+
+        <div>
+          <Text strong>Security:</Text>
+          <div style={{ marginTop: 8 }}>
+            {!endpoint.details.security || endpoint.details.security.length === 0 ? (
+              <Tag color="green">Public (No authentication required)</Tag>
+            ) : (
+              endpoint.details.security.map((sec, secIndex) => (
+                <div key={secIndex} style={{ marginBottom: 4 }}>
+                  {Object.entries(sec).map(([scheme, scopes]) => (
+                    <Space key={scheme}>
+                      <LockOutlined />
+                      <Tag color="red">{scheme}</Tag>
+                      {scopes && scopes.length > 0 && (
+                        <Text type="secondary">Scopes: {scopes.join(', ')}</Text>
+                      )}
+                    </Space>
+                  ))}
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        {endpoint.details.parameters && endpoint.details.parameters.length > 0 && (
+          <div>
+            <Text strong>Parameters:</Text>
+            <div style={{ marginTop: 8 }}>
+              {endpoint.details.parameters.map((param, paramIndex) => (
+                <div key={paramIndex} style={{ marginBottom: 4 }}>
+                  <Space>
+                    <Text code>{param.name}</Text>
+                    <Tag color="blue">{param.in}</Tag>
+                    <Tag color="orange">{param.schema?.type}</Tag>
+                    {param.required && <Tag color="red">Required</Tag>}
+                    <Text type="secondary">{param.description}</Text>
+                  </Space>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {endpoint.details.requestBody && (
+          <div>
+            <Text strong>Request Body:</Text>
+            <div style={{ marginTop: 8 }}>
+              {renderRequestBodyForm(endpoint.details.requestBody)}
+            </div>
+          </div>
+        )}
+
+        {endpoint.details.responses && (
+          <div>
+            <Text strong>Responses:</Text>
+            <div style={{ marginTop: 8 }}>
+              <Tabs
+                defaultActiveKey="0"
+                size="small"
+                items={Object.entries(endpoint.details.responses).map(([code, response], idx) => ({
+                  key: idx.toString(),
+                  label: (
+                    <Space>
+                      <Tag color={code.startsWith('2') ? 'green' : code.startsWith('4') ? 'red' : 'orange'}>
+                        {code}
+                      </Tag>
+                      <Text type="secondary" style={{ fontSize: 12 }}>
+                        {response.description}
+                      </Text>
+                    </Space>
+                  ),
+                  children: (
+                    <div style={{ padding: '8px 0' }}>
+                      <pre style={{
+                        background: '#f5f5f5',
+                        padding: 12,
+                        borderRadius: 6,
+                        fontSize: 12,
+                        overflow: 'auto',
+                        maxHeight: '200px',
+                        margin: 0
+                      }}>
+                        {(() => {
+                          if (response.content) {
+                            const example = getResponseExample(response.content);
+                            return JSON.stringify(example, null, 2);
+                          } else {
+                            let fallbackExample = {};
+                            if (code.startsWith('2')) {
+                              if (endpoint.path.includes('/areas')) {
+                                fallbackExample = {
+                                  areas: [{ id: 1, name: "Khu vực nuôi hàu A", latitude: 10.762622, longitude: 106.660172, area: 1000.5, province: "123e4567-e89b-12d3-a456-426614174000", district: "123e4567-e89b-12d3-a456-426614174001", area_type: "oyster" }],
+                                  total: 25
+                                };
+                              } else if (endpoint.path.includes('/predictions')) {
+                                fallbackExample = {
+                                  rows: [{ id: 1, area_id: 1, user_id: 1, prediction_text: "Good conditions for oyster farming", createdAt: "2024-01-01T00:00:00Z", updatedAt: "2024-01-01T00:00:00Z", Area: { id: 1, name: "Khu vực nuôi hàu A" } }],
+                                  count: 15
+                                };
+                              } else if (endpoint.path.includes('/emails')) {
+                                fallbackExample = {
+                                  subscriptions: [{ id: 1, email: "subscriber@example.com", area_id: 1, is_active: true, unsubscribe_token: "abc123def456ghi789", created_at: "2024-01-01T00:00:00Z", updated_at: "2024-01-01T00:00:00Z" }],
+                                  total: 5
+                                };
+                              } else {
+                                fallbackExample = { success: true, message: response.description || "Operation completed successfully", data: "Sample response data" };
+                              }
+                            } else if (code.startsWith('4')) {
+                              fallbackExample = { error: response.description || "Bad request", message: "Please check your request parameters" };
+                            } else {
+                              fallbackExample = { message: response.description || "Response received", status: code };
+                            }
+                            return JSON.stringify(fallbackExample, null, 2);
+                          }
+                        })()}
+                      </pre>
+                    </div>
+                  )
+                }))}
+              />
+            </div>
+          </div>
+        )}
+
+        <Button
+          type="primary"
+          size="small"
+          icon={<PlayCircleOutlined />}
+          onClick={() => setSelectedEndpoint(endpoint)}
+          style={{ marginTop: 8 }}
+        >
+          Try it out
+        </Button>
+      </Space>
+    </div>
+  );
+
   const renderAPIsByTag = () => {
     const endpointsByTag = getEndpointsByTag();
     const filteredTags = Object.keys(endpointsByTag).filter(tag =>
@@ -796,18 +937,16 @@ const SwaggerViewer = () => {
           ghost
           expandIcon={({ isActive }) => isActive ? <CaretDownOutlined /> : <CaretRightOutlined />}
           style={{ background: '#fafafa', marginBottom: 0 }}
-        >
-          {filteredTags.map(tag => (
-            <Panel
-              header={
-                <Space>
-                  <Text strong>{tag}</Text>
-                  <Badge count={endpointsByTag[tag].length} style={{ backgroundColor: '#007bff' }} />
-                </Space>
-              }
-              key={tag}
-              style={{ marginBottom: 8 }}
-            >
+          items={filteredTags.map(tag => ({
+            key: tag,
+            label: (
+              <Space>
+                <Text strong>{tag}</Text>
+                <Badge count={endpointsByTag[tag].length} style={{ backgroundColor: '#007bff' }} />
+              </Space>
+            ),
+            style: { marginBottom: 8 },
+            children: (
               <div style={{ paddingLeft: 16 }}>
                 {endpointsByTag[tag].map((endpoint, index) => (
                   <div key={index} style={{ marginBottom: 12 }}>
@@ -815,9 +954,9 @@ const SwaggerViewer = () => {
                       ghost
                       size="small"
                       expandIcon={({ isActive }) => isActive ? <MinusOutlined /> : <PlusOutlined />}
-                    >
-                      <Panel
-                        header={
+                      items={[{
+                        key: index.toString(),
+                        label: (
                           <Space>
                             <Tag color={
                               endpoint.method === 'GET' ? 'green' :
@@ -830,223 +969,16 @@ const SwaggerViewer = () => {
                             <Text code>{endpoint.path}</Text>
                             <Text type="secondary">{endpoint.summary}</Text>
                           </Space>
-                        }
-                        key={index}
-                      >
-                        <div style={{ padding: 16, background: '#f5f5f5', borderRadius: 4 }}>
-                          <Space direction="vertical" size="small" style={{ width: '100%' }}>
-                            <div>
-                              <Text strong>Summary:</Text>
-                              <Text style={{ marginLeft: 8 }}>{endpoint.summary}</Text>
-                            </div>
-
-                            {endpoint.details.description && (
-                              <div>
-                                <Text strong>Description:</Text>
-                                <Text style={{ marginLeft: 8 }}>{endpoint.details.description}</Text>
-                              </div>
-                            )}
-
-                            <div>
-                              <Text strong>Security:</Text>
-                              <div style={{ marginTop: 8 }}>
-                                {!endpoint.details.security || endpoint.details.security.length === 0 ? (
-                                  <Tag color="green">Public (No authentication required)</Tag>
-                                ) : (
-                                  endpoint.details.security.map((sec, secIndex) => (
-                                    <div key={secIndex} style={{ marginBottom: 4 }}>
-                                      {Object.entries(sec).map(([scheme, scopes]) => (
-                                        <Space key={scheme}>
-                                          <LockOutlined />
-                                          <Tag color="red">{scheme}</Tag>
-                                          {scopes && scopes.length > 0 && (
-                                            <Text type="secondary">Scopes: {scopes.join(', ')}</Text>
-                                          )}
-                                        </Space>
-                                      ))}
-                                    </div>
-                                  ))
-                                )}
-                              </div>
-                            </div>
-
-                            {endpoint.details.parameters && endpoint.details.parameters.length > 0 && (
-                              <div>
-                                <Text strong>Parameters:</Text>
-                                <div style={{ marginTop: 8 }}>
-                                  {endpoint.details.parameters.map((param, paramIndex) => (
-                                    <div key={paramIndex} style={{ marginBottom: 4 }}>
-                                      <Space>
-                                        <Text code>{param.name}</Text>
-                                        <Tag color="blue">{param.in}</Tag>
-                                        <Tag color="orange">{param.schema?.type}</Tag>
-                                        {param.required && <Tag color="red">Required</Tag>}
-                                        <Text type="secondary">{param.description}</Text>
-                                      </Space>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-
-                            {endpoint.details.requestBody && (
-                              <div>
-                                <Text strong>Request Body:</Text>
-                                <div style={{ marginTop: 8 }}>
-                                  {renderRequestBodyForm(endpoint.details.requestBody)}
-                                </div>
-                              </div>
-                            )}
-
-                            {endpoint.details.responses && (
-                              <div>
-                                <Text strong>Responses:</Text>
-                                <div style={{ marginTop: 8 }}>
-                                  {(() => {
-                                    console.log('Endpoint details:', endpoint.details);
-                                    console.log('Responses:', endpoint.details.responses);
-                                    return null;
-                                  })()}
-                                  <Tabs
-                                    defaultActiveKey="0"
-                                    size="small"
-                                    items={Object.entries(endpoint.details.responses).map(([code, response], index) => ({
-                                      key: index.toString(),
-                                      label: (
-                                        <Space>
-                                          <Tag color={code.startsWith('2') ? 'green' : code.startsWith('4') ? 'red' : 'orange'}>
-                                            {code}
-                                          </Tag>
-                                          <Text type="secondary" style={{ fontSize: 12 }}>
-                                            {response.description}
-                                          </Text>
-                                        </Space>
-                                      ),
-                                      items: (
-                                        <div style={{ padding: '8px 0' }}>
-                                          <pre style={{
-                                            background: '#f5f5f5',
-                                            padding: 12,
-                                            borderRadius: 6,
-                                            fontSize: 12,
-                                            overflow: 'auto',
-                                            maxHeight: '200px',
-                                            margin: 0
-                                          }}>
-                                            {(() => {
-                                              console.log('Response content in list:', response.content);
-                                              if (response.content) {
-                                                const example = getResponseExample(response.content);
-                                                console.log('Generated example for list:', example);
-                                                return JSON.stringify(example, null, 2);
-                                              } else {
-                                                // Fallback: generate example based on response code and common patterns
-                                                let fallbackExample = {};
-
-                                                if (code.startsWith('2')) {
-                                                  // Success responses
-                                                  if (endpoint.path.includes('/areas')) {
-                                                    fallbackExample = {
-                                                      areas: [
-                                                        {
-                                                          id: 1,
-                                                          name: "Khu vực nuôi hàu A",
-                                                          latitude: 10.762622,
-                                                          longitude: 106.660172,
-                                                          area: 1000.5,
-                                                          province: "123e4567-e89b-12d3-a456-426614174000",
-                                                          district: "123e4567-e89b-12d3-a456-426614174001",
-                                                          area_type: "oyster"
-                                                        }
-                                                      ],
-                                                      total: 25
-                                                    };
-                                                  } else if (endpoint.path.includes('/predictions')) {
-                                                    fallbackExample = {
-                                                      rows: [
-                                                        {
-                                                          id: 1,
-                                                          area_id: 1,
-                                                          user_id: 1,
-                                                          prediction_text: "Good conditions for oyster farming",
-                                                          createdAt: "2024-01-01T00:00:00Z",
-                                                          updatedAt: "2024-01-01T00:00:00Z",
-                                                          Area: {
-                                                            id: 1,
-                                                            name: "Khu vực nuôi hàu A"
-                                                          }
-                                                        }
-                                                      ],
-                                                      count: 15
-                                                    };
-                                                  } else if (endpoint.path.includes('/emails')) {
-                                                    fallbackExample = {
-                                                      subscriptions: [
-                                                        {
-                                                          id: 1,
-                                                          email: "subscriber@example.com",
-                                                          area_id: 1,
-                                                          is_active: true,
-                                                          unsubscribe_token: "abc123def456ghi789",
-                                                          created_at: "2024-01-01T00:00:00Z",
-                                                          updated_at: "2024-01-01T00:00:00Z"
-                                                        }
-                                                      ],
-                                                      total: 5
-                                                    };
-                                                  } else {
-                                                    fallbackExample = {
-                                                      success: true,
-                                                      message: response.description || "Operation completed successfully",
-                                                      data: "Sample response data"
-                                                    };
-                                                  }
-                                                } else if (code.startsWith('4')) {
-                                                  // Error responses
-                                                  fallbackExample = {
-                                                    error: response.description || "Bad request",
-                                                    message: "Please check your request parameters"
-                                                  };
-                                                } else {
-                                                  // Other responses
-                                                  fallbackExample = {
-                                                    message: response.description || "Response received",
-                                                    status: code
-                                                  };
-                                                }
-
-                                                console.log('Using fallback example:', fallbackExample);
-                                                return JSON.stringify(fallbackExample, null, 2);
-                                              }
-                                            })()}
-                                          </pre>
-                                        </div>
-                                      )
-                                    }))}
-                                  />
-                                </div>
-                              </div>
-                            )}
-
-                            <Button
-                              type="primary"
-                              size="small"
-                              icon={<PlayCircleOutlined />}
-                              onClick={() => setSelectedEndpoint(endpoint)}
-                              style={{ marginTop: 8 }}
-                            >
-                              Try it out
-                            </Button>
-                          </Space>
-                        </div>
-                      </Panel>
-                    </Collapse>
+                        ),
+                        children: renderEndpointContent(endpoint)
+                      }]}
+                    />
                   </div>
                 ))}
               </div>
-            </Panel>
-          ))}
-        </Collapse>
+            )
+          }))}
+        />
       </div>
     );
   };
@@ -1062,18 +994,17 @@ const SwaggerViewer = () => {
           <SecurityScanOutlined style={{ marginRight: 8 }} />
           Security Schemes
         </Title>
-        <Collapse>
-          {Object.entries(securitySchemes).map(([name, scheme]) => (
-            <Collapse.Panel
-              key={name}
-              header={
-                <Space>
-                  <LockOutlined />
-                  <Text strong>{name}</Text>
-                  <Tag color="blue">{scheme.type}</Tag>
-                </Space>
-              }
-            >
+        <Collapse
+          items={Object.entries(securitySchemes).map(([name, scheme]) => ({
+            key: name,
+            label: (
+              <Space>
+                <LockOutlined />
+                <Text strong>{name}</Text>
+                <Tag color="blue">{scheme.type}</Tag>
+              </Space>
+            ),
+            children: (
               <Descriptions bordered size="small">
                 <Descriptions.Item label="Type" span={3}>
                   <Tag color="blue">{scheme.type}</Tag>
@@ -1094,9 +1025,9 @@ const SwaggerViewer = () => {
                   </Descriptions.Item>
                 )}
               </Descriptions>
-            </Collapse.Panel>
-          ))}
-        </Collapse>
+            )
+          }))}
+        />
       </div>
     );
   };
@@ -1134,22 +1065,20 @@ const SwaggerViewer = () => {
           ghost
           expandIcon={({ isActive }) => isActive ? <CaretDownOutlined /> : <CaretRightOutlined />}
           style={{ background: '#fafafa', marginBottom: 0 }}
-        >
-          {filteredSchemas.map(({ name, schema, endpoints }) => (
-            <Panel
-              header={
-                <Space>
-                  <Text strong>{name}</Text>
-                  <Tag color="blue">{schema.type}</Tag>
-                  <Badge count={endpoints.length} style={{ backgroundColor: '#007bff' }} />
-                  <Text type="secondary">
-                    {Object.keys(schema.properties || {}).length} properties
-                  </Text>
-                </Space>
-              }
-              key={name}
-              style={{ marginBottom: 8 }}
-            >
+          items={filteredSchemas.map(({ name, schema, endpoints }) => ({
+            key: name,
+            label: (
+              <Space>
+                <Text strong>{name}</Text>
+                <Tag color="blue">{schema.type}</Tag>
+                <Badge count={endpoints.length} style={{ backgroundColor: '#007bff' }} />
+                <Text type="secondary">
+                  {Object.keys(schema.properties || {}).length} properties
+                </Text>
+              </Space>
+            ),
+            style: { marginBottom: 8 },
+            children: (
               <div style={{ paddingLeft: 16 }}>
                 <div style={{ marginBottom: 16 }}>
                   <Text type="secondary">{schema.description || 'No description available'}</Text>
@@ -1188,9 +1117,9 @@ const SwaggerViewer = () => {
                             ghost
                             size="small"
                             expandIcon={({ isActive }) => isActive ? <MinusOutlined /> : <PlusOutlined />}
-                          >
-                            <Panel
-                              header={
+                            items={[{
+                              key: index.toString(),
+                              label: (
                                 <Space>
                                   <Tag color={
                                     endpoint.method === 'GET' ? 'green' :
@@ -1203,36 +1132,36 @@ const SwaggerViewer = () => {
                                   <Text code>{endpoint.path}</Text>
                                   <Text type="secondary">{endpoint.summary}</Text>
                                 </Space>
-                              }
-                              key={index}
-                            >
-                              <div style={{ padding: 12, background: '#fff', borderRadius: 4, border: '1px solid #d9d9d9' }}>
-                                <Space direction="vertical" size="small" style={{ width: '100%' }}>
-                                  <div>
-                                    <Text strong>Summary:</Text>
-                                    <Text style={{ marginLeft: 8 }}>{endpoint.summary}</Text>
-                                  </div>
-
-                                  {endpoint.details.description && (
+                              ),
+                              children: (
+                                <div style={{ padding: 12, background: '#fff', borderRadius: 4, border: '1px solid #d9d9d9' }}>
+                                  <Space direction="vertical" size="small" style={{ width: '100%' }}>
                                     <div>
-                                      <Text strong>Description:</Text>
-                                      <Text style={{ marginLeft: 8 }}>{endpoint.details.description}</Text>
+                                      <Text strong>Summary:</Text>
+                                      <Text style={{ marginLeft: 8 }}>{endpoint.summary}</Text>
                                     </div>
-                                  )}
 
-                                  <Button
-                                    type="primary"
-                                    size="small"
-                                    icon={<PlayCircleOutlined />}
-                                    onClick={() => setSelectedEndpoint(endpoint)}
-                                    style={{ marginTop: 8 }}
-                                  >
-                                    Try it out
-                                  </Button>
-                                </Space>
-                              </div>
-                            </Panel>
-                          </Collapse>
+                                    {endpoint.details.description && (
+                                      <div>
+                                        <Text strong>Description:</Text>
+                                        <Text style={{ marginLeft: 8 }}>{endpoint.details.description}</Text>
+                                      </div>
+                                    )}
+
+                                    <Button
+                                      type="primary"
+                                      size="small"
+                                      icon={<PlayCircleOutlined />}
+                                      onClick={() => setSelectedEndpoint(endpoint)}
+                                      style={{ marginTop: 8 }}
+                                    >
+                                      Try it out
+                                    </Button>
+                                  </Space>
+                                </div>
+                              )
+                            }]}
+                          />
                         </div>
                       ))}
                     </div>
@@ -1252,9 +1181,9 @@ const SwaggerViewer = () => {
                   Generate Example
                 </Button>
               </div>
-            </Panel>
-          ))}
-        </Collapse>
+            )
+          }))}
+        />
       </div>
     );
   };
@@ -1358,7 +1287,7 @@ const SwaggerViewer = () => {
                       </Text>
                     </Space>
                   ),
-                  items: (
+                  children: (
                     <div style={{ padding: '8px 0' }}>
                       {response.content ? (
                         <pre style={{
@@ -1479,7 +1408,7 @@ const SwaggerViewer = () => {
                     API Endpoints
                   </span>
                 ),
-                items: (
+                children: (
                   <div style={{ padding: '16px 0', width: '100%' }}>
                     {renderAPIsByTag()}
                   </div>
@@ -1493,7 +1422,7 @@ const SwaggerViewer = () => {
                     Security
                   </span>
                 ),
-                items: (
+                children: (
                   <div style={{ padding: '16px 0', width: '100%' }}>
                     {renderSecuritySchemes()}
                   </div>
@@ -1507,7 +1436,7 @@ const SwaggerViewer = () => {
                     Data Schemas
                   </span>
                 ),
-                items: (
+                children: (
                   <div style={{ padding: '16px 0', width: '100%' }}>
                     {renderSchemasList()}
                   </div>
@@ -1521,7 +1450,7 @@ const SwaggerViewer = () => {
                     Raw JSON
                   </span>
                 ),
-                items: (
+                children: (
                   <div style={{ padding: '16px 0', width: '100%' }}>
                     <Card style={{ margin: '16px 0' }}>
                       <pre style={{

@@ -281,7 +281,7 @@ const Login = () => {
                     />
                   </Form.Item>
 
-                  <Form.Item style={{ marginBottom: '24px' }}>
+                  <Form.Item style={{ marginBottom: '16px' }}>
                     <Button
                       type="primary"
                       htmlType="submit"
@@ -309,9 +309,19 @@ const Login = () => {
                       )}
                     </Button>
                   </Form.Item>
-                </Form>
 
-                {/* simplified, remove extra copy */}
+                  {/* Forgot Password Link */}
+                  <div style={{ textAlign: 'center', marginBottom: '16px' }}>
+                    <Button
+                      type="link"
+                      onClick={() => navigate('/forgot-password')}
+                      style={{ color: '#007bff', padding: 0 }}
+                    >
+                      <KeyOutlined style={{ marginRight: 4 }} />
+                      {t('login.forgotPassword') || 'Quên mật khẩu?'}
+                    </Button>
+                  </div>
+                </Form>
               </Space>
             </div>
           </Card>

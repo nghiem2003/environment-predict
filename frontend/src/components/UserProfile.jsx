@@ -138,7 +138,7 @@ const UserProfile = () => {
         setLoadingPassword(false);
         return;
       }
-      await axios.post(`/api/express/auth/change-password/${userData.id}`, {
+      await axios.post(`/api/express/auth/change-password`, {
         oldPassword: values.oldPassword,
         newPassword: values.newPassword,
       });
