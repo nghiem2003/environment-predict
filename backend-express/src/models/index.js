@@ -11,6 +11,7 @@ const Province = require('./Province');
 const District = require('./District');
 const Email = require('./Email');
 const Otp = require('./Otp');
+const Job = require('./Job');
 
 // Initialize models
 const models = {
@@ -23,6 +24,7 @@ const models = {
   District,
   Email,
   Otp,
+  Job,
 };
 
 // Dynamically associate models after all are initialized

@@ -38,6 +38,7 @@ const boss = new PgBoss({
   connectionString: DATABASE_URL,
   schema: process.env.PGBOSS_SCHEMA || 'pgboss',
   ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
+  // Tắt archive - job sẽ ở lại bảng job mãi mãi
 });
 (async () => {
   try {

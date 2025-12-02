@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 import PredictionDetails from './PredictionDetails';
 import { jwtDecode } from 'jwt-decode';
 import axios from '../axios';
@@ -24,7 +25,7 @@ import {
   Select,
   DatePicker,
 } from 'antd';
-import { MailOutlined, EyeOutlined, CloseOutlined, SendOutlined, DownloadOutlined, FilterOutlined } from '@ant-design/icons';
+import { ClearOutlined, MailOutlined, EyeOutlined, CloseOutlined, SendOutlined, DownloadOutlined, FilterOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import PredictionBadge from './PredictionBadge';
 
@@ -33,6 +34,7 @@ const { Title } = Typography;
 const Dashboard = () => {
   const { t } = useTranslation();
   const { token } = useSelector((state) => state.auth);
+  const navigate = useNavigate();
   console.log('The token', token);
   const [currentPage, setCurrentPage] = useState(0);
   const [totalPredictions, setTotalPredictions] = useState(0);
@@ -52,7 +54,7 @@ const Dashboard = () => {
   const [selectedAreaId, setSelectedAreaId] = useState(null);
   const [isLoadingAreas, setIsLoadingAreas] = useState(false);
   const [loading, setLoading] = useState(false);
-  
+
   // Extended filters
   const [selectedPredictionResult, setSelectedPredictionResult] = useState(undefined);
   const [selectedAreaType, setSelectedAreaType] = useState(undefined);
@@ -110,8 +112,9 @@ const Dashboard = () => {
       axios
         .get('/api/express/areas/provinces')
         .then((response) => {
-          const provincesData = response.data?.provinces || [];
+          const provincesData = response.data || [];
           setProvinces(Array.isArray(provincesData) ? provincesData : []);
+          console.log(provinces);
         })
         .catch((error) => {
           console.error('Error fetching provinces:', error);
@@ -127,13 +130,15 @@ const Dashboard = () => {
     if (selectedProvince && userRole === 'admin') {
       setIsLoadingDistricts(true);
       axios
-        .get(`/api/express/areas/districts/${selectedProvince}`)
+        .get(`/api/express/areas/districts`)
         .then((response) => {
-          const districtsData = response.data?.districts || [];
-          setDistricts(Array.isArray(districtsData) ? districtsData : []);
+          console.log('kkk', response.data);
+          const districtsData = response.data.filter(district => district.province_id === selectedProvince) || [];
+          setDistricts(districtsData);
         })
         .catch((error) => {
           console.error('Error fetching districts:', error);
+          setDistricts([]);
         })
         .finally(() => {
           setIsLoadingDistricts(false);
@@ -225,8 +230,8 @@ const Dashboard = () => {
         setLoading(false);
       }
     }
-  }, [currentPage, selectedAreaId, predictionsPerPage, selectedPredictionResult, selectedAreaType, 
-      selectedProvince, selectedDistrict, startDate, endDate]);
+  }, [currentPage, selectedAreaId, predictionsPerPage, selectedPredictionResult, selectedAreaType,
+    selectedProvince, selectedDistrict, startDate, endDate]);
 
   useEffect(() => { }, [predictionList]);
 
@@ -347,52 +352,52 @@ const Dashboard = () => {
     setCurrentPage(0);
   };
 
-  // Export to Excel
+  // Export to Excel via Job
   const handleExportExcel = async () => {
     try {
       setIsExporting(true);
-      
-      const params = {};
-      
-      // Add all active filters (no limit/offset for export)
-      if (selectedAreaId) params.areaId = selectedAreaId;
-      if (selectedPredictionResult !== undefined && selectedPredictionResult !== '') {
-        params.predictionResult = selectedPredictionResult;
+
+      const body = {};
+
+      // Add all active filters with names for description
+      if (selectedAreaId) {
+        body.areaId = selectedAreaId;
+        const area = areas.find(a => a.id === selectedAreaId);
+        if (area) body.areaName = area.name;
       }
-      if (selectedAreaType) params.areaType = selectedAreaType;
+      if (selectedPredictionResult !== undefined && selectedPredictionResult !== '') {
+        body.predictionResult = selectedPredictionResult;
+      }
+      if (selectedAreaType) body.areaType = selectedAreaType;
       // For admin, use selected filters. For manager, backend will auto-apply their province/district
       if (userRole === 'admin') {
-        if (selectedProvince) params.province = selectedProvince;
-        if (selectedDistrict) params.district = selectedDistrict;
+        if (selectedProvince) {
+          body.province = selectedProvince;
+          const prov = provinces.find(p => p.id === selectedProvince);
+          if (prov) body.provinceName = prov.name;
+        }
+        if (selectedDistrict) {
+          body.district = selectedDistrict;
+          const dist = districts.find(d => d.id === selectedDistrict);
+          if (dist) body.districtName = dist.name;
+        }
       }
-      if (startDate) params.startDate = startDate.format('YYYY-MM-DD');
-      if (endDate) params.endDate = endDate.format('YYYY-MM-DD');
+      if (startDate) body.startDate = startDate.format('YYYY-MM-DD');
+      if (endDate) body.endDate = endDate.format('YYYY-MM-DD');
 
-      const response = await axios.get('/api/express/predictions/admin/export-excel', {
-        params,
-        responseType: 'blob', // Important for file download
-      });
+      // Call job API to queue export
+      const response = await axios.post('/api/express/jobs/export/predictions', body);
 
-      // Create download link
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      
-      // Generate filename with timestamp
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
-      link.setAttribute('download', `BaoCaoDuDoan_${timestamp}.xlsx`);
-      
-      document.body.appendChild(link);
-      link.click();
-      
-      // Cleanup
-      link.parentNode.removeChild(link);
-      window.URL.revokeObjectURL(url);
-      
-      message.success('Xuất báo cáo Excel thành công!');
+      const description = response.data.description || 'Tất cả dữ liệu';
+      message.success(`Đã tạo job xuất báo cáo: "${description}". Đang chuyển đến trang Danh sách Job...`);
+
+      // Redirect to Jobs page after 2 seconds
+      setTimeout(() => {
+        navigate('/jobs');
+      }, 2000);
     } catch (error) {
       console.error('Export Excel error:', error);
-      message.error('Xuất báo cáo Excel thất bại: ' + (error.response?.data?.error || error.message));
+      message.error('Tạo job xuất báo cáo thất bại: ' + (error.response?.data?.error || error.message));
     } finally {
       setIsExporting(false);
     }
@@ -433,7 +438,7 @@ const Dashboard = () => {
               )}
             </Space>
           </div>
-          
+
           {showFilters && (
             <Card size="small" style={{ marginBottom: 16, backgroundColor: '#f5f5f5' }}>
               <Row gutter={[16, 16]}>
@@ -476,9 +481,9 @@ const Dashboard = () => {
                       setCurrentPage(0);
                     }}
                     options={[
-                      { value: 1, label: '✅ Tốt' },
-                      { value: 0, label: '⚠️ Trung bình' },
-                      { value: -1, label: '❌ Kém' },
+                      { value: 1, label: 'Tốt' },
+                      { value: 0, label: 'Trung bình' },
+                      { value: -1, label: 'Kém' },
                     ]}
                   />
                 </Col>
@@ -497,8 +502,8 @@ const Dashboard = () => {
                       setCurrentPage(0);
                     }}
                     options={[
-                      { value: 'oyster', label: '🦪 Hàu' },
-                      { value: 'cobia', label: '🐟 Cá bớp' },
+                      { value: 'oyster', label: 'Hàu' },
+                      { value: 'cobia', label: 'Cá bớp' },
                     ]}
                   />
                 </Col>
@@ -590,9 +595,9 @@ const Dashboard = () => {
                   />
                 </Col>
 
-                <Col xs={24}>
-                  <Button onClick={clearAllFilters} style={{ marginTop: 4 }}>
-                    🔄 Xóa tất cả bộ lọc
+                <Col xs={24} sm={12} md={8} lg={6}>
+                  <Button variant='primary' onClick={clearAllFilters} style={{ marginTop: '1.5rem', width: '100%' }}>
+                    <ClearOutlined /> Xóa tất cả bộ lọc
                   </Button>
                 </Col>
               </Row>

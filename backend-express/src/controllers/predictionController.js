@@ -342,6 +342,12 @@ exports.getAllPredictionsWithFilters = async (req, res) => {
     const {
       userId = undefined,
       areaId = undefined,
+      predictionResult = undefined,
+      areaType = undefined,
+      province = undefined,
+      district = undefined,
+      startDate = undefined,
+      endDate = undefined,
       limit = 10,
       offset = 0,
     } = req.query;
@@ -392,6 +398,42 @@ exports.getAllPredictionsWithFilters = async (req, res) => {
     if (userId) where.user_id = parseInt(userId, 10);
     if (areaId) where.area_id = parseInt(areaId, 10);
 
+    // Filter by prediction result
+    if (predictionResult !== undefined && predictionResult !== '') {
+      where.prediction_text = predictionResult;
+    }
+
+    // Filter by date range
+    if (startDate || endDate) {
+      where.createdAt = {};
+      if (startDate) {
+        where.createdAt[Op.gte] = new Date(startDate);
+      }
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        where.createdAt[Op.lte] = end;
+      }
+    }
+
+    // Filter by area type
+    if (areaType) {
+      where['$Area.area_type$'] = areaType;
+      options.include[1].required = true;
+    }
+
+    // Filter by province/district (only for admin, manager has auto-restrictions below)
+    if (req.user.role === 'admin') {
+      if (province) {
+        where['$Area.province$'] = province;
+        options.include[1].required = true;
+      }
+      if (district) {
+        where['$Area.district$'] = district;
+        options.include[1].required = true;
+      }
+    }
+
     // Nếu là manager, chỉ cho phép xem dự đoán trong phạm vi quản lý
     if (req.user.role === 'manager') {
       const userProvince = req.user.province;
@@ -420,8 +462,8 @@ exports.getAllPredictionsWithFilters = async (req, res) => {
     if (predictions.rows.length === 0) {
       logger.debug('No predictions found with filters', req.query);
       return res
-        .status(404)
-        .json({ error: 'No predictions found for this user' });
+        .status(200)
+        .json({ rows: [], count: 0 });
     }
     res.json(predictions);
   } catch (error) {
@@ -1333,18 +1375,18 @@ exports.exportPredictionsToExcel = async (req, res) => {
     };
 
     const where = {};
-    
+
     // Filter by userId
     if (userId) where.user_id = parseInt(userId, 10);
-    
+
     // Filter by areaId
     if (areaId) where.area_id = parseInt(areaId, 10);
-    
+
     // Filter by prediction result
     if (predictionResult !== undefined && predictionResult !== '') {
       where.prediction_text = parseInt(predictionResult, 10);
     }
-    
+
     // Filter by date range
     if (startDate || endDate) {
       where.createdAt = {};
@@ -1402,7 +1444,7 @@ exports.exportPredictionsToExcel = async (req, res) => {
       return res.status(404).json({ error: 'No predictions found with the specified filters' });
     }
 
-    logger.info(`[Excel Export] Found ${predictions.length} predictions for export`, { 
+    logger.info(`[Excel Export] Found ${predictions.length} predictions for export`, {
       filters: { areaId, predictionResult, areaType, province, district, startDate, endDate }
     });
 
@@ -1410,7 +1452,7 @@ exports.exportPredictionsToExcel = async (req, res) => {
     const workbook = new ExcelJS.Workbook();
     workbook.creator = 'Environment Prediction System';
     workbook.created = new Date();
-    
+
     // Sheet 1: Detailed Report
     const worksheet = workbook.addWorksheet('Báo cáo dự đoán', {
       views: [{ state: 'frozen', xSplit: 0, ySplit: 1 }]
@@ -1438,9 +1480,9 @@ exports.exportPredictionsToExcel = async (req, res) => {
     ];
 
     // Add environment indicator columns
-    const indicators = ['R_PO4', 'O2Sat', 'O2ml_L', 'STheta', 'Salnty', 'R_DYNHT', 'T_degC', 
-                       'R_Depth', 'Distance', 'Wind_Spd', 'Wave_Ht', 'Wave_Prd', 'IntChl', 'Dry_T'];
-    
+    const indicators = ['R_PO4', 'O2Sat', 'O2ml_L', 'STheta', 'Salnty', 'R_DYNHT', 'T_degC',
+      'R_Depth', 'Distance', 'Wind_Spd', 'Wave_Ht', 'Wave_Prd', 'IntChl', 'Dry_T'];
+
     indicators.forEach(indicator => {
       columns.push({
         header: indicator,
@@ -1471,7 +1513,7 @@ exports.exportPredictionsToExcel = async (req, res) => {
     // Add data rows with comprehensive error handling
     let successfulRows = 0;
     let failedRows = 0;
-    
+
     predictions.forEach((prediction, index) => {
       try {
         // Safely handle date with fallback
@@ -1482,12 +1524,12 @@ exports.exportPredictionsToExcel = async (req, res) => {
         // Map prediction value to text with proper handling
         let predictionText = 'Không xác định';
         let predictionColor = 'FFFFFF00'; // Yellow
-        
+
         // Safely parse prediction_text
-        const predValue = prediction.prediction_text !== null && prediction.prediction_text !== undefined 
-          ? parseInt(prediction.prediction_text, 10) 
+        const predValue = prediction.prediction_text !== null && prediction.prediction_text !== undefined
+          ? parseInt(prediction.prediction_text, 10)
           : NaN;
-        
+
         if (!isNaN(predValue)) {
           if (predValue === 1) {
             predictionText = 'Tốt';
@@ -1544,7 +1586,7 @@ exports.exportPredictionsToExcel = async (req, res) => {
         });
 
         const row = worksheet.addRow(rowData);
-        
+
         // Style prediction result cell with color
         const predictionTextCell = row.getCell('predictionText');
         predictionTextCell.fill = {
@@ -1565,7 +1607,7 @@ exports.exportPredictionsToExcel = async (req, res) => {
           };
           cell.alignment = { vertical: 'middle' };
         });
-        
+
         successfulRows++;
       } catch (rowError) {
         failedRows++;
@@ -1576,12 +1618,12 @@ exports.exportPredictionsToExcel = async (req, res) => {
         // Continue with next row instead of breaking the entire export
       }
     });
-    
+
     logger.info(`[Excel Export] Processed rows: ${successfulRows} successful, ${failedRows} failed`);
 
     // Sheet 2: Summary Statistics
     const summarySheet = workbook.addWorksheet('Thống kê tổng hợp');
-    
+
     summarySheet.mergeCells('A1:B1');
     const titleCell = summarySheet.getCell('A1');
     titleCell.value = 'THỐNG KÊ TỔNG HỢP DỰ ĐOÁN';
@@ -1624,7 +1666,7 @@ exports.exportPredictionsToExcel = async (req, res) => {
 
     // Sheet 3: Notes
     const notesSheet = workbook.addWorksheet('Ghi chú');
-    
+
     notesSheet.mergeCells('A1:B1');
     const notesTitleCell = notesSheet.getCell('A1');
     notesTitleCell.value = 'GIẢI THÍCH CÁC CHỈ SỐ MÔI TRƯỜNG';
@@ -1677,11 +1719,11 @@ exports.exportPredictionsToExcel = async (req, res) => {
 
     // Write to response
     await workbook.xlsx.write(res);
-    
-    logger.info('Excel export completed successfully', { 
-      filename, 
+
+    logger.info('Excel export completed successfully', {
+      filename,
       recordCount: predictions.length,
-      user: req.user.username 
+      user: req.user.username
     });
 
   } catch (error) {

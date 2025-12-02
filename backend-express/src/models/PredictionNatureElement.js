@@ -12,4 +12,15 @@ const PredictionNatureElement = sequelize.define(
   { timestamps: false, tableName: 'diagnose_prediction_natureelements' }
 );
 
+PredictionNatureElement.associate = (models) => {
+  PredictionNatureElement.belongsTo(models.NatureElement, {
+    foreignKey: 'nature_element_id',
+    as: 'NatureElement',
+  });
+  PredictionNatureElement.belongsTo(models.Prediction, {
+    foreignKey: 'prediction_id',
+    as: 'Prediction',
+  });
+};
+
 module.exports = PredictionNatureElement;
