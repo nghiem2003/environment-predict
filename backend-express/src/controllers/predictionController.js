@@ -1204,7 +1204,7 @@ exports.getAllPredictionChartData = async (req, res) => {
 // Stats for predictions: latest prediction ratio (good/average/poor) per area
 exports.getLatestPredictionStats = async (req, res) => {
   try {
-    const { role, province, district } = req.query;
+    const { role, province, district, beforeDate } = req.query;
 
     // Build area filter based on user role
     const areaWhere = {};
@@ -1216,8 +1216,17 @@ exports.getLatestPredictionStats = async (req, res) => {
       }
     }
 
+    // Nếu có beforeDate, chỉ lấy predictions trước ngày đó
+    const predictionWhere = {};
+    if (beforeDate) {
+      const endOfDay = new Date(beforeDate);
+      endOfDay.setHours(23, 59, 59, 999);
+      predictionWhere.createdAt = { [Op.lte]: endOfDay };
+    }
+
     // Reuse logic from getAllPredictionChartData but only need latest per area
     const predictions = await Prediction.findAll({
+      where: Object.keys(predictionWhere).length > 0 ? predictionWhere : undefined,
       include: [
         {
           model: NatureElement,
@@ -1286,6 +1295,543 @@ exports.getLatestPredictionStats = async (req, res) => {
       message: error.message,
       stack: error.stack,
     });
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+// So sánh kết quả đợt dự đoán mới nhất với đợt trước đó
+// Hỗ trợ tham số beforeDate để xem tại thời điểm cụ thể
+exports.getPredictionComparison = async (req, res) => {
+  try {
+    const { role, province, district, beforeDate } = req.query;
+
+    const areaWhere = {};
+    if (role === 'manager') {
+      if (district) areaWhere.district = district;
+      else if (province) areaWhere.province = province;
+    }
+
+    // Nếu có beforeDate, chỉ lấy predictions trước ngày đó
+    const predictionWhere = {};
+    if (beforeDate) {
+      const endOfDay = new Date(beforeDate);
+      endOfDay.setHours(23, 59, 59, 999);
+      predictionWhere.createdAt = { [Op.lte]: endOfDay };
+    }
+
+    // Lấy tất cả predictions, sắp xếp theo area và thời gian
+    const predictions = await Prediction.findAll({
+      where: Object.keys(predictionWhere).length > 0 ? predictionWhere : undefined,
+      include: [
+        {
+          model: Area,
+          attributes: ['id', 'name', 'area_type'],
+          where: Object.keys(areaWhere).length > 0 ? areaWhere : undefined,
+          include: [
+            { model: Province, attributes: ['id', 'name'] },
+            { model: District, attributes: ['id', 'name'] },
+          ],
+        },
+      ],
+      order: [['area_id', 'ASC'], ['createdAt', 'DESC']],
+    });
+
+    // Group by area: lấy 2 prediction mới nhất cho mỗi area
+    const areaData = {};
+    predictions.forEach(p => {
+      const areaId = p.area_id;
+      if (!areaData[areaId]) {
+        areaData[areaId] = {
+          area: p.Area,
+          latest: null,
+          previous: null,
+        };
+      }
+      if (!areaData[areaId].latest) {
+        areaData[areaId].latest = p;
+      } else if (!areaData[areaId].previous) {
+        areaData[areaId].previous = p;
+      }
+    });
+
+    // Thống kê so sánh
+    const comparison = {
+      // Đợt hiện tại
+      current: { good: 0, average: 0, poor: 0, total: 0 },
+      // Đợt trước
+      previous: { good: 0, average: 0, poor: 0, total: 0 },
+      // Thay đổi
+      changes: {
+        improved: 0,      // Cải thiện (xấu -> TB/tốt, TB -> tốt)
+        unchanged: 0,     // Không đổi
+        worsened: 0,      // Xấu đi (tốt -> TB/xấu, TB -> xấu)
+        newAreas: 0,      // Vùng mới (chưa có đợt trước)
+      },
+      // Chi tiết các vùng thay đổi
+      details: {
+        improved: [],
+        worsened: [],
+      },
+    };
+
+    Object.values(areaData).forEach(({ area, latest, previous }) => {
+      if (!latest) return;
+
+      const latestResult = parseInt(latest.prediction_text, 10);
+      comparison.current.total += 1;
+      if (latestResult === 1) comparison.current.good += 1;
+      else if (latestResult === 0) comparison.current.average += 1;
+      else if (latestResult === -1) comparison.current.poor += 1;
+
+      if (!previous) {
+        comparison.changes.newAreas += 1;
+        return;
+      }
+
+      const prevResult = parseInt(previous.prediction_text, 10);
+      comparison.previous.total += 1;
+      if (prevResult === 1) comparison.previous.good += 1;
+      else if (prevResult === 0) comparison.previous.average += 1;
+      else if (prevResult === -1) comparison.previous.poor += 1;
+
+      // So sánh
+      if (latestResult > prevResult) {
+        comparison.changes.improved += 1;
+        comparison.details.improved.push({
+          areaId: area.id,
+          areaName: area.name,
+          areaType: area.area_type,
+          province: area.Province?.name,
+          district: area.District?.name,
+          from: prevResult,
+          to: latestResult,
+          fromText: prevResult === 1 ? 'Tốt' : prevResult === 0 ? 'Trung bình' : 'Kém',
+          toText: latestResult === 1 ? 'Tốt' : latestResult === 0 ? 'Trung bình' : 'Kém',
+        });
+      } else if (latestResult < prevResult) {
+        comparison.changes.worsened += 1;
+        comparison.details.worsened.push({
+          areaId: area.id,
+          areaName: area.name,
+          areaType: area.area_type,
+          province: area.Province?.name,
+          district: area.District?.name,
+          from: prevResult,
+          to: latestResult,
+          fromText: prevResult === 1 ? 'Tốt' : prevResult === 0 ? 'Trung bình' : 'Kém',
+          toText: latestResult === 1 ? 'Tốt' : latestResult === 0 ? 'Trung bình' : 'Kém',
+        });
+      } else {
+        comparison.changes.unchanged += 1;
+      }
+    });
+
+    return res.status(200).json(comparison);
+  } catch (error) {
+    logger.error('Get Prediction Comparison Error:', { message: error.message, stack: error.stack });
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+// Lấy danh sách vùng có kết quả xấu liên tiếp
+// Hỗ trợ tham số beforeDate để xem tại thời điểm cụ thể
+exports.getConsecutivePoorAreas = async (req, res) => {
+  try {
+    const { role, province, district, minConsecutive = 2, beforeDate } = req.query;
+
+    const areaWhere = {};
+    if (role === 'manager') {
+      if (district) areaWhere.district = district;
+      else if (province) areaWhere.province = province;
+    }
+
+    // Nếu có beforeDate, chỉ lấy predictions trước ngày đó
+    const predictionWhere = {};
+    if (beforeDate) {
+      const endOfDay = new Date(beforeDate);
+      endOfDay.setHours(23, 59, 59, 999);
+      predictionWhere.createdAt = { [Op.lte]: endOfDay };
+    }
+
+    // Lấy tất cả predictions
+    const predictions = await Prediction.findAll({
+      where: Object.keys(predictionWhere).length > 0 ? predictionWhere : undefined,
+      include: [
+        {
+          model: Area,
+          attributes: ['id', 'name', 'area_type'],
+          where: Object.keys(areaWhere).length > 0 ? areaWhere : undefined,
+          include: [
+            { model: Province, attributes: ['id', 'name'] },
+            { model: District, attributes: ['id', 'name'] },
+          ],
+        },
+      ],
+      order: [['area_id', 'ASC'], ['createdAt', 'DESC']],
+    });
+
+    // Group by area
+    const areaGroups = {};
+    predictions.forEach(p => {
+      if (!areaGroups[p.area_id]) {
+        areaGroups[p.area_id] = {
+          area: p.Area,
+          predictions: [],
+        };
+      }
+      areaGroups[p.area_id].predictions.push(p);
+    });
+
+    // Tìm vùng có kết quả xấu liên tiếp
+    const consecutivePoorAreas = [];
+
+    Object.values(areaGroups).forEach(({ area, predictions }) => {
+      // Đếm số kết quả xấu liên tiếp từ mới nhất
+      let consecutivePoor = 0;
+      const poorPredictions = [];
+
+      for (const p of predictions) {
+        const result = parseInt(p.prediction_text, 10);
+        if (result === -1) {
+          consecutivePoor += 1;
+          poorPredictions.push({
+            id: p.id,
+            date: p.createdAt,
+            result: result,
+          });
+        } else {
+          break; // Dừng khi gặp kết quả không xấu
+        }
+      }
+
+      if (consecutivePoor >= parseInt(minConsecutive)) {
+        consecutivePoorAreas.push({
+          areaId: area.id,
+          areaName: area.name,
+          areaType: area.area_type,
+          areaTypeName: area.area_type === 'oyster' ? 'Hàu' : 'Cá bớp',
+          province: area.Province?.name,
+          district: area.District?.name,
+          consecutiveCount: consecutivePoor,
+          predictions: poorPredictions,
+          lastPredictionDate: poorPredictions[0]?.date,
+        });
+      }
+    });
+
+    // Sắp xếp theo số lần liên tiếp giảm dần
+    consecutivePoorAreas.sort((a, b) => b.consecutiveCount - a.consecutiveCount);
+
+    return res.status(200).json({
+      total: consecutivePoorAreas.length,
+      minConsecutive: parseInt(minConsecutive),
+      areas: consecutivePoorAreas,
+    });
+  } catch (error) {
+    logger.error('Get Consecutive Poor Areas Error:', { message: error.message, stack: error.stack });
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+// Xu hướng kết quả theo chu kỳ (ngày/tuần/tháng/quý)
+// - Tạo TẤT CẢ các điểm trong khoảng thời gian (vd: 30 ngày gần nhất)
+// - Nếu có nhiều dự đoán trong 1 chu kỳ: lấy mới nhất
+// - Nếu không có dự đoán trong chu kỳ: lấy của chu kỳ gần nhất trước đó (carry forward)
+exports.getPredictionTrendByBatch = async (req, res) => {
+  try {
+    const { role, province, district, limit = 12, beforeDate, period = 'month' } = req.query;
+
+    const areaWhere = {};
+    if (role === 'manager') {
+      if (district) areaWhere.district = district;
+      else if (province) areaWhere.province = province;
+    }
+
+    // Ngày kết thúc (mặc định là hôm nay)
+    const endDate = beforeDate ? new Date(beforeDate) : new Date();
+    endDate.setHours(23, 59, 59, 999);
+
+    // Tính ngày bắt đầu dựa trên period và limit
+    const startDate = new Date(endDate);
+    const limitNum = parseInt(limit);
+
+    switch (period) {
+      case 'day':
+        startDate.setDate(startDate.getDate() - limitNum + 1);
+        break;
+      case 'week':
+        startDate.setDate(startDate.getDate() - (limitNum * 7) + 1);
+        break;
+      case 'month':
+        startDate.setMonth(startDate.getMonth() - limitNum + 1);
+        startDate.setDate(1);
+        break;
+      case 'quarter':
+        startDate.setMonth(startDate.getMonth() - (limitNum * 3) + 1);
+        startDate.setDate(1);
+        break;
+    }
+    startDate.setHours(0, 0, 0, 0);
+
+    // Lấy tất cả predictions trước endDate
+    const predictions = await Prediction.findAll({
+      where: { createdAt: { [Op.lte]: endDate } },
+      include: [
+        {
+          model: Area,
+          attributes: ['id', 'name', 'area_type'],
+          where: Object.keys(areaWhere).length > 0 ? areaWhere : undefined,
+        },
+      ],
+      order: [['createdAt', 'DESC']],
+    });
+
+    // Helper: Tạo danh sách tất cả các chu kỳ trong khoảng
+    const generateAllPeriods = () => {
+      const periods = [];
+      const current = new Date(startDate);
+
+      while (current <= endDate) {
+        let periodKey, label;
+        const year = current.getFullYear();
+        const month = current.getMonth();
+        const day = current.getDate();
+
+        switch (period) {
+          case 'day':
+            periodKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            label = `${String(day).padStart(2, '0')}/${String(month + 1).padStart(2, '0')}`;
+            current.setDate(current.getDate() + 1);
+            break;
+          case 'week':
+            // Lấy ngày đầu tuần (Monday)
+            const dayOfWeek = current.getDay();
+            const monday = new Date(current);
+            monday.setDate(current.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1));
+            const weekNum = getWeekNumber(monday);
+            periodKey = `${monday.getFullYear()}-W${String(weekNum).padStart(2, '0')}`;
+            label = `T${weekNum}/${monday.getFullYear()}`;
+            current.setDate(current.getDate() + 7);
+            break;
+          case 'quarter':
+            const quarter = Math.floor(month / 3) + 1;
+            periodKey = `${year}-Q${quarter}`;
+            label = `Q${quarter}/${year}`;
+            current.setMonth(current.getMonth() + 3);
+            break;
+          case 'month':
+          default:
+            periodKey = `${year}-${String(month + 1).padStart(2, '0')}`;
+            label = `${String(month + 1).padStart(2, '0')}/${year}`;
+            current.setMonth(current.getMonth() + 1);
+            break;
+        }
+
+        // Tránh trùng lặp
+        if (!periods.find(p => p.periodKey === periodKey)) {
+          periods.push({ periodKey, label });
+        }
+      }
+
+      return periods;
+    };
+
+    // Helper: Lấy số tuần trong năm
+    const getWeekNumber = (date) => {
+      const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+      const dayNum = d.getUTCDay() || 7;
+      d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+      const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+      return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+    };
+
+    // Helper: Lấy period key từ date
+    const getPeriodKey = (date) => {
+      const d = new Date(date);
+      const year = d.getFullYear();
+      const month = d.getMonth();
+      const day = d.getDate();
+
+      switch (period) {
+        case 'day':
+          return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        case 'week':
+          const dayOfWeek = d.getDay();
+          const monday = new Date(d);
+          monday.setDate(d.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1));
+          const weekNum = getWeekNumber(monday);
+          return `${monday.getFullYear()}-W${String(weekNum).padStart(2, '0')}`;
+        case 'quarter':
+          const quarter = Math.floor(month / 3) + 1;
+          return `${year}-Q${quarter}`;
+        case 'month':
+        default:
+          return `${year}-${String(month + 1).padStart(2, '0')}`;
+      }
+    };
+
+    // Tạo tất cả các chu kỳ trong khoảng
+    const allPeriods = generateAllPeriods();
+
+    if (predictions.length === 0) {
+      // Trả về các chu kỳ rỗng nếu không có dữ liệu
+      const emptyTrend = allPeriods.map(p => ({
+        ...p,
+        good: 0, average: 0, poor: 0, total: 0,
+        goodPercent: 0, averagePercent: 0, poorPercent: 0,
+      }));
+      return res.status(200).json({ trend: emptyTrend, totalPeriods: allPeriods.length, period });
+    }
+
+    // Group predictions by area, sorted by date DESC
+    const areaGroups = {};
+    predictions.forEach(p => {
+      if (!areaGroups[p.area_id]) {
+        areaGroups[p.area_id] = [];
+      }
+      areaGroups[p.area_id].push(p);
+    });
+
+    // Tính prediction cho mỗi area tại mỗi chu kỳ (với carry forward)
+    const trend = allPeriods.map(({ periodKey, label }) => {
+      let good = 0, average = 0, poor = 0;
+
+      Object.values(areaGroups).forEach(areaPredictions => {
+        // Tìm prediction mới nhất trong chu kỳ này hoặc trước đó
+        const predictionForPeriod = areaPredictions.find(p => {
+          const pKey = getPeriodKey(p.createdAt);
+          return pKey <= periodKey; // Lấy prediction mới nhất <= chu kỳ hiện tại
+        });
+
+        if (predictionForPeriod) {
+          const result = parseInt(predictionForPeriod.prediction_text, 10);
+          if (result === 1) good++;
+          else if (result === 0) average++;
+          else if (result === -1) poor++;
+        }
+      });
+
+      const total = good + average + poor;
+
+      return {
+        periodKey,
+        label,
+        good,
+        average,
+        poor,
+        total,
+        goodPercent: total > 0 ? parseFloat(((good / total) * 100).toFixed(1)) : 0,
+        averagePercent: total > 0 ? parseFloat(((average / total) * 100).toFixed(1)) : 0,
+        poorPercent: total > 0 ? parseFloat(((poor / total) * 100).toFixed(1)) : 0,
+      };
+    });
+
+    return res.status(200).json({
+      totalPeriods: allPeriods.length,
+      period,
+      startDate: startDate.toISOString().split('T')[0],
+      endDate: endDate.toISOString().split('T')[0],
+      trend
+    });
+  } catch (error) {
+    logger.error('Get Prediction Trend By Batch Error:', { message: error.message, stack: error.stack });
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+// Thống kê dự đoán theo loại vùng (oyster/cobia) - so sánh đợt mới nhất
+// Hỗ trợ tham số beforeDate để xem tại thời điểm cụ thể
+exports.getPredictionStatsByAreaType = async (req, res) => {
+  try {
+    const { role, province, district, beforeDate } = req.query;
+
+    const areaWhere = {};
+    if (role === 'manager') {
+      if (district) areaWhere.district = district;
+      else if (province) areaWhere.province = province;
+    }
+
+    // Nếu có beforeDate, chỉ lấy predictions trước ngày đó
+    const predictionWhere = {};
+    if (beforeDate) {
+      const endOfDay = new Date(beforeDate);
+      endOfDay.setHours(23, 59, 59, 999);
+      predictionWhere.createdAt = { [Op.lte]: endOfDay };
+    }
+
+    // Lấy tất cả predictions
+    const predictions = await Prediction.findAll({
+      where: Object.keys(predictionWhere).length > 0 ? predictionWhere : undefined,
+      include: [
+        {
+          model: Area,
+          attributes: ['id', 'name', 'area_type'],
+          where: Object.keys(areaWhere).length > 0 ? areaWhere : undefined,
+        },
+      ],
+      order: [['createdAt', 'DESC']],
+    });
+
+    // Group by area: lấy 2 prediction mới nhất
+    const areaData = {};
+    predictions.forEach(p => {
+      const areaId = p.area_id;
+      if (!areaData[areaId]) {
+        areaData[areaId] = { area: p.Area, latest: null, previous: null };
+      }
+      if (!areaData[areaId].latest) {
+        areaData[areaId].latest = p;
+      } else if (!areaData[areaId].previous) {
+        areaData[areaId].previous = p;
+      }
+    });
+
+    // Thống kê theo area_type
+    const statsByType = {
+      oyster: {
+        current: { good: 0, average: 0, poor: 0, total: 0 },
+        previous: { good: 0, average: 0, poor: 0, total: 0 },
+        changes: { improved: 0, unchanged: 0, worsened: 0 }
+      },
+      cobia: {
+        current: { good: 0, average: 0, poor: 0, total: 0 },
+        previous: { good: 0, average: 0, poor: 0, total: 0 },
+        changes: { improved: 0, unchanged: 0, worsened: 0 }
+      },
+    };
+
+    Object.values(areaData).forEach(({ area, latest, previous }) => {
+      if (!latest) return;
+      const areaType = area?.area_type;
+      if (!statsByType[areaType]) return;
+
+      const latestResult = parseInt(latest.prediction_text, 10);
+      statsByType[areaType].current.total += 1;
+      if (latestResult === 1) statsByType[areaType].current.good += 1;
+      else if (latestResult === 0) statsByType[areaType].current.average += 1;
+      else if (latestResult === -1) statsByType[areaType].current.poor += 1;
+
+      if (previous) {
+        const prevResult = parseInt(previous.prediction_text, 10);
+        statsByType[areaType].previous.total += 1;
+        if (prevResult === 1) statsByType[areaType].previous.good += 1;
+        else if (prevResult === 0) statsByType[areaType].previous.average += 1;
+        else if (prevResult === -1) statsByType[areaType].previous.poor += 1;
+
+        if (latestResult > prevResult) statsByType[areaType].changes.improved += 1;
+        else if (latestResult < prevResult) statsByType[areaType].changes.worsened += 1;
+        else statsByType[areaType].changes.unchanged += 1;
+      }
+    });
+
+    return res.status(200).json({
+      byAreaType: [
+        { type: 'oyster', name: 'Hàu', ...statsByType.oyster },
+        { type: 'cobia', name: 'Cá bớp', ...statsByType.cobia },
+      ],
+    });
+  } catch (error) {
+    logger.error('Get Prediction Stats By Area Type Error:', { message: error.message, stack: error.stack });
     return res.status(500).json({ error: 'Internal server error' });
   }
 };

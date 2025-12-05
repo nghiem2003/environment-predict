@@ -12,6 +12,10 @@ const {
   createBatchPredictionFromExcel2,
   getLatestPredictionStats,
   exportPredictionsToExcel,
+  getPredictionComparison,
+  getConsecutivePoorAreas,
+  getPredictionTrendByBatch,
+  getPredictionStatsByAreaType,
 } = require('../controllers/predictionController');
 const { authenticate, authorize } = require('../middlewares/authMiddleware');
 const multer = require('multer');
@@ -756,11 +760,19 @@ router.get(
  * @swagger
  * /predictions/stats/latest-ratio:
  *   get:
- *     summary: Get latest prediction ratio (good/average/poor) per area
+ *     summary: Tỷ lệ kết quả dự đoán mới nhất của mỗi vùng (Tốt/TB/Kém)
  *     tags: [Predictions]
+ *     parameters:
+ *       - in: query
+ *         name: beforeDate
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: Xem thống kê tại thời điểm cụ thể (YYYY-MM-DD)
+ *         example: "2025-06-30"
  *     responses:
  *       200:
- *         description: Latest prediction stats
+ *         description: Thống kê tỷ lệ dự đoán mới nhất
  *         content:
  *           application/json:
  *             schema:
@@ -768,18 +780,379 @@ router.get(
  *               properties:
  *                 good:
  *                   type: integer
+ *                   description: Số vùng có kết quả Tốt
  *                 average:
  *                   type: integer
+ *                   description: Số vùng có kết quả Trung bình
  *                 poor:
  *                   type: integer
+ *                   description: Số vùng có kết quả Kém
  *                 totalAreas:
  *                   type: integer
+ *                   description: Tổng số vùng có dự đoán
+ *             example:
+ *               good: 15
+ *               average: 8
+ *               poor: 3
+ *               totalAreas: 26
  *       500:
  *         description: Server error
  */
 router.get(
   '/stats/latest-ratio',
   getLatestPredictionStats
+);
+
+/**
+ * @swagger
+ * /predictions/stats/comparison:
+ *   get:
+ *     summary: So sánh kết quả đợt dự đoán mới nhất với đợt trước
+ *     tags: [Predictions]
+ *     security:
+ *       - bearerAuth: []
+ *     description: |
+ *       So sánh kết quả dự đoán giữa đợt mới nhất và đợt trước đó của mỗi vùng.
+ *       - Đợt mới nhất = prediction mới nhất của mỗi area
+ *       - Đợt trước = prediction mới nhất - 1 của mỗi area
+ *     parameters:
+ *       - in: query
+ *         name: beforeDate
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: Xem so sánh tại thời điểm cụ thể
+ *         example: "2025-06-30"
+ *     responses:
+ *       200:
+ *         description: Kết quả so sánh giữa 2 đợt
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *             example:
+ *               current:
+ *                 good: 15
+ *                 average: 8
+ *                 poor: 3
+ *                 total: 26
+ *               previous:
+ *                 good: 12
+ *                 average: 10
+ *                 poor: 4
+ *                 total: 26
+ *               changes:
+ *                 improved: 5
+ *                 unchanged: 18
+ *                 worsened: 2
+ *                 newAreas: 1
+ *               details:
+ *                 improved:
+ *                   - areaId: 5
+ *                     areaName: "Vùng nuôi hàu A"
+ *                     areaType: "oyster"
+ *                     province: "Ninh Bình"
+ *                     district: "Kim Sơn"
+ *                     from: -1
+ *                     to: 0
+ *                     fromText: "Kém"
+ *                     toText: "Trung bình"
+ *                 worsened:
+ *                   - areaId: 12
+ *                     areaName: "Vùng nuôi cá B"
+ *                     areaType: "cobia"
+ *                     province: "Quảng Ninh"
+ *                     from: 1
+ *                     to: 0
+ *                     fromText: "Tốt"
+ *                     toText: "Trung bình"
+ */
+router.get(
+  '/stats/comparison',
+  authenticate,
+  authorize(['admin', 'manager']),
+  getPredictionComparison
+);
+
+/**
+ * @swagger
+ * /predictions/stats/consecutive-poor:
+ *   get:
+ *     summary: Cảnh báo vùng có kết quả KÉM liên tiếp
+ *     tags: [Predictions]
+ *     security:
+ *       - bearerAuth: []
+ *     description: |
+ *       Danh sách các vùng có kết quả Kém liên tiếp nhiều đợt.
+ *       Dùng để cảnh báo các vùng cần được chú ý đặc biệt.
+ *     parameters:
+ *       - in: query
+ *         name: minConsecutive
+ *         schema:
+ *           type: integer
+ *           default: 2
+ *         description: Số đợt xấu liên tiếp tối thiểu để cảnh báo
+ *         example: 2
+ *       - in: query
+ *         name: beforeDate
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: Xem cảnh báo tại thời điểm cụ thể
+ *     responses:
+ *       200:
+ *         description: Danh sách vùng xấu liên tiếp
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *             example:
+ *               total: 3
+ *               minConsecutive: 2
+ *               areas:
+ *                 - areaId: 7
+ *                   areaName: "Vùng nuôi hàu C"
+ *                   areaType: "oyster"
+ *                   areaTypeName: "Hàu"
+ *                   province: "Ninh Bình"
+ *                   district: "Kim Sơn"
+ *                   consecutiveCount: 4
+ *                   lastPredictionDate: "2025-12-01T10:30:00.000Z"
+ *                   predictions:
+ *                     - id: 123
+ *                       date: "2025-12-01T10:30:00.000Z"
+ *                       result: -1
+ *                     - id: 119
+ *                       date: "2025-09-15T08:00:00.000Z"
+ *                       result: -1
+ *                 - areaId: 15
+ *                   areaName: "Vùng nuôi cá D"
+ *                   areaType: "cobia"
+ *                   areaTypeName: "Cá bớp"
+ *                   province: "Quảng Ninh"
+ *                   consecutiveCount: 2
+ *                   lastPredictionDate: "2025-11-20T14:00:00.000Z"
+ */
+router.get(
+  '/stats/consecutive-poor',
+  authenticate,
+  authorize(['admin', 'manager']),
+  getConsecutivePoorAreas
+);
+
+/**
+ * @swagger
+ * /predictions/stats/trend-by-batch:
+ *   get:
+ *     summary: Xu hướng kết quả theo chu kỳ thời gian
+ *     tags: [Predictions]
+ *     security:
+ *       - bearerAuth: []
+ *     description: |
+ *       Thống kê xu hướng kết quả dự đoán theo chu kỳ (ngày/tuần/tháng/quý).
+ *       
+ *       **Logic:**
+ *       - Tạo TẤT CẢ các điểm trong khoảng thời gian (vd: 30 ngày gần nhất)
+ *       - Nếu có nhiều dự đoán trong 1 chu kỳ → lấy mới nhất
+ *       - Nếu không có dự đoán trong chu kỳ → lấy của chu kỳ gần nhất trước đó (carry forward)
+ *       
+ *       **Ví dụ với period=day, limit=7:**
+ *       Tạo 7 điểm từ 7 ngày trước đến hôm nay
+ *     parameters:
+ *       - in: query
+ *         name: period
+ *         schema:
+ *           type: string
+ *           enum: [day, week, month, quarter]
+ *           default: month
+ *         description: |
+ *           Loại chu kỳ:
+ *           - day: Theo ngày (vd: 30 ngày gần nhất)
+ *           - week: Theo tuần (vd: 10 tuần gần nhất)
+ *           - month: Theo tháng (vd: 12 tháng gần nhất)
+ *           - quarter: Theo quý (vd: 4 quý gần nhất)
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 12
+ *         description: Số chu kỳ cần lấy
+ *         example: 12
+ *       - in: query
+ *         name: beforeDate
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: Ngày kết thúc (mặc định là hôm nay)
+ *         example: "2025-12-06"
+ *     responses:
+ *       200:
+ *         description: Dữ liệu xu hướng theo chu kỳ
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *             examples:
+ *               byDay:
+ *                 summary: Ví dụ theo ngày (period=day, limit=7)
+ *                 value:
+ *                   totalPeriods: 7
+ *                   period: "day"
+ *                   startDate: "2025-11-30"
+ *                   endDate: "2025-12-06"
+ *                   trend:
+ *                     - periodKey: "2025-11-30"
+ *                       label: "30/11"
+ *                       good: 10
+ *                       average: 5
+ *                       poor: 2
+ *                       total: 17
+ *                       goodPercent: 58.8
+ *                       averagePercent: 29.4
+ *                       poorPercent: 11.8
+ *                     - periodKey: "2025-12-01"
+ *                       label: "01/12"
+ *                       good: 10
+ *                       average: 5
+ *                       poor: 2
+ *                       total: 17
+ *                       goodPercent: 58.8
+ *                       averagePercent: 29.4
+ *                       poorPercent: 11.8
+ *                     - periodKey: "2025-12-06"
+ *                       label: "06/12"
+ *                       good: 13
+ *                       average: 3
+ *                       poor: 1
+ *                       total: 17
+ *                       goodPercent: 76.5
+ *                       averagePercent: 17.6
+ *                       poorPercent: 5.9
+ *               byMonth:
+ *                 summary: Ví dụ theo tháng (period=month, limit=6)
+ *                 value:
+ *                   totalPeriods: 6
+ *                   period: "month"
+ *                   startDate: "2025-07-01"
+ *                   endDate: "2025-12-06"
+ *                   trend:
+ *                     - periodKey: "2025-07"
+ *                       label: "07/2025"
+ *                       good: 8
+ *                       average: 6
+ *                       poor: 3
+ *                       total: 17
+ *                       goodPercent: 47.1
+ *                       averagePercent: 35.3
+ *                       poorPercent: 17.6
+ *                     - periodKey: "2025-12"
+ *                       label: "12/2025"
+ *                       good: 13
+ *                       average: 3
+ *                       poor: 1
+ *                       total: 17
+ *                       goodPercent: 76.5
+ *                       averagePercent: 17.6
+ *                       poorPercent: 5.9
+ *               byQuarter:
+ *                 summary: Ví dụ theo quý (period=quarter, limit=4)
+ *                 value:
+ *                   totalPeriods: 4
+ *                   period: "quarter"
+ *                   startDate: "2025-01-01"
+ *                   endDate: "2025-12-06"
+ *                   trend:
+ *                     - periodKey: "2025-Q1"
+ *                       label: "Q1/2025"
+ *                       good: 5
+ *                       average: 8
+ *                       poor: 4
+ *                       total: 17
+ *                       goodPercent: 29.4
+ *                       averagePercent: 47.1
+ *                       poorPercent: 23.5
+ *                     - periodKey: "2025-Q4"
+ *                       label: "Q4/2025"
+ *                       good: 13
+ *                       average: 3
+ *                       poor: 1
+ *                       total: 17
+ *                       goodPercent: 76.5
+ *                       averagePercent: 17.6
+ *                       poorPercent: 5.9
+ */
+router.get(
+  '/stats/trend-by-batch',
+  authenticate,
+  authorize(['admin', 'manager']),
+  getPredictionTrendByBatch
+);
+
+/**
+ * @swagger
+ * /predictions/stats/by-area-type:
+ *   get:
+ *     summary: Thống kê dự đoán theo loại vùng (Hàu/Cá bớp)
+ *     tags: [Predictions]
+ *     security:
+ *       - bearerAuth: []
+ *     description: |
+ *       Thống kê kết quả dự đoán phân theo loại vùng nuôi trồng.
+ *       Bao gồm so sánh với đợt trước để thấy xu hướng thay đổi.
+ *     parameters:
+ *       - in: query
+ *         name: beforeDate
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: Xem thống kê tại thời điểm cụ thể
+ *     responses:
+ *       200:
+ *         description: Thống kê theo loại vùng với so sánh đợt trước
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *             example:
+ *               byAreaType:
+ *                 - type: "oyster"
+ *                   name: "Hàu"
+ *                   current:
+ *                     good: 10
+ *                     average: 5
+ *                     poor: 2
+ *                     total: 17
+ *                   previous:
+ *                     good: 8
+ *                     average: 6
+ *                     poor: 3
+ *                     total: 17
+ *                   changes:
+ *                     improved: 4
+ *                     unchanged: 11
+ *                     worsened: 2
+ *                 - type: "cobia"
+ *                   name: "Cá bớp"
+ *                   current:
+ *                     good: 5
+ *                     average: 3
+ *                     poor: 1
+ *                     total: 9
+ *                   previous:
+ *                     good: 4
+ *                     average: 4
+ *                     poor: 1
+ *                     total: 9
+ *                   changes:
+ *                     improved: 2
+ *                     unchanged: 6
+ *                     worsened: 1
+ */
+router.get(
+  '/stats/by-area-type',
+  authenticate,
+  authorize(['admin', 'manager']),
+  getPredictionStatsByAreaType
 );
 
 module.exports = router;

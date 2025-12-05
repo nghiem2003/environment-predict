@@ -186,6 +186,158 @@ exports.getAreaStats = async (req, res) => {
   }
 };
 
+// Stats for areas by type (oyster, cobia) - for pie/treemap charts
+exports.getAreaStatsByType = async (req, res) => {
+  try {
+    const { role, district, province } = req.query;
+
+    let where = {};
+
+    // Manager only sees areas within their province/district
+    if (role === 'manager') {
+      if (district) {
+        where.district = district;
+      } else if (province) {
+        where.province = province;
+      }
+    }
+
+    // Distribution by area_type
+    const distributionRaw = await Area.findAll({
+      where,
+      attributes: [
+        'area_type',
+        [sequelize.fn('COUNT', sequelize.col('id')), 'count'],
+      ],
+      group: ['area_type'],
+      order: [['area_type', 'ASC']],
+    });
+
+    const byType = distributionRaw.map((row) => ({
+      type: row.area_type,
+      name: row.area_type === 'oyster' ? 'Hàu' : row.area_type === 'cobia' ? 'Cá bớp' : row.area_type,
+      count: Number(row.get('count')) || 0,
+    }));
+
+    const total = byType.reduce((sum, item) => sum + item.count, 0);
+
+    return res.status(200).json({
+      total,
+      byType,
+    });
+  } catch (error) {
+    logger.error('Get Area Stats By Type Error:', {
+      message: error.message,
+      stack: error.stack,
+      query: req.query,
+    });
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+// Combined stats: by type AND by province (for detailed analysis)
+exports.getAreaStatsCombined = async (req, res) => {
+  try {
+    const { role, district, province } = req.query;
+
+    let where = {};
+
+    if (role === 'manager') {
+      if (district) {
+        where.district = district;
+      } else if (province) {
+        where.province = province;
+      }
+    }
+
+    // Total
+    const totalAreas = await Area.count({ where });
+
+    // By type
+    const byTypeRaw = await Area.findAll({
+      where,
+      attributes: [
+        'area_type',
+        [sequelize.fn('COUNT', sequelize.col('id')), 'count'],
+      ],
+      group: ['area_type'],
+    });
+
+    const byType = byTypeRaw.map((row) => ({
+      type: row.area_type,
+      name: row.area_type === 'oyster' ? 'Hàu' : row.area_type === 'cobia' ? 'Cá bớp' : row.area_type,
+      count: Number(row.get('count')) || 0,
+    }));
+
+    // By province
+    const byProvinceRaw = await Area.findAll({
+      where,
+      attributes: [
+        'province',
+        [sequelize.fn('COUNT', sequelize.col('Area.id')), 'count'],
+      ],
+      include: [
+        {
+          model: Province,
+          as: 'Province',
+          attributes: ['id', 'name'],
+          required: false,
+        },
+      ],
+      group: ['Area.province', 'Province.id', 'Province.name'],
+      order: [[sequelize.fn('COUNT', sequelize.col('Area.id')), 'DESC']],
+    });
+
+    const byProvince = byProvinceRaw.map((row) => ({
+      provinceId: row.province,
+      provinceName: row.Province ? row.Province.name : 'Không xác định',
+      count: Number(row.get('count')) || 0,
+    }));
+
+    // By type per province (detailed breakdown)
+    const byTypePerProvinceRaw = await Area.findAll({
+      where,
+      attributes: [
+        'province',
+        'area_type',
+        [sequelize.fn('COUNT', sequelize.col('Area.id')), 'count'],
+      ],
+      include: [
+        {
+          model: Province,
+          as: 'Province',
+          attributes: ['id', 'name'],
+          required: false,
+        },
+      ],
+      group: ['Area.province', 'Area.area_type', 'Province.id', 'Province.name'],
+      order: [[{ model: Province, as: 'Province' }, 'name', 'ASC'], ['area_type', 'ASC']],
+    });
+
+    const byTypePerProvince = byTypePerProvinceRaw.map((row) => ({
+      provinceId: row.province,
+      provinceName: row.Province ? row.Province.name : 'Không xác định',
+      type: row.area_type,
+      typeName: row.area_type === 'oyster' ? 'Hàu' : row.area_type === 'cobia' ? 'Cá bớp' : row.area_type,
+      count: Number(row.get('count')) || 0,
+    }));
+
+    return res.status(200).json({
+      totalAreas,
+      byType,
+      byProvince,
+      byTypePerProvince,
+    });
+  } catch (error) {
+    logger.error('Get Area Stats Combined Error:', {
+      message: error.message,
+      stack: error.stack,
+      query: req.query,
+    });
+    return res.status(500).json({ error: error.message });
+  }
+};
+
 // Get all areas without pagination (for dropdowns, selects, etc.)
 exports.getAllAreasNoPagination = async (req, res) => {
   try {

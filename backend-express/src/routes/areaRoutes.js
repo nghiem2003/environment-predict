@@ -1,6 +1,6 @@
 const express = require('express');
 const { authenticate, authorize } = require('../middlewares/authMiddleware');
-const { getAllAreas, getAllAreasNoPagination, getAreaById, createArea, updateArea, deleteArea, getAreaStats } = require('../controllers/areaController');
+const { getAllAreas, getAllAreasNoPagination, getAreaById, createArea, updateArea, deleteArea, getAreaStats, getAreaStatsByType, getAreaStatsCombined } = require('../controllers/areaController');
 const { Province, Area, District } = require('../models/index.js');
 const multer = require('multer');
 const logger = require('../config/logger');
@@ -257,10 +257,107 @@ router.get('/all', getAllAreasNoPagination);
  *         description: Forbidden
  */
 router.get(
-  '/stats/summary',
-  authenticate,
-  authorize(['admin', 'manager']),
-  getAreaStats
+    '/stats/summary',
+    authenticate,
+    authorize(['admin', 'manager']),
+    getAreaStats
+);
+
+/**
+ * @swagger
+ * /areas/stats/by-type:
+ *   get:
+ *     summary: Get area statistics by type (oyster/cobia)
+ *     tags: [Areas]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: role
+ *         schema:
+ *           type: string
+ *           enum: [admin, manager]
+ *       - in: query
+ *         name: province
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: district
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Area stats by type
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 total:
+ *                   type: integer
+ *                 byType:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       type:
+ *                         type: string
+ *                       name:
+ *                         type: string
+ *                       count:
+ *                         type: integer
+ */
+router.get(
+    '/stats/by-type',
+    authenticate,
+    authorize(['admin', 'manager']),
+    getAreaStatsByType
+);
+
+/**
+ * @swagger
+ * /areas/stats/combined:
+ *   get:
+ *     summary: Get combined area statistics (by type, by province, and by type per province)
+ *     tags: [Areas]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: role
+ *         schema:
+ *           type: string
+ *           enum: [admin, manager]
+ *       - in: query
+ *         name: province
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: district
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Combined area statistics
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 totalAreas:
+ *                   type: integer
+ *                 byType:
+ *                   type: array
+ *                 byProvince:
+ *                   type: array
+ *                 byTypePerProvince:
+ *                   type: array
+ */
+router.get(
+    '/stats/combined',
+    authenticate,
+    authorize(['admin', 'manager']),
+    getAreaStatsCombined
 );
 
 /**
