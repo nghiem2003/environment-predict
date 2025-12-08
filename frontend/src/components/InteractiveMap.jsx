@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap, Circle } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap, Circle, GeoJSON } from 'react-leaflet';
 import { LatLng } from 'leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -131,6 +131,185 @@ function MapUpdater({ center, zoom }) {
             map.setView(center, zoom || 15);
         }
     }, [center, zoom, map]);
+
+    return null;
+}
+
+// Component to render GeoJSON labels
+function GeoJSONLabels({ data, language }) {
+    const map = useMap();
+    const [currentZoom, setCurrentZoom] = useState(map.getZoom());
+
+    useEffect(() => {
+        const handleZoomEnd = () => {
+            setCurrentZoom(map.getZoom());
+            console.log('Current zoom:', map.getZoom());
+        };
+
+        map.on('zoomend', handleZoomEnd);
+
+        return () => {
+            map.off('zoomend', handleZoomEnd);
+        };
+    }, [map]);
+
+    useEffect(() => {
+        if (!data || !data.features) return;
+
+        // Only show labels when zoomed in enough
+        if (currentZoom < 6) return;
+
+        const markers = [];
+
+        // Calculate clustering distance based on zoom level
+        // More zoom = smaller distance = more clusters
+        const getClusterDistance = (zoom) => {
+            if (zoom < 7) return Infinity; // Single cluster per name
+            if (zoom < 8) return 2; // Large clusters (2 degrees)
+            if (zoom < 9) return 1; // Medium clusters (1 degree)
+            if (zoom < 10) return 0.5; // Smaller clusters (0.5 degrees)
+            if (zoom < 11) return 0.2; // Very small clusters (0.2 degrees)
+            if (zoom < 12) return 0.1; // Very very small clusters (0.1 degrees)
+            return 0; // Each polygon gets its own label
+        };
+
+        const clusterDistance = getClusterDistance(currentZoom);
+
+        // Group features by name first
+        const groupedByName = {};
+
+        data.features.forEach((feature) => {
+            if (feature.geometry && feature.properties) {
+                const { Name_VI, Name_EN } = feature.properties;
+                const labelText = language === 'vi' ? Name_VI : Name_EN;
+
+                if (!groupedByName[labelText]) {
+                    groupedByName[labelText] = [];
+                }
+                groupedByName[labelText].push(feature);
+            }
+        });
+
+        // For each name group, cluster by distance
+        Object.entries(groupedByName).forEach(([labelText, features]) => {
+            // Calculate center for each feature
+            const featureCenters = features.map(feature => {
+                let totalLat = 0, totalLng = 0, pointCount = 0;
+
+                if (feature.geometry.type === 'MultiPolygon') {
+                    feature.geometry.coordinates.forEach(polygon => {
+                        const coords = polygon[0];
+                        coords.forEach(coord => {
+                            totalLng += coord[0];
+                            totalLat += coord[1];
+                            pointCount++;
+                        });
+                    });
+                } else if (feature.geometry.type === 'Polygon') {
+                    const coords = feature.geometry.coordinates[0];
+                    coords.forEach(coord => {
+                        totalLng += coord[0];
+                        totalLat += coord[1];
+                        pointCount++;
+                    });
+                }
+
+                return {
+                    lat: totalLat / pointCount,
+                    lng: totalLng / pointCount,
+                    feature: feature,
+                    clusterId: null
+                };
+            });
+
+            // Simple clustering algorithm
+            const clusters = [];
+
+            featureCenters.forEach(fc => {
+                if (clusterDistance === Infinity) {
+                    // All in one cluster
+                    if (clusters.length === 0) {
+                        clusters.push([fc]);
+                    } else {
+                        clusters[0].push(fc);
+                    }
+                } else {
+                    // Find nearest cluster
+                    let nearestCluster = null;
+                    let minDistance = Infinity;
+
+                    clusters.forEach((cluster, idx) => {
+                        // Calculate cluster center
+                        const clusterLat = cluster.reduce((sum, c) => sum + c.lat, 0) / cluster.length;
+                        const clusterLng = cluster.reduce((sum, c) => sum + c.lng, 0) / cluster.length;
+
+                        // Calculate distance
+                        const distance = Math.sqrt(
+                            Math.pow(fc.lat - clusterLat, 2) +
+                            Math.pow(fc.lng - clusterLng, 2)
+                        );
+
+                        if (distance < minDistance && distance < clusterDistance) {
+                            minDistance = distance;
+                            nearestCluster = idx;
+                        }
+                    });
+
+                    if (nearestCluster !== null) {
+                        clusters[nearestCluster].push(fc);
+                    } else {
+                        clusters.push([fc]);
+                    }
+                }
+            });
+
+            // Create marker for each cluster
+            clusters.forEach(cluster => {
+                const clusterLat = cluster.reduce((sum, c) => sum + c.lat, 0) / cluster.length;
+                const clusterLng = cluster.reduce((sum, c) => sum + c.lng, 0) / cluster.length;
+                const center = [clusterLat, clusterLng];
+
+                // Adjust font size based on zoom level (matching Leaflet's 12px base)
+                const fontSize = Math.min(12 + (currentZoom - 6) * 1.5, 18);
+
+                const textIcon = L.divIcon({
+                    className: 'geojson-label',
+                    html: `<div style="
+                        color: #000000;
+                        font-weight: bold;
+                        font-size: ${fontSize}px;
+                        white-space: nowrap;
+                        text-align: center;
+                        text-shadow: 
+                            -1px -1px 0 rgba(255, 255, 255, 0.5),
+                            1px -1px 0 rgba(255, 255, 255, 0.5),
+                            -1px 1px 0 rgba(255, 255, 255, 0.5),
+                            1px 1px 0 rgba(255, 255, 255, 0.5),
+                            0 0 3px rgba(255, 255, 255, 0.5);
+                        pointer-events: none;
+                        font-family: 'Helvetica Neue', Arial, Helvetica, sans-serif;
+                    ">${labelText}</div>`,
+                    iconSize: [150, 20],
+                    iconAnchor: [75, 10]
+                });
+
+                const marker = L.marker(center, {
+                    icon: textIcon,
+                    interactive: false,
+                    zIndexOffset: 1000
+                }).addTo(map);
+
+                markers.push(marker);
+            });
+        });
+
+        console.log('Total labels rendered:', markers.length, 'at zoom:', currentZoom);
+
+        // Cleanup on unmount or data change
+        return () => {
+            markers.forEach(marker => marker.remove());
+        };
+    }, [data, language, map, currentZoom]);
 
     return null;
 }
@@ -277,7 +456,7 @@ function AreaMarker({ area, prediction, onAreaClick, onViewDetails }) {
 }
 
 const InteractiveMap = () => {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const { token } = useSelector((state) => state.auth);
     const navigate = useNavigate();
     const mapRef = useRef(null);
@@ -301,6 +480,7 @@ const InteractiveMap = () => {
     const [historyByElement, setHistoryByElement] = useState({}); // key: element name/id -> [{date,value}]
     const [mapCenter, setMapCenter] = useState([10.762622, 106.660172]); // Vietnam center
     const [mapZoom, setMapZoom] = useState(6);
+    const [hoangTruongSaGeoJSON, setHoangTruongSaGeoJSON] = useState(null);
 
     // Filter states
     const [searchTerm, setSearchTerm] = useState('');
@@ -596,6 +776,21 @@ const InteractiveMap = () => {
             setFilteredDistricts(districts);
         }
     };
+
+    // Load GeoJSON data
+    useEffect(() => {
+        const loadGeoJSON = async () => {
+            try {
+                const module = await import('../data/hoang_Truong_sa.json');
+                const data = module.default || module;
+                setHoangTruongSaGeoJSON(data);
+                console.log('GeoJSON loaded successfully:', data.type, data.features?.length, 'features');
+            } catch (error) {
+                console.error('Error loading GeoJSON:', error);
+            }
+        };
+        loadGeoJSON();
+    }, []);
 
     // Initialize data
     useEffect(() => {
@@ -1057,6 +1252,38 @@ const InteractiveMap = () => {
                             area={selectedArea}
                             prediction={predictions[selectedArea.id]}
                         />
+                    )}
+
+                    {/* GeoJSON Layer for Hoang Sa and Truong Sa */}
+                    {hoangTruongSaGeoJSON && (
+                        <>
+                            <GeoJSON
+                                data={hoangTruongSaGeoJSON}
+                                style={{
+                                    fillColor: '#3388ff',
+                                    weight: 1,
+                                    opacity: 0.8,
+                                    color: '#0078A8',
+                                    fillOpacity: 0.4
+                                }}
+                                onEachFeature={(feature, layer) => {
+                                    if (feature.properties) {
+                                        const { Name_VI, Name_EN, ISO3166_2_ } = feature.properties;
+                                        layer.bindPopup(`
+                                            <div style="padding: 8px;">
+                                                <h4 style="margin: 0 0 8px 0;">${Name_VI}</h4>
+                                                <p style="margin: 0;"><strong>English:</strong> ${Name_EN}</p>
+                                                <p style="margin: 4px 0 0 0;"><strong>Code:</strong> ${ISO3166_2_}</p>
+                                            </div>
+                                        `);
+                                    }
+                                }}
+                            />
+                            <GeoJSONLabels
+                                data={hoangTruongSaGeoJSON}
+                                language={i18n.language || 'vi'}
+                            />
+                        </>
                     )}
 
                 </MapContainer>
