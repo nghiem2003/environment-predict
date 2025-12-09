@@ -25,7 +25,7 @@ import {
   Select,
   DatePicker,
 } from 'antd';
-import { ClearOutlined, MailOutlined, EyeOutlined, CloseOutlined, SendOutlined, DownloadOutlined, FilterOutlined } from '@ant-design/icons';
+import { ClearOutlined, MailOutlined, EyeOutlined, CloseOutlined, SendOutlined, DownloadOutlined, FilterOutlined, DeleteOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import PredictionBadge from './PredictionBadge';
 
@@ -68,6 +68,11 @@ const Dashboard = () => {
   const [isLoadingDistricts, setIsLoadingDistricts] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+
+  // States for batch delete
+  const [selectedPredictionIds, setSelectedPredictionIds] = useState([]);
+  const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Load areas list for filter
   useEffect(() => {
@@ -148,6 +153,12 @@ const Dashboard = () => {
       setSelectedDistrict(undefined);
     }
   }, [selectedProvince, userRole]);
+
+  // Clear selection when page changes or filters change
+  useEffect(() => {
+    setSelectedPredictionIds([]);
+  }, [currentPage, selectedAreaId, selectedPredictionResult, selectedAreaType,
+    selectedProvince, selectedDistrict, startDate, endDate]);
 
   useEffect(() => {
     if (token) {
@@ -352,6 +363,114 @@ const Dashboard = () => {
     setCurrentPage(0);
   };
 
+  // Handle checkbox selection
+  const handleSelectPrediction = (predictionId, checked) => {
+    if (checked) {
+      setSelectedPredictionIds([...selectedPredictionIds, predictionId]);
+    } else {
+      setSelectedPredictionIds(selectedPredictionIds.filter(id => id !== predictionId));
+    }
+  };
+
+  // Select all predictions on current page
+  const handleSelectAll = (checked) => {
+    if (checked) {
+      const allIds = predictionList.map(pred => pred.id);
+      setSelectedPredictionIds(allIds);
+    } else {
+      setSelectedPredictionIds([]);
+    }
+  };
+
+  // Show delete confirmation modal for batch delete
+  const showDeleteConfirmModal = () => {
+    if (selectedPredictionIds.length === 0) {
+      message.warning('Vui lòng chọn ít nhất một dự đoán để xóa');
+      return;
+    }
+    setIsDeleteModalVisible(true);
+  };
+
+  // Handle delete single prediction
+  const handleDeleteSingle = (predictionId) => {
+    setSelectedPredictionIds([predictionId]);
+    setIsDeleteModalVisible(true);
+  };
+
+  // Handle batch delete
+  const handleBatchDelete = async () => {
+    if (selectedPredictionIds.length === 0) {
+      message.warning('Vui lòng chọn ít nhất một dự đoán để xóa');
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      const response = await axios.delete('/api/express/predictions/batch-delete', {
+        data: { predictionIds: selectedPredictionIds }
+      });
+
+      message.success(response.data.message || `Đã xóa ${response.data.deletedCount} dự đoán thành công`);
+
+      // Clear selection
+      setSelectedPredictionIds([]);
+      setIsDeleteModalVisible(false);
+
+      // Refresh predictions list
+      // Trigger re-fetch by incrementing a counter or call fetch function
+      if (token) {
+        try {
+          const decodedToken = jwtDecode(token);
+          if (decodedToken.role === 'admin' || decodedToken.role === 'manager') {
+            const params = {
+              limit: predictionsPerPage,
+              offset: currentPage * predictionsPerPage,
+            };
+
+            if (selectedAreaId) params.areaId = selectedAreaId;
+            if (selectedPredictionResult !== undefined && selectedPredictionResult !== '') {
+              params.predictionResult = selectedPredictionResult;
+            }
+            if (selectedAreaType) params.areaType = selectedAreaType;
+            if (userRole === 'admin') {
+              if (selectedProvince) params.province = selectedProvince;
+              if (selectedDistrict) params.district = selectedDistrict;
+            }
+            if (startDate) params.startDate = startDate.format('YYYY-MM-DD');
+            if (endDate) params.endDate = endDate.format('YYYY-MM-DD');
+
+            const response = await axios.get(`/api/express/predictions/admin`, { params });
+            setPredictionList(response.data.rows);
+            setTotalPredictions(response.data.count);
+          } else {
+            const params = {
+              limit: predictionsPerPage,
+              offset: currentPage * predictionsPerPage,
+            };
+            if (selectedAreaId) params.areaId = selectedAreaId;
+
+            const response = await axios.get(`/api/express/predictions/user/${decodedToken.id}`, { params });
+            if (response.data.rows !== undefined) {
+              setPredictionList(response.data.rows);
+              setTotalPredictions(response.data.count);
+            } else {
+              setPredictionList(Array.isArray(response.data) ? response.data : []);
+              setTotalPredictions(Array.isArray(response.data) ? response.data.length : 0);
+            }
+          }
+        } catch (error) {
+          console.error('Error refreshing predictions:', error);
+        }
+      }
+    } catch (error) {
+      console.error('Delete predictions error:', error);
+      const errorMsg = error.response?.data?.error || error.message || 'Xóa dự đoán thất bại';
+      message.error(errorMsg);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   // Export to Excel via Job
   const handleExportExcel = async () => {
     try {
@@ -426,15 +545,25 @@ const Dashboard = () => {
                 {showFilters ? 'Ẩn bộ lọc' : 'Hiện bộ lọc'}
               </Button>
               {(userRole === 'admin' || userRole === 'manager') && (
-                <Button
-                  type="primary"
-                  icon={<DownloadOutlined />}
-                  onClick={handleExportExcel}
-                  loading={isExporting}
-                  disabled={predictionList.length === 0}
-                >
-                  Xuất Excel
-                </Button>
+                <>
+                  <Button
+                    danger
+                    icon={<DeleteOutlined />}
+                    onClick={showDeleteConfirmModal}
+                    disabled={selectedPredictionIds.length === 0}
+                  >
+                    Xóa đã chọn ({selectedPredictionIds.length})
+                  </Button>
+                  <Button
+                    type="primary"
+                    icon={<DownloadOutlined />}
+                    onClick={handleExportExcel}
+                    loading={isExporting}
+                    disabled={predictionList.length === 0}
+                  >
+                    Xuất Excel
+                  </Button>
+                </>
               )}
             </Space>
           </div>
@@ -607,6 +736,28 @@ const Dashboard = () => {
         <Spin spinning={loading}>
           <Table
             columns={[
+              ...(userRole === 'admin' || userRole === 'manager'
+                ? [
+                  {
+                    title: (
+                      <Checkbox
+                        checked={selectedPredictionIds.length === predictionList.length && predictionList.length > 0}
+                        indeterminate={selectedPredictionIds.length > 0 && selectedPredictionIds.length < predictionList.length}
+                        onChange={(e) => handleSelectAll(e.target.checked)}
+                      />
+                    ),
+                    key: 'checkbox',
+                    width: 'min-content',
+                    align: 'center',
+                    render: (_, record) => (
+                      <Checkbox
+                        checked={selectedPredictionIds.includes(record.id)}
+                        onChange={(e) => handleSelectPrediction(record.id, e.target.checked)}
+                      />
+                    ),
+                  },
+                ]
+                : []),
               {
                 title: t('dashboard.id'),
                 dataIndex: 'id',
@@ -681,14 +832,24 @@ const Dashboard = () => {
                       />
                     </Tooltip>
                     {(userRole === 'admin' || userRole === 'manager') && (
-                      <Tooltip title="Gửi thông báo">
-                        <Button
-                          type="default"
-                          icon={<MailOutlined />}
-                          size="middle"
-                          onClick={() => showManualNotificationModal(item)}
-                        />
-                      </Tooltip>
+                      <>
+                        <Tooltip title="Gửi thông báo">
+                          <Button
+                            type="default"
+                            icon={<MailOutlined />}
+                            size="middle"
+                            onClick={() => showManualNotificationModal(item)}
+                          />
+                        </Tooltip>
+                        <Tooltip title="Xóa dự đoán">
+                          <Button
+                            danger
+                            icon={<DeleteOutlined />}
+                            size="middle"
+                            onClick={() => handleDeleteSingle(item.id)}
+                          />
+                        </Tooltip>
+                      </>
                     )}
                   </Space>
                 ),
@@ -723,6 +884,31 @@ const Dashboard = () => {
           <div style={{ minWidth: '750px' }}>
             <PredictionDetails predictionId={selectedPredictionId} />
           </div>
+        </Modal>
+
+        {/* Delete Confirmation Modal */}
+        <Modal
+          title="Xác nhận xóa dự đoán"
+          open={isDeleteModalVisible}
+          onOk={handleBatchDelete}
+          onCancel={() => {
+            setIsDeleteModalVisible(false);
+            // Don't clear selectedPredictionIds here to keep checkbox selection
+          }}
+          confirmLoading={isDeleting}
+          okText="Xóa"
+          cancelText="Hủy"
+          okButtonProps={{ danger: true }}
+        >
+          <p>
+            Bạn đang xóa <strong style={{ fontSize: '18px', color: '#ff4d4f' }}>{selectedPredictionIds.length}</strong> dự đoán
+          </p>
+          <p style={{ marginTop: 8 }}>
+            Bạn có chắc chắn muốn tiếp tục?
+          </p>
+          <p style={{ color: '#ff4d4f', marginTop: 16, fontWeight: 500 }}>
+            ⚠️ Hành động này không thể hoàn tác!
+          </p>
         </Modal>
 
         {/* Manual Notification Modal */}

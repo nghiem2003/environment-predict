@@ -485,6 +485,7 @@ exports.getUserById = async (req, res) => {
       phone: user.phone,
       province: user.province,
       district: user.district,
+      login_name: user.login_name,
     };
 
     return res.status(200).json(userData);
@@ -493,6 +494,46 @@ exports.getUserById = async (req, res) => {
       message: error.message,
       stack: error.stack,
       userId: req.params.id,
+    });
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+// Get current user info from token
+exports.getCurrentUser = async (req, res) => {
+  try {
+    // req.user comes from authenticate middleware (decoded from token)
+    const userId = req.user.id;
+    
+    const user = await User.findOne({ 
+      where: { id: userId },
+      attributes: { exclude: ['password'] } // Exclude password field
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Return user data without sensitive information
+    const userData = {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      role: user.role,
+      status: user.status,
+      address: user.address,
+      phone: user.phone,
+      province: user.province,
+      district: user.district,
+      login_name: user.login_name,
+    };
+
+    return res.status(200).json(userData);
+  } catch (error) {
+    logger.error('Get Current User Error:', {
+      message: error.message,
+      stack: error.stack,
+      userId: req.user?.id,
     });
     return res.status(500).json({ error: 'Internal server error' });
   }

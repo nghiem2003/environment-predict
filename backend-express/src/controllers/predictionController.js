@@ -1855,6 +1855,106 @@ function getTimeAgo(date) {
   }
 }
 
+// Delete multiple predictions by IDs
+exports.deletePredictions = async (req, res) => {
+  try {
+    const { predictionIds } = req.body;
+
+    // Validate input
+    if (!predictionIds || !Array.isArray(predictionIds) || predictionIds.length === 0) {
+      return res.status(400).json({
+        error: 'predictionIds is required and must be a non-empty array'
+      });
+    }
+
+    logger.info('[Delete Predictions] Request to delete predictions', {
+      count: predictionIds.length,
+      ids: predictionIds,
+      userId: req.user?.id,
+      userRole: req.user?.role
+    });
+
+    // Check permissions and get predictions to delete
+    const predictions = await Prediction.findAll({
+      where: { id: predictionIds },
+      include: [
+        {
+          model: Area,
+          attributes: ['id', 'name', 'province', 'district'],
+        },
+      ],
+    });
+
+    if (!predictions || predictions.length === 0) {
+      return res.status(404).json({
+        error: 'No predictions found with the provided IDs'
+      });
+    }
+
+    // Manager role restrictions - check if they have permission
+    if (req.user.role === 'manager') {
+      const userProvince = req.user.province;
+      const userDistrict = req.user.district;
+
+      // Check if all predictions are within manager's scope
+      const unauthorizedPredictions = predictions.filter(prediction => {
+        if (userDistrict) {
+          // District manager - can only delete from their district
+          return prediction.Area?.district !== userDistrict;
+        } else if (userProvince) {
+          // Province manager - can only delete from their province
+          return prediction.Area?.province !== userProvince;
+        }
+        return true; // Manager without province/district assignment
+      });
+
+      if (unauthorizedPredictions.length > 0) {
+        logger.warn('[Delete Predictions] Manager attempted to delete unauthorized predictions', {
+          managerId: req.user.id,
+          province: userProvince,
+          district: userDistrict,
+          unauthorizedCount: unauthorizedPredictions.length
+        });
+        return res.status(403).json({
+          error: 'You do not have permission to delete one or more of these predictions.',
+          unauthorizedCount: unauthorizedPredictions.length
+        });
+      }
+    }
+
+    // Delete prediction nature elements first (foreign key constraint)
+    await PredictionNatureElement.destroy({
+      where: { prediction_id: predictionIds }
+    });
+
+    // Delete predictions
+    const deletedCount = await Prediction.destroy({
+      where: { id: predictionIds }
+    });
+
+    logger.info('[Delete Predictions] Successfully deleted predictions', {
+      requestedCount: predictionIds.length,
+      deletedCount: deletedCount,
+      userId: req.user?.id
+    });
+
+    return res.status(200).json({
+      message: `Successfully deleted ${deletedCount} prediction(s)`,
+      deletedCount: deletedCount,
+      requestedCount: predictionIds.length
+    });
+
+  } catch (error) {
+    logger.error('Delete Predictions Error:', {
+      message: error.message,
+      stack: error.stack,
+      predictionIds: req.body?.predictionIds,
+      userId: req.user?.id,
+    });
+    return res.status(500).json({ error: 'Internal server error while deleting predictions' });
+  }
+};
+
 // Export predictions to Excel with filters
 exports.exportPredictionsToExcel = async (req, res) => {
   try {

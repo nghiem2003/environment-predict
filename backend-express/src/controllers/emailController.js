@@ -5,12 +5,13 @@ const logger = require('../config/logger');
 
 
 const resultConvert = (result) => {
-  if (result === -1) {
-    return 'Không phù hợp';
-  } else if (result === 0) {
-    return 'Phù hợp';
-  } else if (result === 1) {
-    return 'Rất phù hợp';
+  switch (+result) {
+    case -1:
+      return 'Môi trường không phù hợp cho việc nuôi trồng';
+    case 0:
+      return 'Môi trường phù hợp cho việc nuôi trồng';
+    default:
+      return 'Môi trường rất phù hợp cho việc nuôi trồng';
   }
 }
 
@@ -700,7 +701,7 @@ exports.sendPredictionNotification = async (areaId, predictionData) => {
           <p><strong>Số lượng dự đoán:</strong> ${predictionData.predictionCount || 'Nhiều'}</p>
           <p><strong>Mô tả:</strong> ${predictionData.result || 'Đã tạo dự đoán hàng loạt'}</p>
           ` : `
-          <p><strong>Kết quả dự đoán:</strong> ${predictionData.result || 'Đang xử lý'
+          <p><strong>Kết quả dự đoán:</strong> ${resultConvert(predictionData.result) || 'Đang xử lý'
         }</p>
           `}
           <p><strong>Thời gian:</strong> ${new Date().toLocaleString(

@@ -353,7 +353,7 @@ function PredictionCircle({ area, prediction }) {
 }
 
 // Component for individual area markers with prediction circles
-function AreaMarker({ area, prediction, onAreaClick, onViewDetails }) {
+function AreaMarker({ area, prediction, onAreaClick, onViewDetails, selectedArea, navigate, isDetailView }) {
     const icon = area.area_type === 'oyster' ? oysterIcon : cobiaIcon;
 
     // Get prediction result and color from prediction_text (categorical)
@@ -428,11 +428,14 @@ function AreaMarker({ area, prediction, onAreaClick, onViewDetails }) {
                                 </div>
                             )}
                             <Space direction="vertical" style={{ width: '100%' }}>
-                                {prediction && prediction.id && (
+                                {prediction && prediction.id && !(isDetailView && selectedArea && area.id === selectedArea.id) && (
                                     <Button
                                         type="primary"
                                         size="small"
-                                        onClick={() => onViewDetails(area)}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            onViewDetails(area);
+                                        }}
                                         style={{ width: '100%' }}
                                     >
                                         Xem chi tiết
@@ -441,7 +444,10 @@ function AreaMarker({ area, prediction, onAreaClick, onViewDetails }) {
                                 <Button
                                     type="default"
                                     size="small"
-                                    onClick={() => navigate(`/email-subscription/${area.id}`)}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        navigate(`/email-subscription/${area.id}`);
+                                    }}
                                     style={{ width: '100%' }}
                                 >
                                     Đăng ký email thông báo
@@ -637,10 +643,10 @@ const InteractiveMap = () => {
         fetchHistory(area.id);
     };
 
-    // Handle area click from map marker - only move map, don't change selected area
+    // Handle area click from map marker - only move map center, don't zoom or change selected area
     const handleAreaClick = (area) => {
         setMapCenter([area.latitude, area.longitude]);
-        setMapZoom(15);
+        // Don't change zoom - keep current zoom level
     };
 
     // Handle area click from "Xem chi tiết" button - change selected area and switch to detail view
@@ -1243,6 +1249,9 @@ const InteractiveMap = () => {
                             prediction={predictions[area.id]}
                             onAreaClick={handleAreaClick}
                             onViewDetails={handleViewDetails}
+                            selectedArea={selectedArea}
+                            navigate={navigate}
+                            isDetailView={isDetailView}
                         />
                     ))}
 

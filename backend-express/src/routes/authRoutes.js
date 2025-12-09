@@ -9,6 +9,7 @@ const {
   activateUser,
   deleteUser,
   getUserById,
+  getCurrentUser,
   changePassword,
   getUserStats,
   checkLoginName,
@@ -117,6 +118,69 @@ const router = express.Router();
  *               $ref: '#/components/schemas/Error'
  */
 router.post('/login', login);
+
+/**
+ * @swagger
+ * /auth/me:
+ *   get:
+ *     summary: Get current user information from token
+ *     tags: [Authentication]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Current user information
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id:
+ *                   type: integer
+ *                   example: 1
+ *                 username:
+ *                   type: string
+ *                   example: "john_doe"
+ *                 email:
+ *                   type: string
+ *                   format: email
+ *                   example: "john@example.com"
+ *                 login_name:
+ *                   type: string
+ *                   example: "john_doe"
+ *                 role:
+ *                   type: string
+ *                   enum: [admin, manager, expert]
+ *                   example: "expert"
+ *                 status:
+ *                   type: string
+ *                   example: "active"
+ *                 address:
+ *                   type: string
+ *                   example: "123 Main St"
+ *                 phone:
+ *                   type: string
+ *                   example: "0123456789"
+ *                 province:
+ *                   type: integer
+ *                   example: 1
+ *                 district:
+ *                   type: integer
+ *                   example: 1
+ *       401:
+ *         description: Unauthorized - Invalid or missing token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+router.get('/me', authenticate, getCurrentUser);
 
 /**
  * @swagger

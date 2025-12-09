@@ -15,7 +15,6 @@ import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import axios from '../axios';
-import { jwtDecode } from 'jwt-decode';
 
 const { Title } = Typography;
 
@@ -37,20 +36,27 @@ const UserProfile = () => {
   useEffect(() => {
     const fetchUserData = async () => {
       try {
-        const decodedToken = jwtDecode(token);
-        const response = await axios.get(
-          `/api/express/auth/user/${decodedToken.id}`
-        );
+        // Use /auth/me instead of decoding token and fetching by ID
+        const response = await axios.get('/api/express/auth/me');
         setUserData(response.data);
       } catch (error) {
         console.error('Error fetching user data:', error);
+        if (error.response?.status === 401) {
+          message.error('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.');
+          navigate('/login');
+        }
       } finally {
         setLoading(false);
       }
     };
 
-    fetchUserData();
-  }, [token]);
+    if (token) {
+      fetchUserData();
+    } else {
+      setLoading(false);
+      navigate('/login');
+    }
+  }, [token, navigate]);
 
   useEffect(() => {
     const fetchRegions = async () => {

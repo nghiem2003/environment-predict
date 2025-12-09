@@ -16,6 +16,7 @@ const {
   getConsecutivePoorAreas,
   getPredictionTrendByBatch,
   getPredictionStatsByAreaType,
+  deletePredictions,
 } = require('../controllers/predictionController');
 const { authenticate, authorize } = require('../middlewares/authMiddleware');
 const multer = require('multer');
@@ -74,6 +75,66 @@ router.post(
   authenticate,
   authorize(['expert']),
   createBatchPrediction
+);
+
+/**
+ * @swagger
+ * /predictions/batch-delete:
+ *   delete:
+ *     summary: Delete multiple predictions by IDs
+ *     tags: [Predictions]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - predictionIds
+ *             properties:
+ *               predictionIds:
+ *                 type: array
+ *                 items:
+ *                   type: integer
+ *                 example: [1, 2, 3, 4, 5]
+ *                 description: Array of prediction IDs to delete
+ *     responses:
+ *       200:
+ *         description: Predictions deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Successfully deleted 5 prediction(s)"
+ *                 deletedCount:
+ *                   type: integer
+ *                   example: 5
+ *                 requestedCount:
+ *                   type: integer
+ *                   example: 5
+ *       400:
+ *         description: Bad request - Invalid input
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - No permission to delete these predictions
+ *       404:
+ *         description: No predictions found with provided IDs
+ */
+router.delete(
+  '/batch-delete',
+  authenticate,
+  authorize(['admin', 'manager']),
+  deletePredictions
 );
 
 /**

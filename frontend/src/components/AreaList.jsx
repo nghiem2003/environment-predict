@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import axios from '../axios';
 import { useSelector } from 'react-redux';
-import { jwtDecode } from 'jwt-decode';
 import './AreaList.css';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -132,17 +131,36 @@ const AreaList = () => {
   const [filterInitialized, setFilterInitialized] = useState(false);
   const [loading, setLoading] = useState(false);
   const debouncedSearchTerm = useDebouncedValue(searchTerm, 500);
+  const [userInfo, setUserInfo] = useState(null);
+  const [userInfoLoading, setUserInfoLoading] = useState(true);
 
-  const userInfo = useMemo(() => {
-    if (!token) return null;
-    try {
-      return jwtDecode(token);
-    } catch (error) {
-      console.error('Error decoding token:', error);
-      return null;
-    }
-  }, [token]);
 
+  // Fetch user info from /auth/me
+  useEffect(() => {
+    const fetchUserInfo = async () => {
+      if (!token) {
+        setUserInfo(null);
+        setUserInfoLoading(false);
+        return;
+      }
+
+      try {
+        const response = await axios.get('/api/express/auth/me');
+        setUserInfo(response.data);
+      } catch (error) {
+        console.error('Error fetching user info:', error);
+        if (error.response?.status === 401) {
+          message.error('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.');
+          navigate('/login');
+        }
+        setUserInfo(null);
+      } finally {
+        setUserInfoLoading(false);
+      }
+    };
+
+    fetchUserInfo();
+  }, [token, navigate]);
 
   const isWithinVietnam = (lat, lon) => lat >= 8 && lat <= 24 && lon >= 102 && lon <= 110;
   const convertVN2000ToWGS84 = (x, y, zone) => {
@@ -329,15 +347,17 @@ const AreaList = () => {
   const userDistrictFilter = userFilter.district;
   const userRoleFilter = userFilter.role;
 
-  // Fetch areas when dependencies change
+  // Fetch areas when dependencies change (only after user info is loaded)
   useEffect(() => {
-    fetchAreas(
-      userProvinceFilter,
-      userDistrictFilter,
-      userRoleFilter,
-      areasPerPage
-    );
-  }, [debouncedSearchTerm, areaType, latRange, longRange, currentPage, areasPerPage, userProvinceFilter, userDistrictFilter, userRoleFilter, selectedProvince, selectedDistrict]);
+    if (!userInfoLoading) {
+      fetchAreas(
+        userProvinceFilter,
+        userDistrictFilter,
+        userRoleFilter,
+        areasPerPage
+      );
+    }
+  }, [debouncedSearchTerm, areaType, latRange, longRange, currentPage, areasPerPage, userProvinceFilter, userDistrictFilter, userRoleFilter, selectedProvince, selectedDistrict, userInfoLoading]);
 
   useEffect(() => {
     setCurrentPage(0);
