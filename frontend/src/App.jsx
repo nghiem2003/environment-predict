@@ -1,37 +1,38 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, Suspense, lazy } from "react";
+
 import {
   Routes,
   Route,
   useNavigate,
   useLocation,
   Navigate,
-} from 'react-router-dom';
-import { useSelector, useDispatch } from 'react-redux';
-import { logout } from './redux/authSlice';
-import Login from './components/Login';
-import 'react-toastify/dist/ReactToastify.css';
-import { jwtDecode } from 'jwt-decode';
-import Dashboard from './components/Dashboard';
-import WelcomePage from './components/WelcomePage';
-import Prediction from './components/Prediction';
-import PredictionDetails from './components/PredictionDetails';
-import CreatePrediction from './components/CreateNewPrediction';
-import ProtectedRoute from './components/ProtectedRoute';
-import 'leaflet/dist/leaflet.css';
-import './App.css'; // Import CSS for header and footer
-import AreaList from './components/AreaList';
-import InteractiveMap from './components/InteractiveMap';
-import UserList from './components/UserList';
-import UserProfile from './components/UserProfile';
-import Jobs from './components/Jobs';
-import AdminStats from './components/AdminStats';
-import EmailList from './components/EmailList';
-import EmailSubscription from './components/EmailSubscription';
-import UnsubscribePage from './components/UnsubscribePage';
-import SwaggerViewer from './components/SwaggerViewer';
-import ForgotPassword from './components/ForgotPassword';
-import { useTranslation } from 'react-i18next';
-import LanguageSwitch from './components/LanguageSwitch';
+} from "react-router-dom";
+import { useSelector, useDispatch } from "react-redux";
+import { logout } from "./redux/authSlice";
+import Login from "./components/Login";
+import "react-toastify/dist/ReactToastify.css";
+import { jwtDecode } from "jwt-decode";
+import Dashboard from "./components/Dashboard";
+//import WelcomePage from "./components/WelcomePage";
+import Prediction from "./components/Prediction";
+import PredictionDetails from "./components/PredictionDetails";
+import CreatePrediction from "./components/CreateNewPrediction";
+import ProtectedRoute from "./components/ProtectedRoute";
+import "leaflet/dist/leaflet.css";
+import "./App.css"; // Import CSS for header and footer
+import AreaList from "./components/AreaList";
+import InteractiveMap from "./components/InteractiveMap";
+import UserList from "./components/UserList";
+import UserProfile from "./components/UserProfile";
+import Jobs from "./components/Jobs";
+import AdminStats from "./components/AdminStats";
+import EmailList from "./components/EmailList";
+import EmailSubscription from "./components/EmailSubscription";
+import UnsubscribePage from "./components/UnsubscribePage";
+import SwaggerViewer from "./components/SwaggerViewer";
+import ForgotPassword from "./components/ForgotPassword";
+import { useTranslation } from "react-i18next";
+import LanguageSwitch from "./components/LanguageSwitch";
 import {
   Layout,
   Menu,
@@ -45,7 +46,7 @@ import {
   Grid,
   Dropdown,
   Tooltip,
-} from 'antd';
+} from "antd";
 import {
   ArrowLeftOutlined,
   MenuFoldOutlined,
@@ -61,7 +62,7 @@ import {
   MailOutlined,
   EnvironmentOutlined,
   ApiOutlined,
-} from '@ant-design/icons';
+} from "@ant-design/icons";
 
 const { Header, Sider, Content } = Layout;
 const { Title } = Typography;
@@ -78,23 +79,27 @@ const App = () => {
   // Get user name from token with character limit based on screen size
   // iPad (md): 25 chars, larger screens: 50 chars
   const screens = useBreakpoint();
-  const userName = token ? (() => {
-    try {
-      const decodedToken = jwtDecode(token);
-      const name = decodedToken.name || decodedToken.username || '';
-      if (!name) return '';
-      // iPad (md) and up: show name, limit based on screen size
-      console.log('name', name)
-      if (screens.md || screens.lg || screens.xl || screens.xxl) {
-        const maxLength = screens.md && !screens.lg ? 25 : 50; // iPad: 25, larger: 50
-        console.log('max', maxLength)
-        return name.length > maxLength ? name.substring(0, maxLength) + '...' : name;
-      }
-      return ''; // Don't show on small screens
-    } catch (e) {
-      return '';
-    }
-  })() : '';
+  const userName = token
+    ? (() => {
+        try {
+          const decodedToken = jwtDecode(token);
+          const name = decodedToken.name || decodedToken.username || "";
+          if (!name) return "";
+          // iPad (md) and up: show name, limit based on screen size
+          console.log("name", name);
+          if (screens.md || screens.lg || screens.xl || screens.xxl) {
+            const maxLength = screens.md && !screens.lg ? 25 : 50; // iPad: 25, larger: 50
+            console.log("max", maxLength);
+            return name.length > maxLength
+              ? name.substring(0, maxLength) + "..."
+              : name;
+          }
+          return ""; // Don't show on small screens
+        } catch (e) {
+          return "";
+        }
+      })()
+    : "";
 
   const {
     token: { colorBgContainer, borderRadiusLG },
@@ -106,91 +111,96 @@ const App = () => {
 
   const handleLogout = () => {
     dispatch(logout());
-    message.success(t('logout.success'));
-    navigate('/');
+    message.success(t("logout.success"));
+    navigate("/");
   };
 
-  const isSidebarVisible = location.pathname !== '/interactive-map' && (role === 'admin' || role === 'expert' || role === 'manager' || location.pathname === '/swagger');
+  const isSidebarVisible =
+    location.pathname !== "/interactive-map" &&
+    (role === "admin" ||
+      role === "expert" ||
+      role === "manager" ||
+      location.pathname === "/swagger");
 
   const getMenuItems = () => {
     // Common menu items for all users (including non-logged in)
     const commonItems = [
       {
-        key: '/swagger',
+        key: "/swagger",
         icon: <ApiOutlined />,
-        label: 'API Documentation',
+        label: "API Documentation",
       },
     ];
 
-    if (role === 'admin') {
+    if (role === "admin") {
       return [
         ...commonItems,
         {
-          key: '/admin-stats',
+          key: "/admin-stats",
           icon: <DashboardOutlined />,
-          label: t('sidebar.stats'),
+          label: t("sidebar.stats"),
         },
         {
-          key: '/areas',
+          key: "/areas",
           icon: <AreaChartOutlined />,
-          label: t('sidebar.area_list'),
+          label: t("sidebar.area_list"),
         },
         {
-          key: '/dashboard',
+          key: "/dashboard",
           icon: <DashboardOutlined />,
-          label: t('sidebar.prediction_list'),
+          label: t("sidebar.prediction_list"),
         },
         {
-          key: '/user-list',
+          key: "/user-list",
           icon: <UserOutlined />,
-          label: t('sidebar.user_list'),
+          label: t("sidebar.user_list"),
         },
         {
-          key: '/email-list',
+          key: "/email-list",
           icon: <MailOutlined />,
-          label: t('sidebar.email_list'),
+          label: t("sidebar.email_list"),
         },
       ];
-    } else if (role === 'expert') {
+    } else if (role === "expert") {
       return [
         ...commonItems,
         {
-          key: '/dashboard',
+          key: "/dashboard",
           icon: <DashboardOutlined />,
-          label: t('sidebar.prediction_list'),
+          label: t("sidebar.prediction_list"),
         },
         {
-          key: '/create-prediction',
+          key: "/create-prediction",
           icon: <PlusCircleOutlined />,
-          label: t('sidebar.create_prediction'),
+          label: t("sidebar.create_prediction"),
         },
       ];
-    } else if (role === 'manager') {
+    } else if (role === "manager") {
       return [
         ...commonItems,
         {
-          key: '/admin-stats',
+          key: "/admin-stats",
           icon: <DashboardOutlined />,
-          label: t('sidebar.stats'),
+          label: t("sidebar.stats"),
         },
         {
-          key: '/dashboard',
+          key: "/dashboard",
           icon: <DashboardOutlined />,
-          label: t('sidebar.prediction_list'),
+          label: t("sidebar.prediction_list"),
         },
         {
-          key: '/areas',
+          key: "/areas",
           icon: <AreaChartOutlined />,
-          label: t('sidebar.area_list'),
+          label: t("sidebar.area_list"),
         },
         ...(!jwtDecode(token).district
           ? [
-            {
-              key: '/user-list',
-              icon: <UserOutlined />,
-              label: t('sidebar.user_list'),
-            },
-          ]
+              {
+                key: "/user-list",
+                icon: <UserOutlined />,
+                label: t("sidebar.user_list"),
+              },
+            ]
           : []),
       ];
     }
@@ -206,32 +216,36 @@ const App = () => {
 
     // Add Map/Management to dropdown only on small screens
     if (isSmallScreen && token) {
-      if (location.pathname !== '/interactive-map') {
+      if (location.pathname !== "/interactive-map") {
         items.push({
-          key: 'map',
+          key: "map",
           icon: <EnvironmentOutlined />,
-          label: t('common.goToMap'),
-          title: t('common.goToMap'),
-          onClick: () => navigate('/interactive-map'),
+          label: t("common.goToMap"),
+          title: t("common.goToMap"),
+          onClick: () => navigate("/interactive-map"),
         });
       } else {
         try {
           const decodedToken = jwtDecode(token);
           const currentTime = Math.floor(Date.now() / 1000);
-          const isTokenValid = decodedToken.exp && decodedToken.exp > currentTime;
-          if (isTokenValid && (role === 'admin' || role === 'expert' || role === 'manager')) {
+          const isTokenValid =
+            decodedToken.exp && decodedToken.exp > currentTime;
+          if (
+            isTokenValid &&
+            (role === "admin" || role === "expert" || role === "manager")
+          ) {
             items.push({
-              key: 'management',
+              key: "management",
               icon: <DashboardOutlined />,
-              label: t('common.goToManagement'),
-              title: t('common.goToManagement'),
+              label: t("common.goToManagement"),
+              title: t("common.goToManagement"),
               onClick: () => {
-                if (role === 'admin') {
-                  navigate('/admin-stats');
-                } else if (role === 'expert') {
-                  navigate('/dashboard');
-                } else if (role === 'manager') {
-                  navigate('/admin-stats');
+                if (role === "admin") {
+                  navigate("/admin-stats");
+                } else if (role === "expert") {
+                  navigate("/dashboard");
+                } else if (role === "manager") {
+                  navigate("/admin-stats");
                 }
               },
             });
@@ -243,26 +257,26 @@ const App = () => {
     }
 
     // Add other menu items
-    if (role === 'admin' || role === 'expert') {
+    if (role === "admin" || role === "expert") {
       items.push({
-        key: 'jobs',
+        key: "jobs",
         icon: <ApiOutlined />,
-        label: 'Jobs',
-        onClick: () => navigate('/jobs'),
+        label: "Jobs",
+        onClick: () => navigate("/jobs"),
       });
     }
 
     items.push(
       {
-        key: 'profile',
+        key: "profile",
         icon: <ProfileOutlined />,
-        label: t('profile.title'),
-        onClick: () => navigate('/profile'),
+        label: t("profile.title"),
+        onClick: () => navigate("/profile"),
       },
       {
-        key: 'logout',
+        key: "logout",
         icon: <LogoutOutlined />,
-        label: t('sidebar.logout'),
+        label: t("sidebar.logout"),
         onClick: handleLogout,
       }
     );
@@ -273,16 +287,20 @@ const App = () => {
   const renderHeader = () => (
     <Header
       style={{
-        background: '#007bff',
-        color: '#fff',
-        padding: screens.xs ? '0 12px' : '0 24px',
-        position: 'sticky',
+        background: "#007bff",
+        color: "#fff",
+        padding: screens.xs ? "0 12px" : "0 24px",
+        position: "sticky",
         top: 0,
         zIndex: 1,
-        width: '100%',
+        width: "100%",
       }}
     >
-      <Row align="middle" justify="space-between" style={{ height: '100%', width: '100%', flexWrap: 'nowrap' }}>
+      <Row
+        align="middle"
+        justify="space-between"
+        style={{ height: "100%", width: "100%", flexWrap: "nowrap" }}
+      >
         <Col flex="none">
           {isSidebarVisible && screens.xs && (
             <Button
@@ -290,29 +308,29 @@ const App = () => {
               icon={<MenuUnfoldOutlined style={{ fontSize: 24 }} />}
               onClick={() => setCollapsed(false)}
               style={{
-                color: '#fff',
+                color: "#fff",
                 width: 40,
                 height: 40,
                 marginRight: 8,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
               }}
             />
           )}
         </Col>
-        <Col flex="auto" style={{ minWidth: 0, overflow: 'hidden' }}>
+        <Col flex="auto" style={{ minWidth: 0, overflow: "hidden" }}>
           <Title
             level={4}
             style={{
-              color: '#fff',
+              color: "#fff",
               margin: 0,
-              cursor: 'pointer',
-              lineHeight: '64px',
-              fontSize: screens.xs ? '18px' : '24px',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
+              cursor: "pointer",
+              lineHeight: "64px",
+              fontSize: screens.xs ? "18px" : "24px",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
             }}
           >
             Prediction System
@@ -320,90 +338,100 @@ const App = () => {
         </Col>
         <Col flex="none" style={{ minWidth: 0 }}>
           <Space
-            size={screens.xs ? 'small' : 'middle'}
-            style={{ justifyContent: 'flex-end', flexWrap: 'nowrap' }}
+            size={screens.xs ? "small" : "middle"}
+            style={{ justifyContent: "flex-end", flexWrap: "nowrap" }}
             wrap={false}
           >
-            <Space.Compact size={screens.xs ? 'small' : 'middle'}>
+            <Space.Compact size={screens.xs ? "small" : "middle"}>
               <Button
-                type={i18n.language === 'en' ? 'primary' : 'default'}
+                type={i18n.language === "en" ? "primary" : "default"}
                 style={{
-                  background: i18n.language === 'en' ? '#fff' : '#007bff',
-                  color: i18n.language === 'en' ? '#007bff' : '#fff',
-                  border: '1px solid #007bff',
+                  background: i18n.language === "en" ? "#fff" : "#007bff",
+                  color: i18n.language === "en" ? "#007bff" : "#fff",
+                  border: "1px solid #007bff",
                 }}
-                onClick={() => switchLanguage('en')}
+                onClick={() => switchLanguage("en")}
               >
                 EN
               </Button>
               <Button
-                type={i18n.language === 'vn' ? 'primary' : 'default'}
+                type={i18n.language === "vn" ? "primary" : "default"}
                 style={{
-                  background: i18n.language === 'vn' ? '#fff' : '#007bff',
-                  color: i18n.language === 'vn' ? '#007bff' : '#fff',
-                  border: '1px solid #007bff',
+                  background: i18n.language === "vn" ? "#fff" : "#007bff",
+                  color: i18n.language === "vn" ? "#007bff" : "#fff",
+                  border: "1px solid #007bff",
                 }}
-                onClick={() => switchLanguage('vn')}
+                onClick={() => switchLanguage("vn")}
               >
                 VN
               </Button>
             </Space.Compact>
             {/* Map/Management buttons - only show on iPad and larger screens, icon only with tooltip */}
-            {token && (screens.md || screens.lg || screens.xl || screens.xxl) && location.pathname !== '/interactive-map' && (
-              <Tooltip title={t('common.goToMap')}>
-                <Button
-                  type="default"
-                  size="middle"
-                  icon={<EnvironmentOutlined />}
-                  onClick={() => navigate('/interactive-map')}
-                  style={{
-                    background: '#007bff',
-                    borderColor: '#007bff',
-                    color: '#fff',
-                    fontWeight: 'bold',
-                  }}
-                />
-              </Tooltip>
-            )}
-            {token && (screens.md || screens.lg || screens.xl || screens.xxl) && location.pathname === '/interactive-map' && (() => {
-              try {
-                const decodedToken = jwtDecode(token);
-                const currentTime = Math.floor(Date.now() / 1000);
-                const isTokenValid = decodedToken.exp && decodedToken.exp > currentTime;
-                if (isTokenValid && (role === 'admin' || role === 'expert' || role === 'manager')) {
-                  return (
-                    <Tooltip title={t('common.goToManagement')}>
-                      <Button
-                        type="default"
-                        size="middle"
-                        icon={<DashboardOutlined />}
-                        onClick={() => {
-                          if (role === 'admin') {
-                            navigate('/admin-stats');
-                          } else if (role === 'expert') {
-                            navigate('/dashboard');
-                          } else if (role === 'manager') {
-                            navigate('/admin-stats');
-                          }
-                        }}
-                        style={{
-                          background: '#007bff',
-                          borderColor: '#007bff',
-                          color: '#fff',
-                          fontWeight: 'bold',
-                        }}
-                      />
-                    </Tooltip>
-                  );
+            {token &&
+              (screens.md || screens.lg || screens.xl || screens.xxl) &&
+              location.pathname !== "/interactive-map" && (
+                <Tooltip title={t("common.goToMap")}>
+                  <Button
+                    type="default"
+                    size="middle"
+                    icon={<EnvironmentOutlined />}
+                    onClick={() => navigate("/interactive-map")}
+                    style={{
+                      background: "#007bff",
+                      borderColor: "#007bff",
+                      color: "#fff",
+                      fontWeight: "bold",
+                    }}
+                  />
+                </Tooltip>
+              )}
+            {token &&
+              (screens.md || screens.lg || screens.xl || screens.xxl) &&
+              location.pathname === "/interactive-map" &&
+              (() => {
+                try {
+                  const decodedToken = jwtDecode(token);
+                  const currentTime = Math.floor(Date.now() / 1000);
+                  const isTokenValid =
+                    decodedToken.exp && decodedToken.exp > currentTime;
+                  if (
+                    isTokenValid &&
+                    (role === "admin" ||
+                      role === "expert" ||
+                      role === "manager")
+                  ) {
+                    return (
+                      <Tooltip title={t("common.goToManagement")}>
+                        <Button
+                          type="default"
+                          size="middle"
+                          icon={<DashboardOutlined />}
+                          onClick={() => {
+                            if (role === "admin") {
+                              navigate("/admin-stats");
+                            } else if (role === "expert") {
+                              navigate("/dashboard");
+                            } else if (role === "manager") {
+                              navigate("/admin-stats");
+                            }
+                          }}
+                          style={{
+                            background: "#007bff",
+                            borderColor: "#007bff",
+                            color: "#fff",
+                            fontWeight: "bold",
+                          }}
+                        />
+                      </Tooltip>
+                    );
+                  }
+                } catch (e) {
+                  return null;
                 }
-              } catch (e) {
                 return null;
-              }
-              return null;
-            })()}
+              })()}
             {token ? (
               <Space>
-
                 <Dropdown
                   menu={{ items: userMenuItems }}
                   placement="bottomRight"
@@ -411,52 +439,57 @@ const App = () => {
                 >
                   <Button
                     type="default"
-                    size={screens.xs ? 'small' : 'middle'}
+                    size={screens.xs ? "small" : "middle"}
                     icon={<UserOutlined />}
                     style={{
-                      background: '#007bff',
-                      borderColor: '#007bff',
-                      color: '#fff',
-                      fontWeight: 'bold',
+                      background: "#007bff",
+                      borderColor: "#007bff",
+                      color: "#fff",
+                      fontWeight: "bold",
                       flexShrink: 0,
                     }}
                   >
-                    {userName && (screens.md || screens.lg || screens.xl || screens.xxl) && (
-                      <Typography.Text
-                        style={{
-                          color: '#fff',
-                          fontWeight: 'bold',
-                          fontSize: screens.md && !screens.lg ? '13px' : '14px',
-                          marginRight: 8,
-                          maxWidth: screens.md && !screens.lg ? '120px' : '200px',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                          display: 'inline-block',
-                        }}
-                        title={userName}
-                      >
-                        {userName}
-                      </Typography.Text>
-                    )}
-                    {screens.xs || screens.sm ? '' : t('profile.title')}
+                    {userName &&
+                      (screens.md ||
+                        screens.lg ||
+                        screens.xl ||
+                        screens.xxl) && (
+                        <Typography.Text
+                          style={{
+                            color: "#fff",
+                            fontWeight: "bold",
+                            fontSize:
+                              screens.md && !screens.lg ? "13px" : "14px",
+                            marginRight: 8,
+                            maxWidth:
+                              screens.md && !screens.lg ? "120px" : "200px",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                            display: "inline-block",
+                          }}
+                          title={userName}
+                        >
+                          {userName}
+                        </Typography.Text>
+                      )}
+                    {screens.xs || screens.sm ? "" : t("profile.title")}
                   </Button>
                 </Dropdown>
               </Space>
             ) : (
               <Button
                 type="primary"
-                size={screens.xs ? 'small' : 'middle'}
+                size={screens.xs ? "small" : "middle"}
                 style={{
-                  background: '#007bff',
-                  borderColor: '#007bff',
-                  color: '#fff',
-                  fontWeight: 'bold',
+                  background: "#007bff",
+                  borderColor: "#007bff",
+                  color: "#fff",
+                  fontWeight: "bold",
                 }}
-                onClick={() => navigate('/Login')}
+                onClick={() => navigate("/Login")}
               >
-
-                {t('login.button')}
+                {t("login.button")}
               </Button>
             )}
           </Space>
@@ -481,7 +514,7 @@ const App = () => {
 
   // Inject custom CSS for Ant Design dropdown menu width
   useEffect(() => {
-    const style = document.createElement('style');
+    const style = document.createElement("style");
     style.innerHTML = `
       .ant-dropdown-menu {
         min-width: 180px !important;
@@ -498,7 +531,7 @@ const App = () => {
   }, []);
 
   return (
-    <Layout style={{ minHeight: '100vh' }}>
+    <Layout style={{ minHeight: "100vh" }}>
       {isSidebarVisible && (
         <Sider
           trigger={null}
@@ -509,17 +542,17 @@ const App = () => {
           width="15vw"
           style={{
             minWidth: 180,
-            overflow: 'auto',
-            height: '100vh',
-            position: 'fixed',
+            overflow: "auto",
+            height: "100vh",
+            position: "fixed",
             left: 0,
             top: 0,
             bottom: 0,
             zIndex: 100,
-            background: '#fff',
-            boxShadow: '2px 0 8px rgba(0,0,0,0.08)',
-            scrollbarWidth: 'thin',
-            scrollbarColor: '#e0e0e0 #fff',
+            background: "#fff",
+            boxShadow: "2px 0 8px rgba(0,0,0,0.08)",
+            scrollbarWidth: "thin",
+            scrollbarColor: "#e0e0e0 #fff",
           }}
           className="custom-sider"
         >
@@ -527,10 +560,10 @@ const App = () => {
             style={{
               height: 32,
               margin: 16,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#222',
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "#222",
               fontWeight: 600,
               borderRadius: 4,
             }}
@@ -544,13 +577,13 @@ const App = () => {
                   width: 40,
                   height: 40,
                   marginRight: 8,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
                 }}
               />
             ) : (
-              t('sidebar.title')
+              t("sidebar.title")
             )}
           </div>
           <Menu
@@ -559,7 +592,7 @@ const App = () => {
             selectedKeys={[location.pathname]}
             items={getMenuItems()}
             onClick={({ key }) => navigate(key)}
-            style={{ background: '#fff', border: 'none' }}
+            style={{ background: "#fff", border: "none" }}
           />
         </Sider>
       )}
@@ -569,26 +602,47 @@ const App = () => {
             ? screens.xs
               ? 0
               : collapsed
-                ? 80
-                : '15vw'
+              ? 80
+              : "15vw"
             : 0,
-          transition: 'all 0.2s',
+          transition: "all 0.2s",
         }}
       >
-        {(location.pathname !== '/Login' && location.pathname !== '/swagger') && (
-          <div style={{ position: 'relative', zIndex: 1 }}>
+        {location.pathname !== "/Login" && location.pathname !== "/swagger" && (
+          <div style={{ position: "relative", zIndex: 1 }}>
             {renderHeader()}
           </div>
         )}
         <Content
           style={{
-            margin: location.pathname === '/interactive-map' ? 0 : (screens.xs ? '12px 8px' : '24px 16px'),
-            padding: location.pathname === '/interactive-map' ? 0 : (screens.xs ? 16 : 24),
-            background: location.pathname === '/interactive-map' ? 'transparent' : colorBgContainer,
-            borderRadius: location.pathname === '/interactive-map' ? 0 : borderRadiusLG,
-            minHeight: location.pathname === '/interactive-map' ? 'calc(100vh - 64px)' : 280,
-            height: location.pathname === '/interactive-map' ? 'calc(100vh - 64px)' : 'auto',
-            overflow: location.pathname === '/interactive-map' ? 'hidden' : 'visible',
+            margin:
+              location.pathname === "/interactive-map"
+                ? 0
+                : screens.xs
+                ? "12px 8px"
+                : "24px 16px",
+            padding:
+              location.pathname === "/interactive-map"
+                ? 0
+                : screens.xs
+                ? 16
+                : 24,
+            background:
+              location.pathname === "/interactive-map"
+                ? "transparent"
+                : colorBgContainer,
+            borderRadius:
+              location.pathname === "/interactive-map" ? 0 : borderRadiusLG,
+            minHeight:
+              location.pathname === "/interactive-map"
+                ? "calc(100vh - 64px)"
+                : 280,
+            height:
+              location.pathname === "/interactive-map"
+                ? "calc(100vh - 64px)"
+                : "auto",
+            overflow:
+              location.pathname === "/interactive-map" ? "hidden" : "visible",
           }}
         >
           <Routes>
@@ -596,7 +650,7 @@ const App = () => {
               path="/"
               element={
                 token ? (
-                  (role === 'admin' || role === 'manager') ? (
+                  role === "admin" || role === "manager" ? (
                     <Navigate to="/admin-stats" replace />
                   ) : (
                     <Navigate to="/dashboard" replace />
@@ -611,7 +665,7 @@ const App = () => {
             <Route
               path="/admin-stats"
               element={
-                <ProtectedRoute roles={['admin', 'manager']}>
+                <ProtectedRoute roles={["admin", "manager"]}>
                   <AdminStats />
                 </ProtectedRoute>
               }
@@ -619,7 +673,7 @@ const App = () => {
             <Route
               path="/dashboard"
               element={
-                <ProtectedRoute roles={['expert', 'admin', 'manager']}>
+                <ProtectedRoute roles={["expert", "admin", "manager"]}>
                   <Dashboard />
                 </ProtectedRoute>
               }
@@ -627,22 +681,19 @@ const App = () => {
             <Route
               path="/areas"
               element={
-                <ProtectedRoute roles={['admin', 'manager']}>
+                <ProtectedRoute roles={["admin", "manager"]}>
                   <AreaList />
                 </ProtectedRoute>
               }
             />
-            <Route
-              path="/interactive-map"
-              element={<InteractiveMap />}
-            />
+            <Route path="/interactive-map" element={<InteractiveMap />} />
             <Route
               path="/user-list"
               element={
-                <ProtectedRoute roles={['admin', 'manager']}>
+                <ProtectedRoute roles={["admin", "manager"]}>
                   {token &&
-                    jwtDecode(token).role === 'manager' &&
-                    jwtDecode(token).district ? (
+                  jwtDecode(token).role === "manager" &&
+                  jwtDecode(token).district ? (
                     <Navigate to="/" replace />
                   ) : (
                     <UserList />
@@ -654,7 +705,7 @@ const App = () => {
             <Route
               path="/predictions/details/:predictionId"
               element={
-                <ProtectedRoute roles={['expert', 'admin', 'manager']}>
+                <ProtectedRoute roles={["expert", "admin", "manager"]}>
                   <PredictionDetails />
                 </ProtectedRoute>
               }
@@ -662,7 +713,7 @@ const App = () => {
             <Route
               path="/create-prediction"
               element={
-                <ProtectedRoute roles={['expert', 'admin']}>
+                <ProtectedRoute roles={["expert", "admin"]}>
                   <CreatePrediction />
                 </ProtectedRoute>
               }
@@ -670,7 +721,7 @@ const App = () => {
             <Route
               path="/profile"
               element={
-                <ProtectedRoute roles={['admin', 'expert', 'manager']}>
+                <ProtectedRoute roles={["admin", "expert", "manager"]}>
                   <UserProfile />
                 </ProtectedRoute>
               }
@@ -678,7 +729,7 @@ const App = () => {
             <Route
               path="/jobs"
               element={
-                <ProtectedRoute roles={['admin', 'expert']}>
+                <ProtectedRoute roles={["admin", "expert"]}>
                   <Jobs />
                 </ProtectedRoute>
               }
@@ -686,7 +737,7 @@ const App = () => {
             <Route
               path="/email-list"
               element={
-                <ProtectedRoute roles={['admin']}>
+                <ProtectedRoute roles={["admin"]}>
                   <EmailList />
                 </ProtectedRoute>
               }
