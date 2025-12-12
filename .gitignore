@@ -2,6 +2,8 @@ backend-express/node_modules
 backend-flask/model/
 **/.env
 */.env
+backend-express/.env
+backend-express/google-service-account.json
 **/google-service-account.json
 */google-service-account.json
 
