@@ -1,5 +1,6 @@
 backend-express/node_modules
 backend-flask/model/
+**/.env
 */.env
 
 backend-flask/venv/

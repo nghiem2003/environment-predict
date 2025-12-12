@@ -163,7 +163,24 @@ exports.deleteNaturalElement = async (req, res) => {
         const element = await NatureElement.findByPk(id);
 
         if (!element) {
-            return res.status(404).json({ error: 'Natural element not found' });
+            return res.status(404).json({ 
+                success: false,
+                error: 'Natural element not found' 
+            });
+        }
+
+        // Check if element is being used in any ML models
+        const { ModelNatureElement } = require('../models');
+        const usageCount = await ModelNatureElement.count({
+            where: { nature_element_id: id }
+        });
+
+        if (usageCount > 0) {
+            return res.status(403).json({
+                success: false,
+                error: `Cannot delete this element. It is currently used in ${usageCount} model(s).`,
+                usageCount
+            });
         }
 
         await element.destroy();
@@ -174,7 +191,10 @@ exports.deleteNaturalElement = async (req, res) => {
         });
     } catch (error) {
         logger.error('Delete Natural Element Error:', error);
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ 
+            success: false,
+            error: error.message 
+        });
     }
 };
 

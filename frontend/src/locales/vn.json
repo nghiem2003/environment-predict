@@ -201,6 +201,7 @@
     }
   },
   "sidebar": {
+    "ml_model_management": "Quản lý model ML (Thử nghiệm)",
     "title": "Hệ thống dự đoán",
     "area_list": "Xem danh sách khu vực",
     "prediction_list": "Xem danh sách dự đoán",

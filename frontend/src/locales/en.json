@@ -202,6 +202,7 @@
     }
   },
   "sidebar": {
+    "ml_model_management": "ML Model Management (Experimental)",
     "title": "Aquaculture Prediction System",
     "area_list": "View Area List",
     "prediction_list": "View Prediction List",

@@ -31,6 +31,7 @@ import EmailSubscription from "./components/EmailSubscription";
 import UnsubscribePage from "./components/UnsubscribePage";
 import SwaggerViewer from "./components/SwaggerViewer";
 import ForgotPassword from "./components/ForgotPassword";
+import MLModelManagement from "./components/MLModelManagement";
 import { useTranslation } from "react-i18next";
 import LanguageSwitch from "./components/LanguageSwitch";
 import {
@@ -62,6 +63,7 @@ import {
   MailOutlined,
   EnvironmentOutlined,
   ApiOutlined,
+  ExperimentOutlined,
 } from "@ant-design/icons";
 
 const { Header, Sider, Content } = Layout;
@@ -81,24 +83,24 @@ const App = () => {
   const screens = useBreakpoint();
   const userName = token
     ? (() => {
-        try {
-          const decodedToken = jwtDecode(token);
-          const name = decodedToken.name || decodedToken.username || "";
-          if (!name) return "";
-          // iPad (md) and up: show name, limit based on screen size
-          console.log("name", name);
-          if (screens.md || screens.lg || screens.xl || screens.xxl) {
-            const maxLength = screens.md && !screens.lg ? 25 : 50; // iPad: 25, larger: 50
-            console.log("max", maxLength);
-            return name.length > maxLength
-              ? name.substring(0, maxLength) + "..."
-              : name;
-          }
-          return ""; // Don't show on small screens
-        } catch (e) {
-          return "";
+      try {
+        const decodedToken = jwtDecode(token);
+        const name = decodedToken.name || decodedToken.username || "";
+        if (!name) return "";
+        // iPad (md) and up: show name, limit based on screen size
+        console.log("name", name);
+        if (screens.md || screens.lg || screens.xl || screens.xxl) {
+          const maxLength = screens.md && !screens.lg ? 25 : 50; // iPad: 25, larger: 50
+          console.log("max", maxLength);
+          return name.length > maxLength
+            ? name.substring(0, maxLength) + "..."
+            : name;
         }
-      })()
+        return ""; // Don't show on small screens
+      } catch (e) {
+        return "";
+      }
+    })()
     : "";
 
   const {
@@ -160,6 +162,11 @@ const App = () => {
           icon: <MailOutlined />,
           label: t("sidebar.email_list"),
         },
+        {
+          key: "/ml-models",
+          icon: <ExperimentOutlined />,
+          label: t("sidebar.ml_model_management"),
+        },
       ];
     } else if (role === "expert") {
       return [
@@ -195,12 +202,12 @@ const App = () => {
         },
         ...(!jwtDecode(token).district
           ? [
-              {
-                key: "/user-list",
-                icon: <UserOutlined />,
-                label: t("sidebar.user_list"),
-              },
-            ]
+            {
+              key: "/user-list",
+              icon: <UserOutlined />,
+              label: t("sidebar.user_list"),
+            },
+          ]
           : []),
       ];
     }
@@ -602,8 +609,8 @@ const App = () => {
             ? screens.xs
               ? 0
               : collapsed
-              ? 80
-              : "15vw"
+                ? 80
+                : "15vw"
             : 0,
           transition: "all 0.2s",
         }}
@@ -619,14 +626,14 @@ const App = () => {
               location.pathname === "/interactive-map"
                 ? 0
                 : screens.xs
-                ? "12px 8px"
-                : "24px 16px",
+                  ? "12px 8px"
+                  : "24px 16px",
             padding:
               location.pathname === "/interactive-map"
                 ? 0
                 : screens.xs
-                ? 16
-                : 24,
+                  ? 16
+                  : 24,
             background:
               location.pathname === "/interactive-map"
                 ? "transparent"
@@ -692,8 +699,8 @@ const App = () => {
               element={
                 <ProtectedRoute roles={["admin", "manager"]}>
                   {token &&
-                  jwtDecode(token).role === "manager" &&
-                  jwtDecode(token).district ? (
+                    jwtDecode(token).role === "manager" &&
+                    jwtDecode(token).district ? (
                     <Navigate to="/" replace />
                   ) : (
                     <UserList />
@@ -748,6 +755,14 @@ const App = () => {
             />
             <Route path="/unsubscribe/:token" element={<UnsubscribePage />} />
             <Route path="/swagger" element={<SwaggerViewer />} />
+            <Route
+              path="/ml-models"
+              element={
+                <ProtectedRoute roles={["admin"]}>
+                  <MLModelManagement />
+                </ProtectedRoute>
+              }
+            />
           </Routes>
         </Content>
       </Layout>

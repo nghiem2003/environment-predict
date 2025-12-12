@@ -32,22 +32,9 @@ const CreateNewPrediction = () => {
   const [selectedAreaId, setSelectedAreaId] = useState('');
   const [areaType, setAreaType] = useState('');
   const [modelName, setModelName] = useState('');
-  const [inputs, setInputs] = useState({
-    R_PO4: 0,
-    O2Sat: 0,
-    O2ml_L: 0,
-    STheta: 0,
-    Salnty: 0,
-    R_DYNHT: 0,
-    T_degC: 0,
-    R_Depth: 0,
-    Distance: 0,
-    Wind_Spd: 0,
-    Wave_Ht: 0,
-    Wave_Prd: 0,
-    IntChl: 0,
-    Dry_T: 0,
-  });
+  const [selectedModel, setSelectedModel] = useState(null);
+  const [modelElements, setModelElements] = useState([]);
+  const [inputs, setInputs] = useState({});
   const [csvElements, setCsvElements] = useState([]);
   const [excelFile, setExcelFile] = useState(null);
   const [excelFile2, setExcelFile2] = useState(null);
@@ -57,24 +44,65 @@ const CreateNewPrediction = () => {
   const [isBatchLoading, setIsBatchLoading] = useState(false);
   const [isSingleLoading, setIsSingleLoading] = useState(false);
   const [batchProgress, setBatchProgress] = useState(0);
+  const [allModels, setAllModels] = useState([]);
 
-  // Predefined list of models
-  const allModels = [
-    { value: 'cobia_ridge', label: 'Cobia Ridge', type: 'cobia' },
-    { value: 'cobia_gbr', label: 'Cobia GBR', type: 'cobia' },
-    { value: 'cobia_xgboost', label: 'Cobia XGBoost', type: 'cobia' },
-    { value: 'cobia_svr', label: 'Cobia SVR', type: 'cobia' },
-    { value: 'cobia_rf', label: 'Cobia Random Forest', type: 'cobia' },
-    { value: 'cobia_lightgbm', label: 'Cobia LightGBM', type: 'cobia' },
-    { value: 'cobia_stack', label: 'Cobia Stacked Model', type: 'cobia' },
-    { value: 'oyster_ridge', label: 'Oyster Ridge', type: 'oyster' },
-    { value: 'oyster_gbr', label: 'Oyster GBR', type: 'oyster' },
-    { value: 'oyster_xgboost', label: 'Oyster XGBoost', type: 'oyster' },
-    { value: 'oyster_svr', label: 'Oyster SVR', type: 'oyster' },
-    { value: 'oyster_rf', label: 'Oyster Random Forest', type: 'oyster' },
-    { value: 'oyster_lightgbm', label: 'Oyster LightGBM', type: 'oyster' },
-    { value: 'oyster_stack', label: 'Oyster Stacked Model', type: 'oyster' },
-  ];
+  // Fetch available ML models with their nature elements
+  useEffect(() => {
+    const fetchModels = async () => {
+      try {
+        const response = await axios.get('/api/express/ml-models', {
+          params: { is_active: true }
+        });
+        const models = response.data.data || [];
+        
+        // Only include models that have files (model_file_path is not null)
+        const modelsWithFiles = models
+          .filter(model => model.model_file_path || model.google_drive_download_link)
+          .map(model => ({
+            value: model.id,
+            label: model.name,
+            type: model.area_type,
+            path: model.model_file_path,
+            natureElements: model.natureElements || [],
+          }));
+        
+        setAllModels(modelsWithFiles);
+      } catch (error) {
+        console.error('Error fetching models:', error);
+        message.error('Không thể tải danh sách model');
+      }
+    };
+    fetchModels();
+  }, []);
+
+  // Handle model selection - load nature elements
+  const handleModelSelect = (modelId) => {
+    const model = allModels.find(m => m.value === modelId);
+    if (model) {
+      setSelectedModel(model);
+      
+      // Sort nature elements by input_order
+      const sortedElements = (model.natureElements || [])
+        .sort((a, b) => {
+          const orderA = a.ModelNatureElement?.input_order ?? 0;
+          const orderB = b.ModelNatureElement?.input_order ?? 0;
+          return orderA - orderB;
+        });
+      
+      setModelElements(sortedElements);
+      
+      // Initialize inputs with default values
+      const initialInputs = {};
+      sortedElements.forEach(element => {
+        initialInputs[element.name] = 0;
+      });
+      setInputs(initialInputs);
+    } else {
+      setSelectedModel(null);
+      setModelElements([]);
+      setInputs({});
+    }
+  };
 
   useEffect(() => {
     if (token) {
@@ -378,6 +406,10 @@ const CreateNewPrediction = () => {
                     <Select
                       placeholder={t('prediction_form.select_model')}
                       disabled={!areaType}
+                      onChange={(value) => {
+                        handleModelSelect(value);
+                        setModelName(value);
+                      }}
                     >
                       {filteredModels.map((model) => (
                         <Option key={model.value} value={model.value}>
@@ -386,19 +418,51 @@ const CreateNewPrediction = () => {
                       ))}
                     </Select>
                   </Form.Item>
-                  {areaType &&
-                    Object.keys(inputs).map((key) => (
-                      <Form.Item
-                        key={key}
-                        label={key}
-                        name={key}
-                        rules={[
-                          { required: true, message: `${key} is required` },
-                        ]}
-                      >
-                        <Input type="number" />
-                      </Form.Item>
-                    ))}
+                  
+                  {selectedModel && modelElements.length > 0 && (
+                    <>
+                      <div style={{ 
+                        marginBottom: 16, 
+                        padding: 12, 
+                        background: '#f0f2f5', 
+                        borderRadius: 4 
+                      }}>
+                        <strong>Các yếu tố cần nhập ({modelElements.length}):</strong>
+                      </div>
+                      {modelElements.map((element) => (
+                        <Form.Item
+                          key={element.name}
+                          label={
+                            <span>
+                              {element.name}
+                              {element.ModelNatureElement?.is_required && (
+                                <span style={{ color: 'red' }}> *</span>
+                              )}
+                              {element.unit && (
+                                <span style={{ color: '#999', marginLeft: 4 }}>
+                                  ({element.unit})
+                                </span>
+                              )}
+                            </span>
+                          }
+                          name={element.name}
+                          rules={[
+                            { 
+                              required: element.ModelNatureElement?.is_required ?? true, 
+                              message: `${element.name} là bắt buộc` 
+                            },
+                          ]}
+                          extra={element.description}
+                        >
+                          <Input 
+                            type="number" 
+                            step="any"
+                            placeholder={`Nhập giá trị ${element.name}`}
+                          />
+                        </Form.Item>
+                      ))}
+                    </>
+                  )}
                   <Form.Item>
                     <Button
                       type="primary"

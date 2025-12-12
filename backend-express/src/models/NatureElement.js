@@ -18,6 +18,15 @@ NaturalElement.associate = (models) => {
     through: models.PredictionNatureElement,
     foreignKey: 'nature_element_id',
     otherKey: 'prediction_id',
+    as: 'predictions',
+  });
+
+  // Association with MLModel
+  NaturalElement.belongsToMany(models.MLModel, {
+    through: models.ModelNatureElement,
+    foreignKey: 'nature_element_id',
+    otherKey: 'model_id',
+    as: 'models',
   });
 };
 

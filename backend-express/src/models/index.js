@@ -12,6 +12,8 @@ const District = require('./District');
 const Email = require('./Email');
 const Otp = require('./Otp');
 const Job = require('./Job');
+const MLModel = require('./MLModel');
+const ModelNatureElement = require('./ModelNatureElement');
 
 // Initialize models
 const models = {
@@ -25,6 +27,8 @@ const models = {
   Email,
   Otp,
   Job,
+  MLModel,
+  ModelNatureElement,
 };
 
 // Dynamically associate models after all are initialized

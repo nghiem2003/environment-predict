@@ -54,10 +54,101 @@ def trigger_fetch_data():
 
 @prediction_api.route('/status', methods=['GET'])
 def home():
+    from .model_manager import get_model_info
+    model_info = get_model_info()
     return jsonify({
         'message': 'Prediction module is running!',
-        'available_models': services.get_available_models()
+        'available_models': services.get_available_models(),
+        'model_details': model_info
     })
+
+@prediction_api.route('/reload_models', methods=['POST'])
+def reload_models_endpoint():
+    """
+    Endpoint to reload all ML models without restarting Flask.
+    Protected by secret key.
+    """
+    from .model_manager import reload_models
+    
+    # Check authorization
+    incoming_secret = request.headers.get('X-RELOAD-SECRET')
+    if incoming_secret != current_app.config.get('FETCH_SECRET_KEY'):
+        return jsonify({"error": "Unauthorized"}), 403
+    
+    success, message, count = reload_models()
+    
+    if success:
+        return jsonify({
+            "success": True,
+            "message": message,
+            "total_models": count,
+            "available_models": services.get_available_models()
+        }), 200
+    else:
+        return jsonify({
+            "success": False,
+            "error": message
+        }), 500
+
+@prediction_api.route('/sync_models', methods=['POST'])
+def sync_models_endpoint():
+    """
+    Endpoint to download a model from Google Drive and reload all models.
+    Protected by secret key.
+    """
+    from .model_manager import reload_models
+    from google_drive_downloader import sync_model_from_google_drive
+    
+    # Check authorization
+    incoming_secret = request.headers.get('X-RELOAD-SECRET')
+    if incoming_secret != current_app.config.get('FETCH_SECRET_KEY'):
+        return jsonify({"error": "Unauthorized"}), 403
+    
+    try:
+        data = request.get_json()
+        file_id = data.get('file_id')
+        file_name = data.get('file_name')
+        download_link = data.get('download_link')
+        
+        if not file_id or not file_name:
+            return jsonify({
+                "success": False,
+                "error": "file_id and file_name are required"
+            }), 400
+        
+        # Download model from Google Drive
+        print(f"Syncing model from Google Drive: {file_name}")
+        success, local_path, message = sync_model_from_google_drive(
+            file_id, file_name, download_link
+        )
+        
+        if not success:
+            return jsonify({
+                "success": False,
+                "error": message
+            }), 500
+        
+        # Reload all models
+        reload_success, reload_message, count = reload_models()
+        
+        if reload_success:
+            return jsonify({
+                "success": True,
+                "message": f"Model synced and loaded successfully: {local_path}",
+                "total_models": count,
+                "available_models": services.get_available_models()
+            }), 200
+        else:
+            return jsonify({
+                "success": False,
+                "error": f"Model downloaded but failed to reload: {reload_message}"
+            }), 500
+            
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
 
 @prediction_api.route('/predict/cobia', methods=['POST'])
 def predict_cobia():

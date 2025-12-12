@@ -10,6 +10,8 @@ const natureElementRoutes = require('./src/routes/natureElementRoutes.js');
 const swaggerRoutes = require('./src/routes/swaggerRoutes.js');
 const dbConfig = require('./src/config/config.js').development;
 const jobRoutes = require('./src/routes/jobRoutes.js');
+const mlModelRoutes = require('./src/routes/mlModelRoutes.js');
+const googleAuthRoutes = require('./src/routes/googleAuthRoutes.js');
 const sequelize = require('./src/config/db.js');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -157,6 +159,8 @@ app.use('/api/express/emails', emailRoutes);
 app.use('/api/express/nature-elements', natureElementRoutes);
 app.use('/api/express', swaggerRoutes);
 app.use('/api/express/jobs', jobRoutes);
+app.use('/api/express/ml-models', mlModelRoutes);
+app.use('/api/express/google', googleAuthRoutes);
 
 
 // Chạy migrations và seeders khi khởi động server - ĐÃ TẮT

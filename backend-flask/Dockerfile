@@ -29,8 +29,12 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # Copy application code
 COPY . .
 
-# Create data directory if it doesn't exist
-RUN mkdir -p data
+# Create directories if they don't exist
+RUN mkdir -p data shared_models
+
+# Copy built-in models to app directory
+# These will be loaded if shared_models is empty
+RUN if [ -d model ]; then echo "Built-in models found"; else echo "WARNING: No built-in models"; fi
 
 # Create a non-root user for security
 RUN adduser --disabled-password --gecos '' appuser && \
@@ -44,5 +48,10 @@ EXPOSE 5001
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:5001/status || exit 1
 
+# Copy init script
+COPY init_models.sh /app/init_models.sh
+RUN chmod +x /app/init_models.sh
+
 # Start the Flask application
-CMD ["sh", "-c", "FLASK_APP=run.py flask run --host=0.0.0.0 --port=5001"]
+# First run init script to copy built-in models if shared_models is empty
+CMD ["sh", "-c", "/app/init_models.sh && FLASK_APP=run.py flask run --host=0.0.0.0 --port=5001"]
