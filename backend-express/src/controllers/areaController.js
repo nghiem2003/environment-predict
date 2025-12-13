@@ -341,7 +341,7 @@ exports.getAreaStatsCombined = async (req, res) => {
 // Get all areas without pagination (for dropdowns, selects, etc.)
 exports.getAllAreasNoPagination = async (req, res) => {
   try {
-    const { search, area_type, lat_min, lat_max, long_min, long_max, province, district } = req.query;
+    const { search, area_type, lat_min, lat_max, long_min, long_max, province, district, include_prediction } = req.query;
     logger.debug('Get All Areas (No Pagination) - Request query', req.query);
 
     let query = {};
@@ -370,26 +370,63 @@ exports.getAllAreasNoPagination = async (req, res) => {
       query.district = district;
     }
 
+    const includes = [
+      {
+        model: Province,
+        as: 'Province',
+        required: false,
+        attributes: ['id', 'name', 'central_meridian'],
+      },
+      {
+        model: District,
+        as: 'District',
+        required: false,
+        attributes: ['id', 'name'],
+      },
+    ];
+
     const options = {
       where: query,
-      include: [
-        {
-          model: Province,
-          as: 'Province',
-          required: false,
-          attributes: ['id', 'name', 'central_meridian'],
-        },
-        {
-          model: District,
-          as: 'District',
-          required: false,
-          attributes: ['id', 'name'],
-        },
-      ],
+      include: includes,
       order: [['name', 'ASC']],
     };
 
-    const areas = await Area.findAll(options);
+    let areas = await Area.findAll(options);
+
+    // If include_prediction is true, fetch latest prediction for each area
+    if (include_prediction === 'true') {
+      const areaIds = areas.map(a => a.id);
+
+      // Get all predictions for the areas, ordered by id DESC
+      const allPredictions = await Prediction.findAll({
+        where: {
+          area_id: { [Op.in]: areaIds },
+        },
+        attributes: ['id', 'area_id', 'prediction_text', 'createdAt'],
+        order: [['id', 'DESC']],
+      });
+
+      // Create a map of area_id -> latest prediction (first one for each area since ordered DESC)
+      const predictionMap = {};
+      allPredictions.forEach(p => {
+        // Only keep the first (latest) prediction for each area
+        if (!predictionMap[p.area_id]) {
+          predictionMap[p.area_id] = {
+            id: p.id,
+            prediction_text: p.prediction_text,
+            createdAt: p.createdAt,
+          };
+        }
+      });
+
+      // Add latestPrediction to each area
+      areas = areas.map(area => {
+        const areaData = area.toJSON();
+        areaData.latestPrediction = predictionMap[area.id] || null;
+        return areaData;
+      });
+    }
+
     res.status(200).json({ areas: areas });
   } catch (error) {
     logger.error('Get All Areas (No Pagination) Error:', {

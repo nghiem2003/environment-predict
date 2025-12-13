@@ -13,12 +13,13 @@ import {
   Card,
   Row,
   Col,
-  Popconfirm,
   Tooltip,
   Transfer,
   InputNumber,
   Upload,
   Tabs,
+  Alert,
+  Divider,
 } from 'antd';
 import {
   PlusOutlined,
@@ -63,6 +64,8 @@ const MLModelManagement = () => {
   // Nature element detail modal
   const [isElementDetailModalVisible, setIsElementDetailModalVisible] = useState(false);
   const [selectedElement, setSelectedElement] = useState(null);
+  const [editingFallbackValue, setEditingFallbackValue] = useState(null);
+  const [savingFallback, setSavingFallback] = useState(false);
 
   // Add element to model
   const [addingElementToModel, setAddingElementToModel] = useState(null);
@@ -73,7 +76,17 @@ const MLModelManagement = () => {
     setLoading(true);
     try {
       const response = await axios.get('/api/express/ml-models');
-      setModels(response.data.data || []);
+      console.log('Models API response:', response.data);
+      const modelsData = response.data.data || [];
+      if (modelsData.length > 0) {
+        console.log('First model sample:', modelsData[0]);
+        console.log('First model natureElements:', modelsData[0].natureElements);
+        if (modelsData[0].natureElements && modelsData[0].natureElements.length > 0) {
+          console.log('First natureElement sample:', modelsData[0].natureElements[0]);
+          console.log('ModelNatureElement:', modelsData[0].natureElements[0].ModelNatureElement);
+        }
+      }
+      setModels(modelsData);
     } catch (error) {
       console.error('Error fetching ML models:', error);
       message.error('Không thể tải danh sách model');
@@ -86,7 +99,10 @@ const MLModelManagement = () => {
   const fetchNatureElements = async () => {
     try {
       const response = await axios.get('/api/express/nature-elements');
-      setNatureElements(response.data?.data?.elements || []);
+      console.log('Nature elements API response:', response.data);
+      const elements = response.data?.data?.elements || [];
+      console.log('Setting nature elements:', elements.length, 'items');
+      setNatureElements(elements);
     } catch (error) {
       console.error('Error fetching nature elements:', error);
       message.error('Không thể tải danh sách yếu tố môi trường');
@@ -120,6 +136,75 @@ const MLModelManagement = () => {
     setIsAddElementModalVisible(false);
   };
 
+  // Save fallback value for model's nature element
+  const handleSaveFallbackValue = async () => {
+    if (!selectedElement || !selectedElement.ModelNatureElement || editingFallbackValue === null) {
+      return;
+    }
+
+    setSavingFallback(true);
+    try {
+      const modelNatureElementId = selectedElement.ModelNatureElement.id;
+      await axios.put(`/api/express/ml-models/nature-element/${modelNatureElementId}`, {
+        fallback_value: editingFallbackValue
+      });
+
+      message.success('Đã cập nhật giá trị fallback');
+
+      // Update local state
+      setSelectedElement({
+        ...selectedElement,
+        ModelNatureElement: {
+          ...selectedElement.ModelNatureElement,
+          fallback_value: editingFallbackValue
+        }
+      });
+
+      setEditingFallbackValue(null);
+    } catch (error) {
+      console.error('Error updating fallback value:', error);
+      message.error('Không thể cập nhật giá trị fallback');
+    } finally {
+      setSavingFallback(false);
+    }
+  };
+
+  // Reset fallback value to null (use common value)
+  const handleResetFallbackValue = async () => {
+    if (!selectedElement || !selectedElement.ModelNatureElement) {
+      return;
+    }
+
+    setSavingFallback(true);
+    try {
+      const modelNatureElementId = selectedElement.ModelNatureElement.id;
+      await axios.put(`/api/express/ml-models/nature-element/${modelNatureElementId}`, {
+        fallback_value: null
+      });
+
+      message.success('Đã reset về giá trị chung');
+
+      // Update local state
+      setSelectedElement({
+        ...selectedElement,
+        ModelNatureElement: {
+          ...selectedElement.ModelNatureElement,
+          fallback_value: null
+        }
+      });
+
+      setEditingFallbackValue(null);
+
+      // Refresh models to reflect changes
+      fetchModels();
+    } catch (error) {
+      console.error('Error resetting fallback value:', error);
+      message.error('Không thể reset giá trị fallback');
+    } finally {
+      setSavingFallback(false);
+    }
+  };
+
   useEffect(() => {
     fetchModels();
     fetchNatureElements();
@@ -127,6 +212,8 @@ const MLModelManagement = () => {
 
   // Open modal for create/edit
   const showModal = (model = null) => {
+    console.log('Opening modal, natureElements count:', natureElements.length);
+    console.log('Nature elements:', natureElements);
     setEditingModel(model);
     setIsModalVisible(true);
 
@@ -142,6 +229,7 @@ const MLModelManagement = () => {
 
       // Set transfer target keys and config
       const selectedIds = model.natureElements?.map((ne) => ne.id) || [];
+      console.log('Edit mode - selected nature element IDs:', selectedIds);
       setTargetKeys(selectedIds);
 
       const config = {};
@@ -154,6 +242,7 @@ const MLModelManagement = () => {
       setElementConfig(config);
     } else {
       // Creating new model
+      console.log('Create mode - resetting transfer state');
       form.resetFields();
       form.setFieldsValue({ is_active: true });
       setTargetKeys([]);
@@ -184,7 +273,7 @@ const MLModelManagement = () => {
       if (hasDuplicate) {
         const conflictMessages = conflicts.map(c => c.message).join('\n');
         const flaskKey = generatedInfo.flaskModelKey;
-        
+
         Modal.warning({
           title: 'Cảnh báo trùng lặp!',
           content: (
@@ -238,6 +327,13 @@ const MLModelManagement = () => {
         is_required: elementConfig[id]?.is_required !== false,
         input_order: elementConfig[id]?.input_order || 0,
       }));
+
+      console.log('Submitting model with data:', {
+        values,
+        targetKeys,
+        elementConfig,
+        natureElementsData
+      });
 
       const payload = {
         ...values,
@@ -403,6 +499,9 @@ const MLModelManagement = () => {
 
   // Show element detail modal
   const showElementDetail = (element) => {
+    console.log('showElementDetail - element:', element);
+    console.log('showElementDetail - ModelNatureElement:', element.ModelNatureElement);
+    console.log('showElementDetail - ModelNatureElement.id:', element.ModelNatureElement?.id);
     setSelectedElement(element);
     setIsElementDetailModalVisible(true);
   };
@@ -484,6 +583,7 @@ const MLModelManagement = () => {
 
   // Transfer component handlers
   const handleTransferChange = (newTargetKeys) => {
+    console.log('Transfer onChange - newTargetKeys:', newTargetKeys);
     setTargetKeys(newTargetKeys);
 
     // Initialize config for newly added elements
@@ -495,6 +595,7 @@ const MLModelManagement = () => {
         }));
       }
     });
+    console.log('Updated targetKeys and elementConfig');
   };
 
   const handleSelectChange = (sourceSelectedKeys, targetSelectedKeys) => {
@@ -667,6 +768,21 @@ const MLModelManagement = () => {
                   </Button>
                 }
               >
+                <Card warning>
+                  <Alert
+                    message="Lưu ý"
+                    description="Khi thêm yếu tố môi trường vào model, nếu không đặt giá trị fallback, sẽ sử dụng giá trị mặc định chung."
+                    type="info"
+                    showIcon
+                  />
+                  <Divider />
+                  <Alert
+                    message="Cảnh báo"
+                    description="Hiện đang trong giai đoạn thử nghiệm, vui lòng không tự thêm model mới."
+                    type="warning"
+                    showIcon
+                  />
+                </Card>
                 <Table
                   columns={columns}
                   dataSource={models}
@@ -838,14 +954,14 @@ const MLModelManagement = () => {
               </Form.Item>
             </Col>
           </Row>
-          
+
           {/* Info box about file path */}
-          <div style={{ 
-            background: '#e6f7ff', 
+          <div style={{
+            background: '#e6f7ff',
             border: '1px solid #91d5ff',
-            borderRadius: 4, 
-            padding: 12, 
-            marginBottom: 16 
+            borderRadius: 4,
+            padding: 12,
+            marginBottom: 16
           }}>
             <p style={{ margin: 0, fontSize: 13, color: '#0050b3' }}>
               ℹ️ <strong>Lưu ý:</strong> Đường dẫn file sẽ tự động được tạo khi bạn upload file .pkl sau khi tạo model.
@@ -1081,6 +1197,19 @@ const MLModelManagement = () => {
                 </div>
               </Col>
 
+              <Col span={24}>
+                <div style={{ marginBottom: 8 }}>
+                  <strong style={{ color: '#666' }}>Giá trị mặc định (chung):</strong>
+                </div>
+                <div>
+                  <Tag color="cyan" style={{ fontSize: 14, padding: '4px 12px' }}>
+                    {selectedElement.fallback_value !== null && selectedElement.fallback_value !== undefined
+                      ? selectedElement.fallback_value
+                      : 'Chưa có'}
+                  </Tag>
+                </div>
+              </Col>
+
               {selectedElement.ModelNatureElement && (
                 <>
                   <Col span={12}>
@@ -1103,6 +1232,79 @@ const MLModelManagement = () => {
                     <div>
                       <Tag color="blue">{selectedElement.ModelNatureElement.input_order}</Tag>
                     </div>
+                  </Col>
+
+                  <Col span={24}>
+                    <div style={{ marginBottom: 8 }}>
+                      <strong style={{ color: '#666' }}>Giá trị mặc định cho model này:</strong>
+                    </div>
+                    <Space style={{ width: '100%' }} direction="vertical">
+                      {editingFallbackValue === null ? (
+                        <Space wrap>
+                          <Tag color="orange" style={{ fontSize: 14, padding: '4px 12px' }}>
+                            {selectedElement.ModelNatureElement.fallback_value !== null && selectedElement.ModelNatureElement.fallback_value !== undefined
+                              ? selectedElement.ModelNatureElement.fallback_value
+                              : 'Sử dụng giá trị chung'}
+                          </Tag>
+                          <Button
+                            size="small"
+                            type="primary"
+                            onClick={() => setEditingFallbackValue(
+                              selectedElement.ModelNatureElement.fallback_value !== null
+                                ? selectedElement.ModelNatureElement.fallback_value
+                                : selectedElement.fallback_value
+                            )}
+                          >
+                            Chỉnh sửa
+                          </Button>
+                          {selectedElement.ModelNatureElement.fallback_value !== null &&
+                            selectedElement.ModelNatureElement.fallback_value !== undefined && (
+                              <Popconfirm
+                                title="Reset về giá trị chung?"
+                                description="Giá trị riêng của model sẽ bị xóa và sử dụng giá trị chung."
+                                onConfirm={handleResetFallbackValue}
+                                okText="Reset"
+                                cancelText="Hủy"
+                                okButtonProps={{ danger: true }}
+                              >
+                                <Button
+                                  size="small"
+                                  danger
+                                  loading={savingFallback}
+                                >
+                                  Reset về giá trị chung
+                                </Button>
+                              </Popconfirm>
+                            )}
+                        </Space>
+                      ) : (
+                        <Space>
+                          <InputNumber
+                            value={editingFallbackValue}
+                            onChange={setEditingFallbackValue}
+                            style={{ width: 150 }}
+                            placeholder="Nhập giá trị"
+                          />
+                          <Button
+                            type="primary"
+                            size="small"
+                            loading={savingFallback}
+                            onClick={handleSaveFallbackValue}
+                          >
+                            Lưu
+                          </Button>
+                          <Button
+                            size="small"
+                            onClick={() => setEditingFallbackValue(null)}
+                          >
+                            Hủy
+                          </Button>
+                        </Space>
+                      )}
+                      <div style={{ fontSize: 12, color: '#999', marginTop: 4 }}>
+                        💡 Nếu không đặt giá trị, sẽ sử dụng giá trị mặc định chung
+                      </div>
+                    </Space>
                   </Col>
                 </>
               )}

@@ -37,6 +37,11 @@ const ModelNatureElement = sequelize.define(
       allowNull: false,
       defaultValue: 0,
     },
+    fallback_value: {
+      type: DataTypes.FLOAT,
+      allowNull: true,
+      defaultValue: null,
+    },
     createdAt: {
       type: DataTypes.DATE,
       allowNull: false,

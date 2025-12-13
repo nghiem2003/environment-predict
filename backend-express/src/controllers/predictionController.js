@@ -6,6 +6,8 @@ const {
   User,
   Province,
   District,
+  MLModel,
+  ModelNatureElement,
 } = require('../models');
 const { Op } = require('sequelize');
 require('dotenv').config();
@@ -28,9 +30,49 @@ async function createPredictionInternal(userId, areaId, inputs, modelName, creat
     throw new Error('Area not found');
   }
 
+  // Fetch model with nature elements and fallback values
+  const model = await MLModel.findOne({
+    where: { name: modelName },
+    include: [
+      {
+        model: NatureElement,
+        as: 'natureElements',
+        through: {
+          model: ModelNatureElement,
+          attributes: ['id', 'is_required', 'input_order', 'fallback_value'],
+        },
+        attributes: ['id', 'name', 'description', 'unit', 'category', 'fallback_value'],
+      },
+    ],
+  });
+
+  if (!model) {
+    logger.warn(`[Prediction] Model not found: ${modelName}. Proceeding without fallback values.`);
+  }
+
+  // Build fallback map: elementName -> fallback_value (prioritize model-specific, then global)
+  const fallbackMap = {};
+  if (model && model.natureElements) {
+    model.natureElements.forEach(element => {
+      const modelFallback = element.ModelNatureElement?.fallback_value;
+      const globalFallback = element.fallback_value;
+      const fallbackValue = modelFallback !== null && modelFallback !== undefined
+        ? modelFallback
+        : globalFallback;
+
+      if (fallbackValue !== null && fallbackValue !== undefined) {
+        fallbackMap[element.name] = fallbackValue;
+      }
+    });
+  }
+
+  logger.debug(`[Prediction] Fallback map for model ${modelName}:`, fallbackMap);
+
   // Filter inputs to only include required fields for the model
   const filteredInputs = {};
   const skippedFields = [];
+  const appliedFallbacks = [];
+
   for (const [key, value] of Object.entries(inputs)) {
     if (REQUIRED_FIELDS.includes(key)) {
       filteredInputs[key] = Number.parseFloat(value);
@@ -39,8 +81,30 @@ async function createPredictionInternal(userId, areaId, inputs, modelName, creat
     }
   }
 
+  // Apply fallback values for missing required fields
+  const missingFields = [];
+  REQUIRED_FIELDS.forEach(field => {
+    if (filteredInputs[field] == null || isNaN(filteredInputs[field])) {
+      if (fallbackMap[field] !== undefined) {
+        filteredInputs[field] = fallbackMap[field];
+        appliedFallbacks.push(`${field}=${fallbackMap[field]}`);
+      } else {
+        missingFields.push(field);
+      }
+    }
+  });
+
   if (skippedFields.length > 0) {
     logger.debug(`[Prediction] Filtered out non-required fields: ${skippedFields.join(', ')}`);
+  }
+
+  if (appliedFallbacks.length > 0) {
+    logger.info(`[Prediction] Applied fallback values: ${appliedFallbacks.join(', ')}`);
+  }
+
+  if (missingFields.length > 0) {
+    logger.warn(`[Prediction] Missing required fields without fallback: ${missingFields.join(', ')}`);
+    logger.warn(`[Prediction] These fields will be omitted from prediction request. This may affect prediction accuracy.`);
   }
 
   // Prepare request data for Flask API - only include REQUIRED_FIELDS + lat/lon
@@ -209,10 +273,24 @@ exports.getLatestPrediction = async (req, res) => {
 };
 
 // Get prediction history for an area within last N days (default 14)
+// Supports period param: 'quarter' (91 days), 'month' (30 days), 'week' (7 days), or custom days
 exports.getPredictionHistory = async (req, res) => {
   try {
     const { areaId } = req.params;
-    const days = Number.parseInt(req.query.days, 10) || 14;
+    const { period, days: daysParam } = req.query;
+
+    // Calculate days based on period or use days param
+    let days;
+    if (period === 'quarter') {
+      days = 91;
+    } else if (period === 'month') {
+      days = 30;
+    } else if (period === 'week') {
+      days = 7;
+    } else {
+      days = Number.parseInt(daysParam, 10) || 14;
+    }
+
     const since = new Date();
     since.setDate(since.getDate() - days);
 
@@ -231,7 +309,29 @@ exports.getPredictionHistory = async (req, res) => {
       ],
     });
 
-    res.json({ areaId, days, predictions });
+    // If no predictions found in the period, get the latest prediction for fallback
+    let latestPrediction = null;
+    if (predictions.length === 0) {
+      latestPrediction = await Prediction.findOne({
+        where: { area_id: areaId },
+        order: [['createdAt', 'DESC']],
+        include: [
+          {
+            model: NatureElement,
+            attributes: ['id', 'name', 'description', 'unit'],
+            through: { model: PredictionNatureElement, attributes: ['value'] },
+          },
+        ],
+      });
+    }
+
+    res.json({
+      areaId,
+      period: period || null,
+      days,
+      predictions,
+      latestPrediction // Fallback prediction if no data in period
+    });
   } catch (error) {
     logger.error('Get Prediction History Error', {
       message: error.message,

@@ -134,13 +134,24 @@ exports.getAllMLModels = async (req, res) => {
           model: NatureElement,
           as: 'natureElements',
           through: {
-            attributes: ['is_required', 'input_order'],
+            attributes: ['id', 'is_required', 'input_order', 'fallback_value'],
           },
-          attributes: ['id', 'name', 'description', 'unit', 'category'],
+          attributes: ['id', 'name', 'description', 'unit', 'category', 'fallback_value'],
         },
       ],
       order: [['createdAt', 'DESC']],
     });
+
+    // Debug log for first model's natureElements
+    if (models.length > 0 && models[0].natureElements && models[0].natureElements.length > 0) {
+      const firstElement = models[0].natureElements[0];
+      logger.info('Sample natureElement structure:', {
+        id: firstElement.id,
+        name: firstElement.name,
+        ModelNatureElement: firstElement.ModelNatureElement,
+        ModelNatureElement_dataValues: firstElement.ModelNatureElement?.dataValues,
+      });
+    }
 
     return res.status(200).json({
       success: true,
@@ -172,9 +183,9 @@ exports.getMLModelById = async (req, res) => {
           model: NatureElement,
           as: 'natureElements',
           through: {
-            attributes: ['is_required', 'input_order', 'id'],
+            attributes: ['is_required', 'input_order', 'id', 'fallback_value'],
           },
-          attributes: ['id', 'name', 'description', 'unit', 'category'],
+          attributes: ['id', 'name', 'description', 'unit', 'category', 'fallback_value'],
         },
       ],
     });
@@ -217,6 +228,13 @@ exports.createMLModel = async (req, res) => {
       natureElements, // Array of { nature_element_id, is_required, input_order }
     } = req.body;
 
+    logger.info('Creating ML Model with data:', {
+      name,
+      area_type,
+      natureElementsCount: natureElements?.length || 0,
+      natureElements
+    });
+
     // Validation
     if (!name) {
       return res.status(400).json({
@@ -253,7 +271,11 @@ exports.createMLModel = async (req, res) => {
         input_order: element.input_order || 0,
       }));
 
+      logger.info('Creating ModelNatureElement associations:', { count: elementRecords.length, records: elementRecords });
       await ModelNatureElement.bulkCreate(elementRecords);
+      logger.info('ModelNatureElement associations created successfully');
+    } else {
+      logger.warn('No nature elements provided for model');
     }
 
     // Fetch complete model with associations
@@ -263,9 +285,9 @@ exports.createMLModel = async (req, res) => {
           model: NatureElement,
           as: 'natureElements',
           through: {
-            attributes: ['is_required', 'input_order', 'id'],
+            attributes: ['is_required', 'input_order', 'id', 'fallback_value'],
           },
-          attributes: ['id', 'name', 'description', 'unit', 'category'],
+          attributes: ['id', 'name', 'description', 'unit', 'category', 'fallback_value'],
         },
       ],
     });
@@ -303,6 +325,14 @@ exports.updateMLModel = async (req, res) => {
       is_active,
       natureElements, // Array of { nature_element_id, is_required, input_order }
     } = req.body;
+
+    logger.info('Updating ML Model with data:', {
+      id,
+      name,
+      area_type,
+      natureElementsCount: natureElements?.length || 0,
+      natureElements
+    });
 
     const model = await MLModel.findByPk(id);
     if (!model) {
@@ -343,6 +373,7 @@ exports.updateMLModel = async (req, res) => {
     // Update nature elements if provided
     if (natureElements && Array.isArray(natureElements)) {
       // Delete existing associations
+      logger.info('Deleting existing ModelNatureElement associations');
       await ModelNatureElement.destroy({ where: { model_id: id } });
 
       // Add new associations
@@ -354,8 +385,14 @@ exports.updateMLModel = async (req, res) => {
           input_order: element.input_order || 0,
         }));
 
+        logger.info('Creating new ModelNatureElement associations:', { count: elementRecords.length, records: elementRecords });
         await ModelNatureElement.bulkCreate(elementRecords);
+        logger.info('ModelNatureElement associations updated successfully');
+      } else {
+        logger.warn('No nature elements to add in update');
       }
+    } else {
+      logger.warn('natureElements not provided or not an array');
     }
 
     // Fetch updated model with associations
@@ -365,9 +402,9 @@ exports.updateMLModel = async (req, res) => {
           model: NatureElement,
           as: 'natureElements',
           through: {
-            attributes: ['is_required', 'input_order', 'id'],
+            attributes: ['is_required', 'input_order', 'id', 'fallback_value'],
           },
-          attributes: ['id', 'name', 'description', 'unit', 'category'],
+          attributes: ['id', 'name', 'description', 'unit', 'category', 'fallback_value'],
         },
       ],
     });
@@ -715,6 +752,51 @@ exports.uploadModelFile = async (req, res) => {
     return res.status(500).json({
       success: false,
       error: error.message || 'Failed to upload model file',
+    });
+  }
+};
+
+/**
+ * Update fallback value for a ModelNatureElement
+ */
+exports.updateModelNatureElementFallback = async (req, res) => {
+  try {
+    const { id } = req.params; // ModelNatureElement ID
+    const { fallback_value } = req.body;
+
+    logger.info('Updating fallback value for ModelNatureElement:', { id, fallback_value });
+
+    // Find the ModelNatureElement
+    const modelNatureElement = await ModelNatureElement.findByPk(id);
+
+    if (!modelNatureElement) {
+      return res.status(404).json({
+        success: false,
+        error: 'ModelNatureElement not found',
+      });
+    }
+
+    // Update fallback_value
+    await modelNatureElement.update({
+      fallback_value: fallback_value !== null && fallback_value !== undefined ? fallback_value : null,
+    });
+
+    logger.info('Fallback value updated successfully');
+
+    return res.status(200).json({
+      success: true,
+      message: 'Fallback value updated successfully',
+      data: modelNatureElement,
+    });
+  } catch (error) {
+    logger.error('Update Model Nature Element Fallback Error:', {
+      message: error.message,
+      stack: error.stack,
+      id: req.params.id,
+    });
+    return res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to update fallback value',
     });
   }
 };

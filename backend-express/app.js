@@ -31,11 +31,12 @@ app.use(requestLogger);
 // Init pg-boss for background jobs
 const PgBoss = require('pg-boss');
 const DB_USER = dbConfig.username || process.env.DB_USER || 'postgres';
-const DB_PASSWORD = dbConfig.password || process.env.DB_PASSWORD || '';
+const DB_PASSWORD = dbConfig.password || process.env.DB_PASSWORD || 'admin';
 const DB_HOST = dbConfig.host || process.env.DB_HOST || 'localhost';
 const DB_PORT = dbConfig.port || process.env.DB_PORT || 5432;
-const DB_NAME = dbConfig.database || process.env.DB_NAME || 'postgres';
+const DB_NAME = dbConfig.database || process.env.DB_NAME || 'ocean';
 const DATABASE_URL = process.env.DATABASE_URL || `postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}`;
+console.log(DATABASE_URL);
 const boss = new PgBoss({
   connectionString: DATABASE_URL,
   schema: process.env.PGBOSS_SCHEMA || 'pgboss',

@@ -9,6 +9,7 @@ const {
   toggleMLModelStatus,
   uploadModelFile,
   checkDuplicate,
+  updateModelNatureElementFallback,
 } = require('../controllers/mlModelController');
 const { authenticate, authorize } = require('../middlewares/authMiddleware');
 const { upload } = require('../middlewares/uploadModel');
@@ -351,6 +352,51 @@ router.post(
   authorize(['admin']),
   upload.single('file'),
   uploadModelFile
+);
+
+/**
+ * @swagger
+ * /ml-models/nature-element/{id}:
+ *   put:
+ *     summary: Update fallback value for a model's nature element
+ *     tags: [ML Models]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ModelNatureElement ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               fallback_value:
+ *                 type: number
+ *                 description: Fallback value for this nature element in this model
+ *                 nullable: true
+ *     responses:
+ *       200:
+ *         description: Fallback value updated successfully
+ *       400:
+ *         description: Bad request
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: ModelNatureElement not found
+ *       500:
+ *         description: Internal server error
+ */
+router.put(
+  '/nature-element/:id',
+  authenticate,
+  authorize(['admin']),
+  updateModelNatureElementFallback
 );
 
 module.exports = router;

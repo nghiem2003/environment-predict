@@ -74,8 +74,28 @@
 /* Areas List */
 .areas-list {
   flex: 1;
-  overflow: visible;
+  overflow-y: auto;
+  overflow-x: hidden;
   margin: 8px 0 16px;
+  max-height: calc(100vh - 350px);
+}
+
+.areas-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.areas-list::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.areas-list::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+.areas-list::-webkit-scrollbar-thumb:hover {
+  background: #a1a1a1;
 }
 
 
@@ -278,6 +298,10 @@
     overflow: hidden;
   }
 
+  .areas-list {
+    max-height: calc(50vh - 200px);
+  }
+
   .right-filter {
     left: 10px;
     right: 10px;
@@ -309,6 +333,10 @@
     max-height: calc(45vh - 80px);
     padding: 8px;
     overflow: hidden;
+  }
+
+  .areas-list {
+    max-height: calc(45vh - 180px);
   }
   
   .area-list-item {

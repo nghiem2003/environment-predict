@@ -5,7 +5,8 @@
  * Run: node scripts/seed_ml_models.js
  */
 
-const { MLModel, NatureElement, ModelNatureElement, sequelize } = require('../src/models');
+const { MLModel, NatureElement, ModelNatureElement } = require('../src/models');
+const sequelize = require('../src/config/db');
 const logger = require('../src/config/logger');
 
 // ML Models configuration from Flask
@@ -67,7 +68,7 @@ const ML_MODELS = [
     is_active: true,
     is_default: true,
   },
-  
+
   // OYSTER MODELS
   {
     name: 'Oyster Ridge Regression',
@@ -231,7 +232,10 @@ async function seedMLModels() {
       const totalModels = await MLModel.count();
       logger.info(`Total ML models in database: ${totalModels}`);
 
-      process.exit(0);
+      // Only exit if run directly
+      if (require.main === module) {
+        process.exit(0);
+      }
     } catch (error) {
       await transaction.rollback();
       throw error;
@@ -241,10 +245,19 @@ async function seedMLModels() {
       message: error.message,
       stack: error.stack,
     });
-    process.exit(1);
+    // Only exit if run directly
+    if (require.main === module) {
+      process.exit(1);
+    } else {
+      throw error;
+    }
   }
 }
 
-// Run seeding
-seedMLModels();
+// Run seeding only if executed directly
+if (require.main === module) {
+  seedMLModels();
+}
+
+module.exports = { seedMLModels };
 

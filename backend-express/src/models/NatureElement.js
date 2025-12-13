@@ -9,6 +9,7 @@ const NaturalElement = sequelize.define(
     description: { type: DataTypes.TEXT, allowNull: true },
     unit: { type: DataTypes.STRING, allowNull: true },
     category: { type: DataTypes.STRING, allowNull: true },
+    fallback_value: { type: DataTypes.FLOAT, allowNull: true, defaultValue: null },
   },
   { timestamps: false, tableName: 'diagnose_naturalelements' }
 );

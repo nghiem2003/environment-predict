@@ -28,19 +28,18 @@ import {
     message,
     Tooltip,
     Collapse,
+    Divider,
+    Skeleton,
 } from 'antd';
+import InfiniteScroll from 'react-infinite-scroll-component';
 import { LineChart, Line, XAxis, YAxis, Tooltip as RTooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import {
-    EnvironmentOutlined,
     SearchOutlined,
     FilterOutlined,
     InfoCircleOutlined,
     ArrowRightOutlined,
     ArrowLeftOutlined,
-    EyeOutlined,
-    EyeInvisibleOutlined,
-    BugOutlined,
-    MailOutlined,
+    QuestionCircleOutlined,
 } from '@ant-design/icons';
 import PredictionBadge from './PredictionBadge';
 
@@ -484,6 +483,7 @@ const InteractiveMap = () => {
     const [loading, setLoading] = useState(true);
     const [selectedArea, setSelectedArea] = useState(null);
     const [historyByElement, setHistoryByElement] = useState({}); // key: element name/id -> [{date,value}]
+    const [elementMeta, setElementMeta] = useState({}); // key: element name -> {unit, description}
     const [mapCenter, setMapCenter] = useState([10.762622, 106.660172]); // Vietnam center
     const [mapZoom, setMapZoom] = useState(6);
     const [hoangTruongSaGeoJSON, setHoangTruongSaGeoJSON] = useState(null);
@@ -509,7 +509,7 @@ const InteractiveMap = () => {
 
     const isWithinVietnam = (lat, lon) => lat >= 8 && lat <= 24 && lon >= 102 && lon <= 110;
 
-    // Fetch areas data
+    // Fetch areas data (with latest predictions included)
     const fetchAreas = async () => {
         try {
             setLoading(true);
@@ -519,6 +519,7 @@ const InteractiveMap = () => {
                     area_type: areaType,
                     province: provinceFilter,
                     district: districtFilter,
+                    include_prediction: true,
                 },
             });
 
@@ -526,20 +527,14 @@ const InteractiveMap = () => {
             setAreas(areasData);
             setFilteredAreas(areasData);
 
-            // Log central_meridian info for debugging
-            console.log('Fetched areas with Province info:');
-            areasData.forEach((area, index) => {
-                if (area.Province) {
-                    console.log(`Area ${index + 1} (${area.name}):`, {
-                        provinceId: area.Province.id,
-                        provinceName: area.Province.name,
-                        central_meridian: area.Province.central_meridian || 'Không có'
-                    });
+            // Extract predictions from areas data
+            const predictionsMap = {};
+            areasData.forEach((area) => {
+                if (area.latestPrediction) {
+                    predictionsMap[area.id] = area.latestPrediction;
                 }
             });
-
-            // Fetch predictions for all areas
-            await fetchPredictionsForAreas(areasData);
+            setPredictions(predictionsMap);
 
             // Set map center to first area if available
             if (areasData.length > 0) {
@@ -552,30 +547,6 @@ const InteractiveMap = () => {
             message.error('Không thể tải dữ liệu khu vực');
         } finally {
             setLoading(false);
-        }
-    };
-
-    // Fetch predictions for areas
-    const fetchPredictionsForAreas = async (areasData) => {
-        try {
-            const predictionPromises = areasData.map(async (area) => {
-                try {
-                    const response = await axios.get(`/api/express/predictions/${area.id}/latest`);
-                    return { areaId: area.id, prediction: response.data };
-                } catch (error) {
-                    console.error(`Error fetching prediction for area ${area.id}:`, error);
-                    return { areaId: area.id, prediction: null };
-                }
-            });
-
-            const results = await Promise.all(predictionPromises);
-            const predictionsMap = {};
-            results.forEach(({ areaId, prediction }) => {
-                predictionsMap[areaId] = prediction;
-            });
-            setPredictions(predictionsMap);
-        } catch (error) {
-            console.error('Error fetching predictions:', error);
         }
     };
 
@@ -650,7 +621,7 @@ const InteractiveMap = () => {
     };
 
     // Handle area click from "Xem chi tiết" button - change selected area and switch to detail view
-    const handleViewDetails = (area) => {
+    const handleViewDetails = async (area) => {
         console.log('handleViewDetails called with area:', area);
         console.log('Central Meridian:', area?.Province?.central_meridian || 'Không có');
         console.log('Province Info:', area?.Province ? { id: area.Province.id, name: area.Province.name, central_meridian: area.Province.central_meridian } : 'Không có');
@@ -659,28 +630,60 @@ const InteractiveMap = () => {
         setMapZoom(15);
         setIsDetailView(true);
         setIsFilterCardVisible(false);
-        // fetch 2-week history for charts
+        setIsDetailCardVisible(true); // Reset to show detail card when entering detail view
+
+        // Fetch full prediction with NaturalElements for detail view
+        try {
+            const response = await axios.get(`/api/express/predictions/${area.id}/latest`);
+            console.log('Latest prediction response:', response.data);
+            console.log('NaturalElements:', response.data?.NaturalElements);
+            if (response.data && response.data.id) {
+                setPredictions(prev => {
+                    const updated = {
+                        ...prev,
+                        [area.id]: response.data
+                    };
+                    console.log('Updated predictions state:', updated);
+                    return updated;
+                });
+            }
+        } catch (error) {
+            console.error('Error fetching full prediction:', error);
+        }
+
+        // fetch 1 quarter history for charts
         fetchHistory(area.id);
     };
     const fetchHistory = async (areaId) => {
         try {
             console.log('Fetching history for area:', areaId);
-            const res = await axios.get(`/api/express/predictions/${areaId}/history`, { params: { days: 14 } });
+            // Fetch 1 quarter of data using period param
+            const res = await axios.get(`/api/express/predictions/${areaId}/history`, { params: { period: 'quarter' } });
             console.log('Full API response:', res);
             console.log('History API response data:', res.data);
 
             // Check if response has predictions array or is direct array
             let predictions = [];
+            let latestPrediction = null;
+
             if (Array.isArray(res.data)) {
                 predictions = res.data;
             } else if (res.data && Array.isArray(res.data.predictions)) {
                 predictions = res.data.predictions;
+                latestPrediction = res.data.latestPrediction; // Fallback from backend
             } else if (res.data && res.data.data && Array.isArray(res.data.data)) {
                 predictions = res.data.data;
             }
 
             console.log('Parsed predictions array:', predictions);
             console.log('Number of predictions:', predictions.length);
+            console.log('Latest prediction fallback:', latestPrediction);
+
+            // If no predictions in period but have latestPrediction fallback, use it
+            if (predictions.length === 0 && latestPrediction) {
+                predictions = [latestPrediction];
+                console.log('Using latestPrediction as fallback');
+            }
 
             if (predictions.length === 0) {
                 console.log('No predictions found, creating empty series');
@@ -688,27 +691,39 @@ const InteractiveMap = () => {
                 return;
             }
 
-            // Create date range for last 14 days
-            const dateRange = [];
-            for (let i = 13; i >= 0; i--) {
+            // Create week range for last 13 weeks (1 quarter)
+            const weekRange = [];
+            for (let i = 12; i >= 0; i--) {
                 const date = new Date();
-                date.setDate(date.getDate() - i);
-                dateRange.push(date.toISOString().split('T')[0]); // YYYY-MM-DD format
+                date.setDate(date.getDate() - (i * 7)); // Go back i weeks
+                weekRange.push({
+                    weekStart: new Date(date.getTime() - 6 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                    weekEnd: date.toISOString().split('T')[0],
+                    displayDate: date.toISOString().split('T')[0] // Display end of week
+                });
             }
-            console.log('Date range:', dateRange);
+            console.log('Week range:', weekRange);
 
-            // Transform: for each element, build time series with full 14 days
+            // Transform: for each element, build time series with 13 weeks
             const elementSeries = {};
 
             // First, collect all unique elements from predictions
             const allElements = new Set();
+            const elementMeta = {}; // Store units and descriptions for each element
             predictions.forEach((p, index) => {
                 console.log(`Processing prediction ${index}:`, p);
                 if (p && p.NaturalElements && Array.isArray(p.NaturalElements)) {
                     p.NaturalElements.forEach((el) => {
                         if (el && el.name) {
                             allElements.add(el.name);
-                            console.log(`Found element: ${el.name}, value: ${el.PredictionNatureElement?.value}`);
+                            // Store metadata for each element (unit, description)
+                            if (!elementMeta[el.name]) {
+                                elementMeta[el.name] = {
+                                    unit: el.unit || '',
+                                    description: el.description || ''
+                                };
+                            }
+                            console.log(`Found element: ${el.name}, value: ${el.PredictionNatureElement?.value}, description: ${el.description}`);
                         }
                     });
                 }
@@ -716,47 +731,73 @@ const InteractiveMap = () => {
 
             console.log('All unique elements:', Array.from(allElements));
 
-            // For each element, create 14-day series
+            // Sort predictions by date (newest first) for fallback logic
+            const sortedPredictions = [...predictions].sort((a, b) =>
+                new Date(b.createdAt) - new Date(a.createdAt)
+            );
+
+            // For each element, create 13-week series
             allElements.forEach(elementName => {
                 elementSeries[elementName] = [];
-                dateRange.forEach(dateStr => {
-                    // Find prediction for this date
-                    const predictionForDate = predictions.find(p => {
+                let lastKnownValue = null;
+                let lastKnownUnit = elementMeta[elementName]?.unit || '';
+
+                // Find the latest value for this element (for fallback)
+                for (const p of sortedPredictions) {
+                    if (p && p.NaturalElements) {
+                        const el = p.NaturalElements.find(e => e && e.name === elementName);
+                        if (el && el.PredictionNatureElement?.value !== undefined) {
+                            lastKnownValue = parseFloat(el.PredictionNatureElement.value) || 0;
+                            lastKnownUnit = el.unit || lastKnownUnit;
+                            break;
+                        }
+                    }
+                }
+
+                weekRange.forEach(week => {
+                    // Find the LATEST prediction within this week (filter all, take last one since sorted ASC)
+                    const predictionsInWeek = predictions.filter(p => {
                         if (!p || !p.createdAt) return false;
                         const predictionDate = p.createdAt.split('T')[0];
-                        return predictionDate === dateStr;
+                        return predictionDate >= week.weekStart && predictionDate <= week.weekEnd;
                     });
+                    // Get the latest prediction in this week (last element since sorted by createdAt ASC)
+                    const predictionForWeek = predictionsInWeek.length > 0 ? predictionsInWeek[predictionsInWeek.length - 1] : null;
 
-                    if (predictionForDate && predictionForDate.NaturalElements) {
-                        const element = predictionForDate.NaturalElements.find(el => el && el.name === elementName);
-                        if (element) {
-                            const value = element.PredictionNatureElement?.value;
-                            const unit = element.unit;
+                    if (predictionForWeek && predictionForWeek.NaturalElements) {
+                        const element = predictionForWeek.NaturalElements.find(el => el && el.name === elementName);
+                        if (element && element.PredictionNatureElement?.value !== undefined) {
+                            const value = parseFloat(element.PredictionNatureElement.value) || 0;
+                            lastKnownValue = value; // Update last known value
+                            lastKnownUnit = element.unit || lastKnownUnit;
                             elementSeries[elementName].push({
-                                date: dateStr,
-                                value: parseFloat(value) || 0,
-                                unit: unit || ''
+                                date: week.displayDate,
+                                value: value,
+                                unit: lastKnownUnit
                             });
                         } else {
+                            // Element not found in this prediction, use last known value
                             elementSeries[elementName].push({
-                                date: dateStr,
-                                value: 0,
-                                unit: ''
+                                date: week.displayDate,
+                                value: lastKnownValue !== null ? lastKnownValue : 0,
+                                unit: lastKnownUnit
                             });
                         }
                     } else {
-                        // No data for this date, use 0
+                        // No prediction for this week, use last known value
                         elementSeries[elementName].push({
-                            date: dateStr,
-                            value: 0,
-                            unit: ''
+                            date: week.displayDate,
+                            value: lastKnownValue !== null ? lastKnownValue : 0,
+                            unit: lastKnownUnit
                         });
                     }
                 });
             });
 
-            console.log('Processed element series with 14 days:', elementSeries);
+            console.log('Processed element series with 13 weeks:', elementSeries);
+            console.log('Element metadata:', elementMeta);
             setHistoryByElement(elementSeries);
+            setElementMeta(elementMeta);
         } catch (e) {
             console.error('Failed to fetch history', e);
             console.error('Error details:', e.response?.data || e.message);
@@ -968,65 +1009,77 @@ const InteractiveMap = () => {
                             </Space>
 
                             {/* Areas List */}
-                            <div className="areas-list">
+                            <div id="scrollableDiv" className="areas-list">
                                 {loading ? (
                                     <div style={{ textAlign: 'center', padding: '20px' }}>
                                         <Spin size="large" />
                                     </div>
                                 ) : (
-                                    <List
-                                        dataSource={filteredAreas}
-                                        renderItem={(area) => (
-                                            <List.Item
-                                                className={`area-list-item ${selectedArea?.id === area.id ? 'selected' : ''}`}
-                                                onClick={() => handleAreaSelect(area)}
-                                            >
-                                                <List.Item.Meta
-                                                    avatar={
-                                                        <div
-                                                            className={`area-marker-icon ${area.area_type}`}
-                                                        />
-                                                    }
-                                                    title={
-                                                        <Space>
-                                                            <Text strong style={{ fontSize: '14px' }}>
-                                                                {area.name}
-                                                            </Text>
-                                                            {predictions[area.id] && (
-                                                                <PredictionBadge
-                                                                    prediction={predictions[area.id]}
-                                                                    size="small"
-                                                                />
-                                                            )}
-                                                        </Space>
-                                                    }
-                                                    description={
-                                                        <Space direction="vertical" size="small" style={{ width: '100%' }}>
-                                                            <Text type="secondary" style={{ fontSize: '12px' }}>
-                                                                {area.Province?.name}, {area.District?.name}
-                                                            </Text>
+                                    <InfiniteScroll
+                                        dataLength={filteredAreas.length}
+                                        next={() => {
+                                            fetchAreas();
+                                        }}
+                                        hasMore={filteredAreas.length < 50}
+                                        loader={<Skeleton avatar paragraph={{ rows: 1 }} active />}
+                                        endMessage={<Divider plain>Đã hết dữ liệu</Divider>}
+                                        scrollableTarget="scrollableDiv"
+                                    >
+                                        <List
+                                            dataSource={filteredAreas}
+                                            renderItem={(area) => (
+                                                <List.Item
+                                                    className={`area-list-item ${selectedArea?.id === area.id ? 'selected' : ''}`}
+                                                    onClick={() => handleAreaSelect(area)}
+
+                                                >
+                                                    <List.Item.Meta
+                                                        avatar={
+                                                            <div
+                                                                className={`area-marker-icon ${area.area_type}`}
+                                                            />
+                                                        }
+                                                        title={
                                                             <Space>
-                                                                <Tag color={area.area_type === 'oyster' ? 'blue' : 'green'} size="small">
-                                                                    {area.area_type === 'oyster' ? t('common.oyster') : t('common.cobia')}
-                                                                </Tag>
-                                                                {area.area && (
+                                                                <Text strong style={{ fontSize: '14px' }}>
+                                                                    {area.name}
+                                                                </Text>
+                                                                {predictions[area.id] && (
+                                                                    <PredictionBadge
+                                                                        prediction={predictions[area.id]}
+                                                                        size="small"
+                                                                    />
+                                                                )}
+                                                            </Space>
+                                                        }
+                                                        description={
+                                                            <Space direction="vertical" size="small" style={{ width: '100%' }}>
+                                                                <Text type="secondary" style={{ fontSize: '12px' }}>
+                                                                    {area.Province?.name}, {area.District?.name}
+                                                                </Text>
+                                                                <Space>
+                                                                    <Tag color={area.area_type === 'oyster' ? 'blue' : 'green'} size="small">
+                                                                        {area.area_type === 'oyster' ? t('common.oyster') : t('common.cobia')}
+                                                                    </Tag>
+                                                                    {area.area && (
+                                                                        <Text type="secondary" style={{ fontSize: '11px' }}>
+                                                                            {area.area} ha
+                                                                        </Text>
+                                                                    )}
+                                                                </Space>
+                                                                {predictions[area.id] && (
                                                                     <Text type="secondary" style={{ fontSize: '11px' }}>
-                                                                        {area.area} ha
+                                                                        {t('detail.predictionLabel')}: {new Date(predictions[area.id].createdAt).toLocaleDateString('vi-VN')}
                                                                     </Text>
                                                                 )}
                                                             </Space>
-                                                            {predictions[area.id] && (
-                                                                <Text type="secondary" style={{ fontSize: '11px' }}>
-                                                                    {t('detail.predictionLabel')}: {new Date(predictions[area.id].createdAt).toLocaleDateString('vi-VN')}
-                                                                </Text>
-                                                            )}
-                                                        </Space>
-                                                    }
-                                                />
-                                            </List.Item>
-                                        )}
-                                        locale={{ emptyText: t('area_list.noAreas') }}
-                                    />
+                                                        }
+                                                    />
+                                                </List.Item>
+                                            )}
+                                            locale={{ emptyText: t('area_list.noAreas') }}
+                                        />
+                                    </InfiniteScroll>
                                 )}
                             </div>
                         </>
@@ -1100,7 +1153,7 @@ const InteractiveMap = () => {
                                         </div>
                                         <div style={{ marginTop: '12px' }}>
                                             <Space direction="vertical" style={{ width: '100%' }}>
-                                                {predictions[selectedArea.id] && (
+                                                {predictions[selectedArea.id] && (predictions[selectedArea.id]?.NaturalElements?.length > 0 || Object.keys(historyByElement).length > 0) && (
                                                     <Button
                                                         size="large"
                                                         onClick={() => setIsDetailCardVisible(!isDetailCardVisible)}
@@ -1152,8 +1205,8 @@ const InteractiveMap = () => {
                 </Card>
             </div>
 
-            {/* Right Detail Card - only in detail view and when visible */}
-            {isDetailView && isDetailCardVisible && selectedArea && predictions[selectedArea.id]?.NaturalElements && predictions[selectedArea.id].NaturalElements.length > 0 && (
+            {/* Right Detail Card - only in detail view and when visible and has prediction */}
+            {isDetailView && isDetailCardVisible && selectedArea && predictions[selectedArea.id] && (
                 <div className="right-detail">
                     <Card size="small" title="Chi tiết yếu tố môi trường">
                         <Space direction="vertical" style={{ width: '100%' }}>
@@ -1162,64 +1215,94 @@ const InteractiveMap = () => {
                                     Test History API
                                 </Button>
                             )}
-                            {predictions[selectedArea.id].NaturalElements.map((el) => (
-                                <div key={el.id} style={{ marginBottom: '12px', padding: '8px', border: '1px solid #f0f0f0', borderRadius: '4px' }}>
-                                    <Space style={{ width: '100%', justifyContent: 'space-between', marginBottom: '4px' }}>
-                                        <Text strong>{el.name}</Text>
-                                        <Text>{el.PredictionNatureElement?.value} {el.unit || ''}</Text>
-                                    </Space>
-                                    {el.description && (
-                                        <Text type="secondary" style={{ fontSize: '12px', display: 'block', marginBottom: '8px' }}>{el.description}</Text>
-                                    )}
-                                    {/* Chart */}
-                                    <div style={{ height: 140 }}>
-                                        {(() => {
-                                            const elementData = historyByElement[el.name] || [];
-                                            const chartData = elementData.map(d => ({
-                                                ...d,
-                                                dateLabel: new Date(d.date).toLocaleDateString('vi-VN'),
-                                                value: parseFloat(d.value) || 0
-                                            }));
-                                            console.log(`Chart data for ${el.name}:`, chartData);
-                                            console.log('Raw historyByElement:', historyByElement[el.name]);
-
-                                            return chartData.length > 0 ? (
-                                                <ResponsiveContainer width="100%" height="100%">
-                                                    <LineChart data={chartData} margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>
-                                                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                                                        <XAxis
-                                                            dataKey="dateLabel"
-                                                            tick={{ fontSize: 10 }}
-                                                            interval="preserveStartEnd"
-                                                            angle={-45}
-                                                            textAnchor="end"
-                                                            height={60}
-                                                        />
-                                                        <YAxis
-                                                            tick={{ fontSize: 10 }}
-                                                            width={50}
-                                                            domain={['dataMin - 0.1', 'dataMax + 0.1']}
-                                                        />
-                                                        <RTooltip content={<SmallTooltip unit={el.unit} />} />
-                                                        <Line
-                                                            type="monotone"
-                                                            dataKey="value"
-                                                            stroke="#1890ff"
-                                                            strokeWidth={2}
-                                                            dot={false}
-                                                            activeDot={{ r: 4, stroke: '#1890ff', strokeWidth: 2 }}
-                                                        />
-                                                    </LineChart>
-                                                </ResponsiveContainer>
-                                            ) : (
-                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', background: '#f9f9f9', borderRadius: '4px' }}>
-                                                    <Text type="secondary" style={{ fontSize: '11px' }}>Chưa có dữ liệu lịch sử</Text>
-                                                </div>
-                                            );
-                                        })()}
-                                    </div>
+                            {/* Debug info */}
+                            {window.location.hostname === 'localhost' && (
+                                <Text type="secondary" style={{ fontSize: '10px' }}>
+                                    NaturalElements: {predictions[selectedArea.id]?.NaturalElements?.length || 0} |
+                                    History keys: {Object.keys(historyByElement).length}
+                                </Text>
+                            )}
+                            {/* Show message if no data */}
+                            {!predictions[selectedArea.id]?.NaturalElements?.length && Object.keys(historyByElement).length === 0 && (
+                                <div style={{ textAlign: 'center', padding: '20px' }}>
+                                    <Spin size="small" />
+                                    <Text type="secondary" style={{ display: 'block', marginTop: '8px' }}>Đang tải dữ liệu...</Text>
                                 </div>
-                            ))}
+                            )}
+                            {/* Render from NaturalElements if available, otherwise from historyByElement keys */}
+                            {(predictions[selectedArea.id]?.NaturalElements?.length > 0 || Object.keys(historyByElement).length > 0) &&
+                                (predictions[selectedArea.id]?.NaturalElements?.length > 0
+                                    ? predictions[selectedArea.id].NaturalElements
+                                    : Object.keys(historyByElement).map(name => ({
+                                        id: name,
+                                        name,
+                                        unit: elementMeta[name]?.unit || historyByElement[name]?.[0]?.unit || '',
+                                        description: elementMeta[name]?.description || ''
+                                    }))
+                                ).map((el) => (
+                                    <div key={el.id || el.name} style={{ marginBottom: '12px', padding: '8px', border: '1px solid #f0f0f0', borderRadius: '4px' }}>
+                                        <Space style={{ width: '100%', justifyContent: 'space-between', marginBottom: '4px' }}>
+                                            <Space size="small">
+                                                <Text strong>{el.name}</Text>
+                                                {(el.description || elementMeta[el.name]?.description) && (
+                                                    <Tooltip title={el.description || elementMeta[el.name]?.description} placement="top">
+                                                        <QuestionCircleOutlined style={{ color: '#1890ff', cursor: 'pointer', fontSize: '14px' }} />
+                                                    </Tooltip>
+                                                )}
+                                            </Space>
+                                            <Text>{el.PredictionNatureElement?.value || historyByElement[el.name]?.slice(-1)[0]?.value || ''} {el.unit || elementMeta[el.name]?.unit || ''}</Text>
+                                        </Space>
+                                        {/* Chart */}
+                                        <div style={{ height: 140 }}>
+                                            {(() => {
+                                                const elementData = historyByElement[el.name] || [];
+                                                const chartData = elementData.map(d => ({
+                                                    ...d,
+                                                    dateLabel: new Date(d.date).toLocaleDateString('vi-VN'),
+                                                    value: parseFloat(d.value) || 0
+                                                }));
+                                                console.log(`Chart data for ${el.name}:`, chartData);
+                                                console.log('Raw historyByElement:', historyByElement[el.name]);
+
+                                                return chartData.length > 0 ? (
+                                                    <ResponsiveContainer width="100%" height="100%">
+                                                        <LineChart data={chartData} margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>
+                                                            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                                                            <XAxis
+                                                                dataKey="dateLabel"
+                                                                tick={{ fontSize: 10 }}
+                                                                interval="preserveStartEnd"
+                                                                angle={-45}
+                                                                textAnchor="end"
+                                                                height={60}
+                                                            />
+                                                            <YAxis
+                                                                tick={{ fontSize: 10 }}
+                                                                width={50}
+                                                                domain={['auto', 'auto']}
+                                                                allowDecimals={false}
+                                                                tickFormatter={(value) => Math.round(value)}
+                                                            />
+                                                            <RTooltip content={<SmallTooltip unit={el.unit} />} />
+                                                            <Line
+                                                                type="monotone"
+                                                                dataKey="value"
+                                                                stroke="#1890ff"
+                                                                strokeWidth={2}
+                                                                dot={false}
+                                                                activeDot={{ r: 4, stroke: '#1890ff', strokeWidth: 2 }}
+                                                            />
+                                                        </LineChart>
+                                                    </ResponsiveContainer>
+                                                ) : (
+                                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', background: '#f9f9f9', borderRadius: '4px' }}>
+                                                        <Text type="secondary" style={{ fontSize: '11px' }}>Chưa có dữ liệu lịch sử</Text>
+                                                    </div>
+                                                );
+                                            })()}
+                                        </div>
+                                    </div>
+                                ))}
                         </Space>
                     </Card>
                 </div>
