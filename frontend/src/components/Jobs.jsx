@@ -120,7 +120,7 @@ const Jobs = () => {
             title: 'Chi tiết', key: 'details', render: (_, r) => {
                 const data = r.data || {};
                 const output = r.output || {};
-                
+
                 if (r.name === 'area-xlsx-import') {
                     return (
                         <Space direction="vertical" size={0}>
@@ -179,7 +179,7 @@ const Jobs = () => {
             render: (_, r) => {
                 const output = r.output || {};
                 const data = r.data || {};
-                
+
                 // Check if file exists (from output or data)
                 const hasFile = r.state === 'completed' && (output.filePath || data.path);
                 const filename = output.filename || output.originalname || data.savedFilename || data.originalname || 'file';
@@ -193,7 +193,7 @@ const Jobs = () => {
                                 icon={downloadingJobId === r.id ? <LoadingOutlined /> : <DownloadOutlined />}
                                 onClick={() => handleDownload(r.id, filename)}
                                 loading={downloadingJobId === r.id}
-                                size="small"
+                                size="medium"
                             >
                                 Tải
                             </Button>

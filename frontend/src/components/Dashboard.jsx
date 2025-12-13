@@ -569,7 +569,7 @@ const Dashboard = () => {
           </div>
 
           {showFilters && (
-            <Card size="small" style={{ marginBottom: 16, backgroundColor: '#f5f5f5' }}>
+            <Card size="medium" style={{ marginBottom: 16, backgroundColor: '#f5f5f5' }}>
               <Row gutter={[16, 16]}>
                 <Col xs={24} sm={12} md={8} lg={6}>
                   <div style={{ marginBottom: 4 }}>

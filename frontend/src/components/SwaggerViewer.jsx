@@ -592,7 +592,7 @@ const SwaggerViewer = () => {
                   <Text type="secondary" style={{ fontSize: 12 }}>Possible values: </Text>
                   <Space wrap>
                     {prop.enum.map((value) => (
-                      <Tag key={value} size="small">{value}</Tag>
+                      <Tag key={value} size="medium">{value}</Tag>
                     ))}
                   </Space>
                 </div>
@@ -690,7 +690,7 @@ const SwaggerViewer = () => {
               }}
               styles={{ body: { padding: 16 } }}
             >
-              <Space direction="vertical" size="small" style={{ width: '100%' }}>
+              <Space direction="vertical" size="medium" style={{ width: '100%' }}>
                 <Text style={{ color: '#fff', fontWeight: 'bold' }}>
                   <GlobalOutlined style={{ marginRight: 8 }} />
                   Available Servers
@@ -757,7 +757,7 @@ const SwaggerViewer = () => {
 
   const renderEndpointContent = (endpoint) => (
     <div style={{ padding: 16, background: '#f5f5f5', borderRadius: 4 }}>
-      <Space direction="vertical" size="small" style={{ width: '100%' }}>
+      <Space direction="vertical" size="medium" style={{ width: '100%' }}>
         <div>
           <Text strong>Summary:</Text>
           <Text style={{ marginLeft: 8 }}>{endpoint.summary}</Text>
@@ -827,7 +827,7 @@ const SwaggerViewer = () => {
             <div style={{ marginTop: 8 }}>
               <Tabs
                 defaultActiveKey="0"
-                size="small"
+                size="medium"
                 items={Object.entries(endpoint.details.responses).map(([code, response], idx) => ({
                   key: idx.toString(),
                   label: (
@@ -895,7 +895,7 @@ const SwaggerViewer = () => {
 
         <Button
           type="primary"
-          size="small"
+          size="medium"
           icon={<PlayCircleOutlined />}
           onClick={() => setSelectedEndpoint(endpoint)}
           style={{ marginTop: 8 }}
@@ -952,7 +952,7 @@ const SwaggerViewer = () => {
                   <div key={index} style={{ marginBottom: 12 }}>
                     <Collapse
                       ghost
-                      size="small"
+                      size="medium"
                       expandIcon={({ isActive }) => isActive ? <MinusOutlined /> : <PlusOutlined />}
                       items={[{
                         key: index.toString(),
@@ -1005,7 +1005,7 @@ const SwaggerViewer = () => {
               </Space>
             ),
             children: (
-              <Descriptions bordered size="small">
+              <Descriptions bordered size="medium">
                 <Descriptions.Item label="Type" span={3}>
                   <Tag color="blue">{scheme.type}</Tag>
                 </Descriptions.Item>
@@ -1115,7 +1115,7 @@ const SwaggerViewer = () => {
                         <div key={index} style={{ marginBottom: 8 }}>
                           <Collapse
                             ghost
-                            size="small"
+                            size="medium"
                             expandIcon={({ isActive }) => isActive ? <MinusOutlined /> : <PlusOutlined />}
                             items={[{
                               key: index.toString(),
@@ -1135,7 +1135,7 @@ const SwaggerViewer = () => {
                               ),
                               children: (
                                 <div style={{ padding: 12, background: '#fff', borderRadius: 4, border: '1px solid #d9d9d9' }}>
-                                  <Space direction="vertical" size="small" style={{ width: '100%' }}>
+                                  <Space direction="vertical" size="medium" style={{ width: '100%' }}>
                                     <div>
                                       <Text strong>Summary:</Text>
                                       <Text style={{ marginLeft: 8 }}>{endpoint.summary}</Text>
@@ -1150,7 +1150,7 @@ const SwaggerViewer = () => {
 
                                     <Button
                                       type="primary"
-                                      size="small"
+                                      size="medium"
                                       icon={<PlayCircleOutlined />}
                                       onClick={() => setSelectedEndpoint(endpoint)}
                                       style={{ marginTop: 8 }}
@@ -1170,7 +1170,7 @@ const SwaggerViewer = () => {
 
                 <Button
                   type="dashed"
-                  size="small"
+                  size="medium"
                   icon={<PlayCircleOutlined />}
                   onClick={() => {
                     setExampleData(generateExample(schema));
@@ -1249,7 +1249,7 @@ const SwaggerViewer = () => {
                         </Space>
                       }
                       description={
-                        <Space direction="vertical" size="small" style={{ width: '100%' }}>
+                        <Space direction="vertical" size="medium" style={{ width: '100%' }}>
                           <Text type="secondary">{param.description}</Text>
                           {param.schema && (
                             <Text code>Type: {param.schema.type}</Text>
@@ -1373,7 +1373,7 @@ const SwaggerViewer = () => {
         type="error"
         showIcon
         action={
-          <Button size="small" onClick={fetchSwaggerData}>
+          <Button size="medium" onClick={fetchSwaggerData}>
             Thử lại
           </Button>
         }

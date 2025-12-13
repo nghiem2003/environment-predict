@@ -114,7 +114,7 @@ exports.checkDuplicate = async (req, res) => {
  */
 exports.getAllMLModels = async (req, res) => {
   try {
-    const { is_active, area_type, search } = req.query;
+    const { is_active, area_type, search, limit, offset } = req.query;
 
     const whereClause = {};
     if (is_active !== undefined) {
@@ -127,7 +127,7 @@ exports.getAllMLModels = async (req, res) => {
       whereClause.name = { [Op.iLike]: `%${search}%` };
     }
 
-    const models = await MLModel.findAll({
+    const queryOptions = {
       where: whereClause,
       include: [
         {
@@ -140,23 +140,35 @@ exports.getAllMLModels = async (req, res) => {
         },
       ],
       order: [['createdAt', 'DESC']],
-    });
+    };
+
+    // Optional pagination - if limit/offset provided, use pagination
+    if (limit !== undefined) {
+      queryOptions.limit = parseInt(limit, 10);
+    }
+    if (offset !== undefined) {
+      queryOptions.offset = parseInt(offset, 10);
+    }
+
+    // Use findAndCountAll for consistent total count
+    const { count, rows } = await MLModel.findAndCountAll(queryOptions);
 
     // Debug log for first model's natureElements
-    if (models.length > 0 && models[0].natureElements && models[0].natureElements.length > 0) {
-      const firstElement = models[0].natureElements[0];
-      logger.info('Sample natureElement structure:', {
+    if (rows.length > 0 && rows[0].natureElements && rows[0].natureElements.length > 0) {
+      const firstElement = rows[0].natureElements[0];
+      logger.debug('Sample natureElement structure:', {
         id: firstElement.id,
         name: firstElement.name,
         ModelNatureElement: firstElement.ModelNatureElement,
-        ModelNatureElement_dataValues: firstElement.ModelNatureElement?.dataValues,
       });
     }
 
     return res.status(200).json({
       success: true,
-      data: models,
-      count: models.length,
+      data: rows,
+      total: count,
+      // Legacy support
+      count: rows.length,
     });
   } catch (error) {
     logger.error('Get All ML Models Error:', {

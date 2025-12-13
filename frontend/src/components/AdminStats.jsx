@@ -909,7 +909,7 @@ const AdminStats = () => {
                             </Row>
 
                             {/* === BỘ LỌC THỜI GIAN CHO THỐNG KÊ DỰ ĐOÁN === */}
-                            <Card size="small">
+                            <Card size="medium">
                                 <Space wrap>
                                     <Text strong>Xem thống kê dự đoán tại thời điểm:</Text>
                                     <DatePicker
@@ -1145,7 +1145,7 @@ const AdminStats = () => {
                                 extra={
                                     <Space>
                                         <Segmented
-                                            size="small"
+                                            size="medium"
                                             value={trendPeriod}
                                             onChange={(val) => setTrendPeriod(val)}
                                             options={[
@@ -1168,7 +1168,7 @@ const AdminStats = () => {
                                         {stats.statsByAreaType.byAreaType.map(item => (
                                             <Col xs={24} md={12} key={item.type}>
                                                 <Card
-                                                    size="small"
+                                                    size="medium"
                                                     title={
                                                         <Space>
                                                             <Tag color={item.type === 'oyster' ? 'green' : 'blue'}>
@@ -1263,7 +1263,7 @@ const AdminStats = () => {
                                 title={t('stats.emailCumulative')}
                                 extra={
                                     <Segmented
-                                        size="small"
+                                        size="medium"
                                         value={timeGranularity}
                                         onChange={(val) => setTimeGranularity(val)}
                                         options={[

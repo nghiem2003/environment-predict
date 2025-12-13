@@ -391,7 +391,7 @@ function AreaMarker({ area, prediction, onAreaClick, onViewDetails, selectedArea
                         <Title level={5} style={{ margin: '0 0 8px 0' }}>
                             {area.name}
                         </Title>
-                        <Space direction="vertical" size="small" style={{ width: '100%' }}>
+                        <Space direction="vertical" size="medium" style={{ width: '100%' }}>
                             <div>
                                 <Text strong>Loại: </Text>
                                 <Tag color={area.area_type === 'oyster' ? 'blue' : 'green'}>
@@ -400,7 +400,7 @@ function AreaMarker({ area, prediction, onAreaClick, onViewDetails, selectedArea
                             </div>
                             <div>
                                 <Text strong>Dự báo: </Text>
-                                <Space direction="vertical" size="small">
+                                <Space direction="vertical" size="medium">
                                     <PredictionBadge prediction={prediction} />
                                 </Space>
                             </div>
@@ -430,7 +430,7 @@ function AreaMarker({ area, prediction, onAreaClick, onViewDetails, selectedArea
                                 {prediction && prediction.id && !(isDetailView && selectedArea && area.id === selectedArea.id) && (
                                     <Button
                                         type="primary"
-                                        size="small"
+                                        size="medium"
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             onViewDetails(area);
@@ -442,7 +442,7 @@ function AreaMarker({ area, prediction, onAreaClick, onViewDetails, selectedArea
                                 )}
                                 <Button
                                     type="default"
-                                    size="small"
+                                    size="medium"
                                     onClick={(e) => {
                                         e.stopPropagation();
                                         navigate(`/email-subscription/${area.id}`);
@@ -961,14 +961,14 @@ const InteractiveMap = () => {
                         <>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                                 <Button
-                                    size="small"
+                                    size="medium"
                                     onClick={() => setIsSidebarCollapsed(true)}
                                     icon={<ArrowLeftOutlined />}
                                 >
                                     {t('common.hide') || 'Thu gọn'}
                                 </Button>
                                 <Button
-                                    size="small"
+                                    size="medium"
                                     onClick={() => setIsFilterCardVisible(!isFilterCardVisible)}
                                     className="filter-button"
                                     icon={<FilterOutlined />}
@@ -995,10 +995,10 @@ const InteractiveMap = () => {
                                     <Text strong style={{ color: '#1890ff' }}>
                                         {filteredAreas.length} {t('area_list.title').toLowerCase()}
                                     </Text>
-                                    {loading && <Spin size="small" style={{ marginLeft: '8px' }} />}
+                                    {loading && <Spin size="medium" style={{ marginLeft: '8px' }} />}
                                     {window.location.hostname === 'localhost' && (
                                         <Button
-                                            size="small"
+                                            size="medium"
                                             onClick={debugData}
                                             style={{ marginLeft: '8px' }}
                                         >
@@ -1047,18 +1047,18 @@ const InteractiveMap = () => {
                                                                 {predictions[area.id] && (
                                                                     <PredictionBadge
                                                                         prediction={predictions[area.id]}
-                                                                        size="small"
+                                                                        size="medium"
                                                                     />
                                                                 )}
                                                             </Space>
                                                         }
                                                         description={
-                                                            <Space direction="vertical" size="small" style={{ width: '100%' }}>
+                                                            <Space direction="vertical" size="medium" style={{ width: '100%' }}>
                                                                 <Text type="secondary" style={{ fontSize: '12px' }}>
                                                                     {area.Province?.name}, {area.District?.name}
                                                                 </Text>
                                                                 <Space>
-                                                                    <Tag color={area.area_type === 'oyster' ? 'blue' : 'green'} size="small">
+                                                                    <Tag color={area.area_type === 'oyster' ? 'blue' : 'green'} size="medium">
                                                                         {area.area_type === 'oyster' ? t('common.oyster') : t('common.cobia')}
                                                                     </Tag>
                                                                     {area.area && (
@@ -1102,7 +1102,7 @@ const InteractiveMap = () => {
 
                             {selectedArea && (
                                 <Card
-                                    size="small"
+                                    size="medium"
                                     style={{ marginBottom: '16px' }}
                                     title={
                                         <Space>
@@ -1132,7 +1132,7 @@ const InteractiveMap = () => {
                                         )}
                                         <div>
                                             <Text strong>{t('detail.location')}: </Text>
-                                            <Space size="small" wrap style={{ width: '100%', marginTop: '4px' }}>
+                                            <Space size="medium" wrap style={{ width: '100%', marginTop: '4px' }}>
                                                 <Tag color="geekblue">WGS84: Lat {Number(selectedArea.latitude).toFixed(6)}°, Lon {Number(selectedArea.longitude).toFixed(6)}°</Tag>
                                                 {(() => {
                                                     const res = convertWGS84ToVN2000(selectedArea.latitude, selectedArea.longitude);
@@ -1208,10 +1208,10 @@ const InteractiveMap = () => {
             {/* Right Detail Card - only in detail view and when visible and has prediction */}
             {isDetailView && isDetailCardVisible && selectedArea && predictions[selectedArea.id] && (
                 <div className="right-detail">
-                    <Card size="small" title="Chi tiết yếu tố môi trường">
+                    <Card size="medium" title="Chi tiết yếu tố môi trường">
                         <Space direction="vertical" style={{ width: '100%' }}>
                             {window.location.hostname === 'localhost' && (
-                                <Button onClick={() => fetchHistory(selectedArea?.id)} type="dashed" size="small">
+                                <Button onClick={() => fetchHistory(selectedArea?.id)} type="dashed" size="medium">
                                     Test History API
                                 </Button>
                             )}
@@ -1225,7 +1225,7 @@ const InteractiveMap = () => {
                             {/* Show message if no data */}
                             {!predictions[selectedArea.id]?.NaturalElements?.length && Object.keys(historyByElement).length === 0 && (
                                 <div style={{ textAlign: 'center', padding: '20px' }}>
-                                    <Spin size="small" />
+                                    <Spin size="medium" />
                                     <Text type="secondary" style={{ display: 'block', marginTop: '8px' }}>Đang tải dữ liệu...</Text>
                                 </div>
                             )}
@@ -1242,7 +1242,7 @@ const InteractiveMap = () => {
                                 ).map((el) => (
                                     <div key={el.id || el.name} style={{ marginBottom: '12px', padding: '8px', border: '1px solid #f0f0f0', borderRadius: '4px' }}>
                                         <Space style={{ width: '100%', justifyContent: 'space-between', marginBottom: '4px' }}>
-                                            <Space size="small">
+                                            <Space size="medium">
                                                 <Text strong>{el.name}</Text>
                                                 {(el.description || elementMeta[el.name]?.description) && (
                                                     <Tooltip title={el.description || elementMeta[el.name]?.description} placement="top">
@@ -1384,7 +1384,7 @@ const InteractiveMap = () => {
             {/* Right Floating Filter Card */}
             {!isDetailView && isFilterCardVisible && (
                 <div className="right-filter">
-                    <Card size="small" title={t('common.filter')}>
+                    <Card size="medium" title={t('common.filter')}>
                         <Space direction="vertical" style={{ width: '100%' }}>
                             <div>
                                 <Text strong style={{ fontSize: '12px', color: '#666' }}>{t('filter.areaType')}</Text>
@@ -1394,7 +1394,7 @@ const InteractiveMap = () => {
                                     onChange={setAreaType}
                                     style={{ width: '100%', marginTop: '4px' }}
                                     allowClear
-                                    size="small"
+                                    size="medium"
                                 >
                                     <Option value="oyster">{t('common.oyster')}</Option>
                                     <Option value="cobia">{t('common.cobia')}</Option>
@@ -1409,7 +1409,7 @@ const InteractiveMap = () => {
                                     onChange={handleProvinceChange}
                                     style={{ width: '100%', marginTop: '4px' }}
                                     allowClear
-                                    size="small"
+                                    size="medium"
                                     disabled={token && jwtDecode(token)?.role === 'manager'}
                                 >
                                     {provinces.map(province => (
@@ -1428,7 +1428,7 @@ const InteractiveMap = () => {
                                     onChange={setDistrictFilter}
                                     style={{ width: '100%', marginTop: '4px' }}
                                     allowClear
-                                    size="small"
+                                    size="medium"
                                     disabled={token && jwtDecode(token)?.role === 'manager' && jwtDecode(token)?.district}
                                 >
                                     {filteredDistricts.map(district => (
@@ -1440,7 +1440,7 @@ const InteractiveMap = () => {
                             </div>
 
                             <Button
-                                size="small"
+                                size="medium"
                                 onClick={() => setIsFilterCardVisible(false)}
                                 style={{ width: '100%', marginTop: '8px' }}
                             >

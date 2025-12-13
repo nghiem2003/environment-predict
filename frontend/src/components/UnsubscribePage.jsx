@@ -142,9 +142,9 @@ const UnsubscribePage = () => {
                   </Space>
                 }
                 style={{ marginTop: 24 }}
-                size="small"
+                size="medium"
               >
-                <Descriptions column={1} size="small">
+                <Descriptions column={1} size="medium">
                   <Descriptions.Item label="Tên khu vực">
                     <Text strong>{areaInfo.name}</Text>
                   </Descriptions.Item>

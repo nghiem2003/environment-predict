@@ -53,6 +53,13 @@ const MLModelManagement = () => {
   const [selectedKeys, setSelectedKeys] = useState([]);
   const [elementConfig, setElementConfig] = useState({}); // Store input_order and is_required
 
+  // Pagination for models
+  const [modelPagination, setModelPagination] = useState({
+    current: 1,
+    pageSize: 10,
+    total: 0,
+  });
+
   // Nature element creation modal
   const [isAddElementModalVisible, setIsAddElementModalVisible] = useState(false);
 
@@ -71,13 +78,24 @@ const MLModelManagement = () => {
   const [addingElementToModel, setAddingElementToModel] = useState(null);
   const [searchElementValue, setSearchElementValue] = useState('');
 
-  // Fetch all ML models
-  const fetchModels = async () => {
+  // Fetch all ML models with optional pagination
+  const fetchModels = async (page = 1, pageSize = 10, usePagination = false) => {
     setLoading(true);
     try {
-      const response = await axios.get('/api/express/ml-models');
+      const params = {};
+
+      // Optional pagination - only add params if usePagination is true
+      if (usePagination) {
+        params.limit = pageSize;
+        params.offset = (page - 1) * pageSize;
+      }
+
+      const response = await axios.get('/api/express/ml-models', { params });
       console.log('Models API response:', response.data);
+
       const modelsData = response.data.data || [];
+      const total = response.data.total || modelsData.length;
+
       if (modelsData.length > 0) {
         console.log('First model sample:', modelsData[0]);
         console.log('First model natureElements:', modelsData[0].natureElements);
@@ -86,7 +104,13 @@ const MLModelManagement = () => {
           console.log('ModelNatureElement:', modelsData[0].natureElements[0].ModelNatureElement);
         }
       }
+
       setModels(modelsData);
+      setModelPagination({
+        current: page,
+        pageSize: pageSize,
+        total: total,
+      });
     } catch (error) {
       console.error('Error fetching ML models:', error);
       message.error('Không thể tải danh sách model');
@@ -691,12 +715,12 @@ const MLModelManagement = () => {
       width: 220,
       align: 'center',
       render: (_, record) => (
-        <Space size="small">
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'nowrap', alignItems: 'center', justifyContent: 'center' }}>
           {!record.is_default && (
             <Tooltip title="Upload file model">
               <Button
                 icon={<UploadOutlined />}
-                size="small"
+                size="medium"
                 onClick={() => showUploadModal(record)}
               />
             </Tooltip>
@@ -705,7 +729,7 @@ const MLModelManagement = () => {
             <Button
               type="primary"
               icon={<EditOutlined />}
-              size="small"
+              size="medium"
               onClick={() => showModal(record)}
               disabled={record.is_default}
             />
@@ -713,7 +737,7 @@ const MLModelManagement = () => {
           <Tooltip title={record.is_active ? 'Tắt model' : 'Kích hoạt model'}>
             <Button
               icon={<PoweroffOutlined />}
-              size="small"
+              size="medium"
               onClick={() => handleToggleStatus(record.id, record.is_active)}
               style={{
                 color: record.is_active ? '#ff4d4f' : '#52c41a',
@@ -726,7 +750,7 @@ const MLModelManagement = () => {
               <Button
                 danger
                 icon={<DeleteOutlined />}
-                size="small"
+                size="medium"
                 onClick={() => handleDeleteModel(record)}
               />
             </Tooltip>
@@ -736,13 +760,13 @@ const MLModelManagement = () => {
               <Button
                 danger
                 icon={<DeleteOutlined />}
-                size="small"
+                size="medium"
                 disabled
                 style={{ opacity: 0.3 }}
               />
             </Tooltip>
           )}
-        </Space>
+        </div>
       ),
     },
   ];
@@ -789,9 +813,16 @@ const MLModelManagement = () => {
                   rowKey="id"
                   loading={loading}
                   pagination={{
-                    pageSize: 10,
+                    current: modelPagination.current,
+                    pageSize: modelPagination.pageSize,
+                    total: modelPagination.total,
                     showSizeChanger: true,
                     showTotal: (total) => `Tổng số ${total} model`,
+                    onChange: (page, pageSize) => {
+                      // Can switch between server-side and client-side pagination
+                      // Set usePagination = true to enable server-side pagination
+                      fetchModels(page, pageSize, false); // false = client-side (default)
+                    },
                   }}
                   expandable={{
                     expandedRowRender: (record) => {
@@ -986,7 +1017,7 @@ const MLModelManagement = () => {
                 <span>Chọn yếu tố môi trường</span>
                 <Button
                   type="link"
-                  size="small"
+                  size="medium"
                   icon={<PlusOutlined />}
                   onClick={showAddElementModal}
                   style={{ padding: 0 }}
@@ -1038,7 +1069,7 @@ const MLModelManagement = () => {
                         <strong>{element?.name}</strong>
                       </Col>
                       <Col span={7}>
-                        <Space size="small">
+                        <Space size="medium">
                           <span>Thứ tự:</span>
                           <InputNumber
                             min={0}
@@ -1047,20 +1078,20 @@ const MLModelManagement = () => {
                             onChange={(value) =>
                               updateElementConfig(key, 'input_order', value)
                             }
-                            size="small"
+                            size="medium"
                             style={{ width: 60 }}
                           />
                         </Space>
                       </Col>
                       <Col span={7}>
-                        <Space size="small">
+                        <Space size="medium">
                           <span>Bắt buộc:</span>
                           <Switch
                             checked={elementConfig[key]?.is_required !== false}
                             onChange={(checked) =>
                               updateElementConfig(key, 'is_required', checked)
                             }
-                            size="small"
+                            size="medium"
                           />
                         </Space>
                       </Col>
@@ -1247,7 +1278,7 @@ const MLModelManagement = () => {
                               : 'Sử dụng giá trị chung'}
                           </Tag>
                           <Button
-                            size="small"
+                            size="medium"
                             type="primary"
                             onClick={() => setEditingFallbackValue(
                               selectedElement.ModelNatureElement.fallback_value !== null
@@ -1268,7 +1299,7 @@ const MLModelManagement = () => {
                                 okButtonProps={{ danger: true }}
                               >
                                 <Button
-                                  size="small"
+                                  size="medium"
                                   danger
                                   loading={savingFallback}
                                 >
@@ -1287,14 +1318,14 @@ const MLModelManagement = () => {
                           />
                           <Button
                             type="primary"
-                            size="small"
+                            size="medium"
                             loading={savingFallback}
                             onClick={handleSaveFallbackValue}
                           >
                             Lưu
                           </Button>
                           <Button
-                            size="small"
+                            size="medium"
                             onClick={() => setEditingFallbackValue(null)}
                           >
                             Hủy

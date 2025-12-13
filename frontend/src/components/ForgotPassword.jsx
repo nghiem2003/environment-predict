@@ -142,7 +142,7 @@ const ForgotPassword = () => {
               <Steps
                 current={currentStep}
                 items={steps}
-                size="small"
+                size="medium"
                 style={{ marginBottom: '24px' }}
               />
 

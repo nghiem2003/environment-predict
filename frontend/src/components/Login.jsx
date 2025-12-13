@@ -213,7 +213,7 @@ const Login = () => {
                     style={{ marginBottom: '16px' }}
                     action={
                       <Button
-                        size="small"
+                        size="medium"
                         type="text"
                         onClick={() => setError('')}
                       >
@@ -301,7 +301,7 @@ const Login = () => {
                     >
                       {loading ? (
                         <Space>
-                          <Spin size="small" />
+                          <Spin size="medium" />
                           <span>Đang đăng nhập...</span>
                         </Space>
                       ) : (

@@ -33,21 +33,47 @@ const NatureElementManagement = () => {
     const [form] = Form.useForm();
     const [categories, setCategories] = useState([]);
 
-    // Fetch all nature elements
-    const fetchElements = async () => {
+    // Pagination state
+    const [pagination, setPagination] = useState({
+        current: 1,
+        pageSize: 15,
+        total: 0,
+    });
+
+    // Fetch nature elements with optional pagination
+    const fetchElements = async (page = 1, pageSize = 15, usePagination = false) => {
         setLoading(true);
         try {
-            const response = await axios.get('/api/express/nature-elements');
-            const data = response.data?.data;
-            setElements(data?.elements || []);
+            const params = {};
 
-            // Get unique categories
-            const uniqueCategories = [...new Set(
-                (data?.elements || [])
-                    .map(el => el.category)
-                    .filter(Boolean)
-            )];
-            setCategories(uniqueCategories);
+            // Optional pagination - only add params if usePagination is true
+            if (usePagination) {
+                params.limit = pageSize;
+                params.offset = (page - 1) * pageSize;
+            }
+
+            const response = await axios.get('/api/express/nature-elements', { params });
+            const data = response.data?.data;
+
+            setElements(data?.elements || []);
+            setPagination({
+                current: page,
+                pageSize: pageSize,
+                total: data?.total || (data?.elements || []).length,
+            });
+
+            // Get unique categories from response
+            if (data?.categories) {
+                setCategories(data.categories);
+            } else {
+                // Fallback: calculate from elements
+                const uniqueCategories = [...new Set(
+                    (data?.elements || [])
+                        .map(el => el.category)
+                        .filter(Boolean)
+                )];
+                setCategories(uniqueCategories);
+            }
         } catch (error) {
             console.error('Error fetching nature elements:', error);
             message.error('Không thể tải danh sách yếu tố môi trường');
@@ -166,16 +192,17 @@ const NatureElementManagement = () => {
         {
             title: 'Hành động',
             key: 'actions',
-            width: 120,
+            fixed: 'right',
+            width: 'max-content',
             align: 'center',
             render: (_, record) => (
-                <Space size="small">
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'nowrap', alignItems: 'center', justifyContent: 'center' }}>
                     <Tooltip title="Chỉnh sửa">
                         <Button
                             type="primary"
                             icon={<EditOutlined />}
-                            size="small"
                             onClick={() => showModal(record)}
+
                         />
                     </Tooltip>
                     <Popconfirm
@@ -194,10 +221,10 @@ const NatureElementManagement = () => {
                         okButtonProps={{ danger: true }}
                     >
                         <Tooltip title="Xóa">
-                            <Button danger icon={<DeleteOutlined />} size="small" />
+                            <Button danger icon={<DeleteOutlined />} />
                         </Tooltip>
                     </Popconfirm>
-                </Space>
+                </div>
             ),
         },
     ];
@@ -227,9 +254,16 @@ const NatureElementManagement = () => {
                     rowKey="id"
                     loading={loading}
                     pagination={{
-                        pageSize: 15,
+                        current: pagination.current,
+                        pageSize: pagination.pageSize,
+                        total: pagination.total,
                         showSizeChanger: true,
                         showTotal: (total) => `Tổng số ${total} yếu tố`,
+                        onChange: (page, pageSize) => {
+                            // Can switch between server-side and client-side pagination
+                            // Set usePagination = true to enable server-side pagination
+                            fetchElements(page, pageSize, false); // false = client-side (default)
+                        },
                     }}
                     scroll={{ x: 'max-content' }}
                 />
