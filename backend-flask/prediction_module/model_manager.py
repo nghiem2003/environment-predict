@@ -1,40 +1,36 @@
 """
 Model Manager Module
-Handles dynamic model loading and reloading
+Handles dynamic model loading and reloading with enhanced validation
 """
 
 import os
-from . import services
+from .model_loader import model_loader
 from config import discover_model_paths
 
 def reload_models():
     """
-    Reload all models from the model directory.
+    Reload all models from the model directory using enhanced ModelLoader.
     This allows hot-reloading of models without restarting Flask.
+    Thread-safe operation with validation and retry logic.
     
     Returns:
         tuple: (success: bool, message: str, model_count: int)
     """
     try:
-        print("Reloading models...")
+        print("\n" + "="*60)
+        print("Model Reload Requested")
+        print("="*60)
         
-        # Clear existing models
-        services.models.clear()
-        
-        # Rediscover models
-        new_model_paths = discover_model_paths()
+        # Rediscover models from both directories
+        new_model_paths = discover_model_paths(['model', 'shared_models'])
         
         if not new_model_paths:
-            return False, "No models found in model directory", 0
+            return False, "No models found in model directories", 0
         
-        # Load all models
-        services.load_all_models(new_model_paths)
+        # Use ModelLoader's enhanced loading with validation, retry, and atomic swap
+        success, message, model_count = model_loader.reload_models(new_model_paths)
         
-        model_count = len(services.models)
-        message = f"Successfully reloaded {model_count} model(s)"
-        print(message)
-        
-        return True, message, model_count
+        return success, message, model_count
         
     except Exception as e:
         error_msg = f"Error reloading models: {str(e)}"
@@ -43,29 +39,43 @@ def reload_models():
 
 def get_model_info():
     """
-    Get information about currently loaded models.
+    Get detailed information about currently loaded models.
     
     Returns:
-        dict: Model information including paths and status
+        dict: Model information including paths, status, metadata, and loading state
     """
     from config import MODEL_PATHS
     
-    loaded_models = services.get_available_models()
+    # Get status from ModelLoader
+    status = model_loader.get_status()
     
     model_info = []
-    for model_name in loaded_models:
-        path = MODEL_PATHS.get(model_name, 'Unknown')
+    all_metadata = status.get('models', {})
+    
+    for model_name in status.get('available_models', []):
+        metadata = all_metadata.get(model_name, {})
+        path = metadata.get('path', MODEL_PATHS.get(model_name, 'Unknown'))
         file_exists = os.path.exists(path) if path != 'Unknown' else False
         
-        model_info.append({
+        info = {
             'name': model_name,
             'path': path,
             'loaded': True,
             'file_exists': file_exists,
-        })
+            'status': metadata.get('status', 'unknown'),
+            'loaded_at': metadata.get('loaded_at'),
+            'file_size_mb': round(metadata.get('file_size', 0) / (1024 * 1024), 2),
+        }
+        
+        # Add error info if failed
+        if metadata.get('status') == 'failed':
+            info['error'] = metadata.get('error', 'Unknown error')
+        
+        model_info.append(info)
     
     return {
-        'total_models': len(loaded_models),
+        'total_models': status.get('total_models', 0),
+        'is_loading': status.get('is_loading', False),
         'models': model_info,
     }
 

@@ -1,7 +1,10 @@
 # /project_flask_api/prediction_module/routes.py
 
 from flask import Blueprint, request, jsonify, current_app
+from datetime import datetime
+import threading
 from . import services
+from .data_fetcher import run_daily_grid_retrieval
 
 prediction_api = Blueprint('prediction_api', __name__)
 
@@ -54,13 +57,75 @@ def trigger_fetch_data():
 
 @prediction_api.route('/status', methods=['GET'])
 def home():
+    """Enhanced status endpoint with detailed model information"""
     from .model_manager import get_model_info
+    from .model_loader import model_loader
+    
     model_info = get_model_info()
+    loader_status = model_loader.get_status()
+    
+    # Calculate health status
+    total_models = model_info.get('total_models', 0)
+    is_loading = model_info.get('is_loading', False)
+    
+    # Count failed models
+    failed_count = sum(1 for m in model_info.get('models', []) if m.get('status') == 'failed')
+    
+    # Determine overall health
+    if is_loading:
+        health = 'loading'
+    elif total_models == 0:
+        health = 'unhealthy'
+    elif failed_count > 0:
+        health = 'degraded'
+    else:
+        health = 'healthy'
+    
     return jsonify({
+        'status': 'running',
+        'health': health,
         'message': 'Prediction module is running!',
-        'available_models': services.get_available_models(),
-        'model_details': model_info
+        'model_loader': {
+            'is_loading': is_loading,
+            'total_models': total_models,
+            'failed_models': failed_count,
+            'available_models': services.get_available_models(),
+        },
+        'model_details': model_info.get('models', []),
+        'timestamp': datetime.now().isoformat()
     })
+
+@prediction_api.route('/health', methods=['GET'])
+def health_check():
+    """
+    Simple health check endpoint for load balancers
+    Returns 200 if ready, 503 if loading or unhealthy
+    """
+    from .model_manager import get_model_info
+    
+    model_info = get_model_info()
+    total_models = model_info.get('total_models', 0)
+    is_loading = model_info.get('is_loading', False)
+    
+    if is_loading:
+        return jsonify({
+            'status': 'loading',
+            'ready': False,
+            'message': 'Models are being loaded'
+        }), 503
+    
+    if total_models == 0:
+        return jsonify({
+            'status': 'unhealthy',
+            'ready': False,
+            'message': 'No models loaded'
+        }), 503
+    
+    return jsonify({
+        'status': 'healthy',
+        'ready': True,
+        'total_models': total_models
+    }), 200
 
 @prediction_api.route('/reload_models', methods=['POST'])
 def reload_models_endpoint():

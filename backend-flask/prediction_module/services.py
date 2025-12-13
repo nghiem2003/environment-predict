@@ -9,23 +9,23 @@ import xarray as xr
 import gsw
 
 from config import REQUIRED_FIELDS,DEFAULT_FALLBACK_VALUES, DATA_CACHE_PATH
+from .model_loader import model_loader
 
-models = {}
+# Backward compatibility - expose model_loader's models dict
+models = model_loader.models
 
 
-# (Hàm load_all_models và get_available_models giữ nguyên)
+# Enhanced load_all_models using ModelLoader
 def load_all_models(model_paths):
-    for model_name, path in model_paths.items():
-        try:
-            with open(path, 'rb') as file:
-                models[model_name] = joblib.load(file) 
-            print(f"Model '{model_name}' loaded successfully from {path}")
-        except Exception as e:
-            print(f"Error loading model '{model_name}': {e}")
-    return models
+    """Load all models using enhanced ModelLoader with validation and retry"""
+    success, message, count = model_loader.load_all_models(model_paths)
+    if not success:
+        print(f"Warning: {message}")
+    return model_loader.models
 
 def get_available_models():
-    return list(models.keys())
+    """Get list of available model names"""
+    return model_loader.get_available_models()
 def get_ocean_data(existing_data, target_depth, username, password):
     """
     Lấy dữ liệu hải dương học (Tối ưu: chỉ lấy những gì còn thiếu ở độ sâu chỉ định).
@@ -440,7 +440,14 @@ def process_prediction_request(user_data, species, credentials):
                 if O2_sat_ml_L > 0:
                     final_features['O2Sat'] = (final_features['O2ml_L'] / O2_sat_ml_L) * 100
     
-    # 4. Thực hiện dự đoán
+    # 4. Check if models are currently being loaded
+    if model_loader.is_loading():
+        return {
+            "error": "Models are currently being reloaded. Please try again in a moment.",
+            "retry_after": 5  # seconds
+        }, 503, final_features
+    
+    # 5. Thực hiện dự đoán
     model_name_from_req = user_data.get("model")
     default_model = f"{species}_stack"
     model_name = model_name_from_req or default_model
@@ -453,9 +460,26 @@ def process_prediction_request(user_data, species, credentials):
         else:
             final_input_dict[field] = value
     prediction_input_list = [final_input_dict[field] for field in REQUIRED_FIELDS]
-    model = models.get(model_name)
+    
+    # Use thread-safe model retrieval
+    model = model_loader.get_model(model_name)
     if not model:
-        return {"error": f"Model '{model_name}' not found"}, 404, final_features
+        # Provide helpful error with available models
+        available = model_loader.get_available_models()
+        return {
+            "error": f"Model '{model_name}' not found",
+            "available_models": available,
+            "suggestion": f"Try using one of: {', '.join(available[:3])}" if available else "No models loaded"
+        }, 404, final_features
+    
+    # Verify model is loaded correctly
+    model_meta = model_loader.get_model_metadata(model_name)
+    if model_meta and model_meta.get('status') == 'failed':
+        return {
+            "error": f"Model '{model_name}' failed to load",
+            "details": model_meta.get('error', 'Unknown error')
+        }, 500, final_features
+    
     input_array = np.array(prediction_input_list).reshape(1, -1)
     prediction_val = model.predict(input_array)
     rounded_prediction = round(prediction_val[0])
