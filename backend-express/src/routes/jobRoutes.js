@@ -136,7 +136,7 @@ router.post('/export/predictions', authenticate, authorize(['admin', 'manager'])
         // Build description for user to identify the export
         const descParts = [];
         if (areaName) descParts.push(`Khu vực: ${areaName}`);
-        if (areaType) descParts.push(`Loại: ${areaType === 'oyster' ? 'Hàu' : areaType === 'cobia' ? 'Cá bớp' : areaType}`);
+        if (areaType) descParts.push(`Loại: ${areaType === 'oyster' ? 'Hàu' : areaType === 'cobia' ? 'Cá giò' : areaType}`);
         if (predictionResult !== undefined && predictionResult !== '') {
             const resultText = predictionResult == 1 ? 'Tốt' : predictionResult == 0 ? 'Trung bình' : predictionResult == -1 ? 'Kém' : predictionResult;
             descParts.push(`Kết quả: ${resultText}`);

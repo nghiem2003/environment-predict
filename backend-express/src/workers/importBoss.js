@@ -726,7 +726,7 @@ module.exports = (boss) => {
                         quarter: date ? `Quý ${quarter}` : '-',
                         month: date ? `Tháng ${month}` : '-',
                         areaName: prediction.Area?.name || '-',
-                        areaType: prediction.Area?.area_type === 'oyster' ? 'Hàu' : prediction.Area?.area_type === 'cobia' ? 'Cá bớp' : '-',
+                        areaType: prediction.Area?.area_type === 'oyster' ? 'Hàu' : prediction.Area?.area_type === 'cobia' ? 'Cá giò' : '-',
                         province: prediction.Area?.Province?.name || '-',
                         district: prediction.Area?.District?.name || '-',
                         predictionText: predictionText,

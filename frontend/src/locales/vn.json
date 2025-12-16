@@ -1,7 +1,7 @@
 {
   "welcomePage": {
     "title": "Chào mừng đến với Hệ thống Dự đoán Nuôi trồng Thủy sản",
-    "subtitle": "Chọn khu vực để bắt đầu dự đoán môi trường cho nuôi hàu và cá bớp.",
+    "subtitle": "Chọn khu vực để bắt đầu dự đoán môi trường cho nuôi hàu và cá giò.",
     "searchPlaceholder": "Tìm kiếm khu vực..."
   },
   "userList": {
@@ -147,7 +147,7 @@
       "type": "Chọn loại khu vực",
       "all": "Tất cả",
       "oyster": "Hàu",
-      "cobia": "Cá bớp",
+      "cobia": "Cá giò",
       "min_lat": "Vĩ độ tối thiểu",
       "max_lat": "Vĩ độ tối đa",
       "min_long": "Kinh độ tối thiểu",
@@ -235,7 +235,7 @@
     "back": "Trở về",
     "filter": "Bộ lọc",
     "oyster": "Hàu",
-    "cobia": "Cá bớp",
+    "cobia": "Cá giò",
     "viewDetails": "Xem chi tiết",
     "subscribeEmail": "Đăng ký email thông báo",
     "showDetails": "Hiện chi tiết",

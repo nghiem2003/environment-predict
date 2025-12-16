@@ -215,7 +215,7 @@ exports.getAreaStatsByType = async (req, res) => {
 
     const byType = distributionRaw.map((row) => ({
       type: row.area_type,
-      name: row.area_type === 'oyster' ? 'Hàu' : row.area_type === 'cobia' ? 'Cá bớp' : row.area_type,
+      name: row.area_type === 'oyster' ? 'Hàu' : row.area_type === 'cobia' ? 'Cá giò' : row.area_type,
       count: Number(row.get('count')) || 0,
     }));
 
@@ -265,7 +265,7 @@ exports.getAreaStatsCombined = async (req, res) => {
 
     const byType = byTypeRaw.map((row) => ({
       type: row.area_type,
-      name: row.area_type === 'oyster' ? 'Hàu' : row.area_type === 'cobia' ? 'Cá bớp' : row.area_type,
+      name: row.area_type === 'oyster' ? 'Hàu' : row.area_type === 'cobia' ? 'Cá giò' : row.area_type,
       count: Number(row.get('count')) || 0,
     }));
 
@@ -318,7 +318,7 @@ exports.getAreaStatsCombined = async (req, res) => {
       provinceId: row.province,
       provinceName: row.Province ? row.Province.name : 'Không xác định',
       type: row.area_type,
-      typeName: row.area_type === 'oyster' ? 'Hàu' : row.area_type === 'cobia' ? 'Cá bớp' : row.area_type,
+      typeName: row.area_type === 'oyster' ? 'Hàu' : row.area_type === 'cobia' ? 'Cá giò' : row.area_type,
       count: Number(row.get('count')) || 0,
     }));
 

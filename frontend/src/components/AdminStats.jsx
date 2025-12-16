@@ -673,7 +673,7 @@ const AdminStats = () => {
                 const areaTypeDistribution = (byType || []).map((item, index) => ({
                     name: item.name,
                     value: item.count,
-                    fill: index === 0 ? COLORS[0] : COLORS[3], // Xanh lá cho Hàu, Xanh dương cho Cá bớp
+                    fill: index === 0 ? COLORS[0] : COLORS[3], // Xanh lá cho Hàu, Xanh dương cho Cá giò
                 }));
 
                 console.log('📊 [AdminStats] Area type distribution:', areaTypeDistribution);
@@ -1238,7 +1238,7 @@ const AdminStats = () => {
                                 {stats.areaTypeData && stats.areaTypeData.length > 0 && (
                                     <Col xs={24} lg={12}>
                                         <Card
-                                            title={<><PieChartOutlined /> Tỷ lệ loại vùng (Hàu/Cá bớp)</>}
+                                            title={<><PieChartOutlined /> Tỷ lệ loại vùng (Hàu/Cá giò)</>}
                                             styles={{ body: { padding: 0 } }}
                                         >
                                             <PieChartComponent

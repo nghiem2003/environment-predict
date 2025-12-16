@@ -632,7 +632,7 @@ const Dashboard = () => {
                     }}
                     options={[
                       { value: 'oyster', label: 'Hàu' },
-                      { value: 'cobia', label: 'Cá bớp' },
+                      { value: 'cobia', label: 'Cá giò' },
                     ]}
                   />
                 </Col>

@@ -989,7 +989,7 @@ router.get(
  *                 - areaId: 15
  *                   areaName: "Vùng nuôi cá D"
  *                   areaType: "cobia"
- *                   areaTypeName: "Cá bớp"
+ *                   areaTypeName: "Cá giò"
  *                   province: "Quảng Ninh"
  *                   consecutiveCount: 2
  *                   lastPredictionDate: "2025-11-20T14:00:00.000Z"
@@ -1153,7 +1153,7 @@ router.get(
  * @swagger
  * /predictions/stats/by-area-type:
  *   get:
- *     summary: Thống kê dự đoán theo loại vùng (Hàu/Cá bớp)
+ *     summary: Thống kê dự đoán theo loại vùng (Hàu/Cá giò)
  *     tags: [Predictions]
  *     security:
  *       - bearerAuth: []
@@ -1193,7 +1193,7 @@ router.get(
  *                     unchanged: 11
  *                     worsened: 2
  *                 - type: "cobia"
- *                   name: "Cá bớp"
+ *                   name: "Cá giò"
  *                   current:
  *                     good: 5
  *                     average: 3

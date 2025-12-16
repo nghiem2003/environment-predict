@@ -667,7 +667,7 @@ const MLModelManagement = () => {
         if (!type) return '-';
         return (
           <Tag color={type === 'oyster' ? 'blue' : 'green'}>
-            {type === 'oyster' ? 'Hàu' : 'Cá bớp'}
+            {type === 'oyster' ? 'Hàu' : 'Cá giò'}
           </Tag>
         );
       },
@@ -782,15 +782,15 @@ const MLModelManagement = () => {
             children: (
               <Card
                 title="Quản lý Model Học Máy"
-                extra={
-                  <Button
-                    type="primary"
-                    icon={<PlusOutlined />}
-                    onClick={() => showModal()}
-                  >
-                    Thêm Model
-                  </Button>
-                }
+              // extra={
+              //   <Button
+              //     type="primary"
+              //     icon={<PlusOutlined />}
+              //     onClick={() => showModal()}
+              //   >
+              //     Thêm Model
+              //   </Button>
+              // }
               >
                 <Card warning>
                   <Alert
@@ -980,7 +980,7 @@ const MLModelManagement = () => {
               <Form.Item label="Loại khu vực" name="area_type">
                 <Select placeholder="Chọn loại khu vực" allowClear>
                   <Option value="oyster">Hàu</Option>
-                  <Option value="cobia">Cá bớp</Option>
+                  <Option value="cobia">Cá giò</Option>
                 </Select>
               </Form.Item>
             </Col>

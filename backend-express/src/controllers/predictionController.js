@@ -1609,7 +1609,7 @@ exports.getConsecutivePoorAreas = async (req, res) => {
           areaId: area.id,
           areaName: area.name,
           areaType: area.area_type,
-          areaTypeName: area.area_type === 'oyster' ? 'Hàu' : 'Cá bớp',
+          areaTypeName: area.area_type === 'oyster' ? 'Hàu' : 'Cá giò',
           province: area.Province?.name,
           district: area.District?.name,
           consecutiveCount: consecutivePoor,
@@ -1927,7 +1927,7 @@ exports.getPredictionStatsByAreaType = async (req, res) => {
     return res.status(200).json({
       byAreaType: [
         { type: 'oyster', name: 'Hàu', ...statsByType.oyster },
-        { type: 'cobia', name: 'Cá bớp', ...statsByType.cobia },
+        { type: 'cobia', name: 'Cá giò', ...statsByType.cobia },
       ],
     });
   } catch (error) {
@@ -2304,7 +2304,7 @@ exports.exportPredictionsToExcel = async (req, res) => {
           month: prediction.createdAt ? `Tháng ${month}` : '-',
           areaName: prediction.Area?.name || '-',
           // Use snake_case area_type from database
-          areaType: prediction.Area?.area_type === 'oyster' ? 'Hàu' : prediction.Area?.area_type === 'cobia' ? 'Cá bớp' : '-',
+          areaType: prediction.Area?.area_type === 'oyster' ? 'Hàu' : prediction.Area?.area_type === 'cobia' ? 'Cá giò' : '-',
           province: prediction.Area?.Province?.name || '-',
           district: prediction.Area?.District?.name || '-',
           areaSize: (prediction.Area?.area !== null && prediction.Area?.area !== undefined) ? prediction.Area.area : '-',
