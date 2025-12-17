@@ -4,7 +4,7 @@ import { jwtDecode } from 'jwt-decode';
 import axios from '../axios';
 import { useTranslation } from 'react-i18next';
 import {
-    Card, Row, Col, Statistic, Typography, Space, Segmented, Spin, message, Empty, Result, Alert, Tag, Badge, Tooltip, Divider, DatePicker
+    Card, Row, Col, Statistic, Typography, Space, Segmented, Spin, message, Empty, Result, Alert, Tag, Badge, Tooltip, Divider, DatePicker, Skeleton
 } from 'antd';
 import {
     EnvironmentOutlined, UserOutlined, PieChartOutlined, BarChartOutlined,
@@ -624,6 +624,7 @@ const AdminStats = () => {
     const [timeGranularity, setTimeGranularity] = useState('day');
     const [selectedDate, setSelectedDate] = useState(null); // Date filter cho prediction stats
     const [trendPeriod, setTrendPeriod] = useState('month'); // Chu kỳ cho biểu đồ xu hướng
+    const [areaTypeFilter, setAreaTypeFilter] = useState(null); // Filter theo loại vùng nuôi: null (tất cả), 'oyster', 'cobia'
     const [poorAreasExpanded, setPoorAreasExpanded] = useState(false); // Mở rộng danh sách vùng xấu
     const fetchingRef = useRef(false);
     const predictionFetchingRef = useRef(false);
@@ -718,10 +719,10 @@ const AdminStats = () => {
                 }
 
                 const [predictionsRes, comparisonRes, consecutivePoorRes, trendByBatchRes, statsByAreaTypeRes] = await Promise.all([
-                    axios.get('/api/express/predictions/stats/latest-ratio', { params: commonParams }),
-                    axios.get('/api/express/predictions/stats/comparison', { params: { ...commonParams, period: trendPeriod } }),
-                    axios.get('/api/express/predictions/stats/consecutive-poor', { params: { ...commonParams, minConsecutive: 2 } }),
-                    axios.get('/api/express/predictions/stats/trend-by-batch', { params: { ...commonParams, limit: 12, period: trendPeriod } }),
+                    axios.get('/api/express/predictions/stats/latest-ratio', { params: { ...commonParams, ...(areaTypeFilter && { areaType: areaTypeFilter }) } }),
+                    axios.get('/api/express/predictions/stats/comparison', { params: { ...commonParams, period: trendPeriod, ...(areaTypeFilter && { areaType: areaTypeFilter }) } }),
+                    axios.get('/api/express/predictions/stats/consecutive-poor', { params: { ...commonParams, minConsecutive: 2, ...(areaTypeFilter && { areaType: areaTypeFilter }) } }),
+                    axios.get('/api/express/predictions/stats/trend-by-batch', { params: { ...commonParams, limit: 12, period: trendPeriod, ...(areaTypeFilter && { areaType: areaTypeFilter }) } }),
                     axios.get('/api/express/predictions/stats/by-area-type', { params: commonParams }),
                 ]);
 
@@ -743,13 +744,14 @@ const AdminStats = () => {
                 }));
             } catch (error) {
                 console.error('Error fetching prediction stats:', error);
+                message.error('Lỗi khi tải dữ liệu thống kê dự đoán');
             } finally {
                 predictionFetchingRef.current = false;
             }
         };
 
         fetchPredictionStats();
-    }, [decoded, selectedDate, trendPeriod, t]);
+    }, [decoded, selectedDate, trendPeriod, areaTypeFilter, t]);
 
     // Fetch email stats riêng (vì cần granularity và limit)
     // Sử dụng ref riêng để tránh conflict với fetchingRef chính
@@ -924,6 +926,25 @@ const AdminStats = () => {
                                     {selectedDate && (
                                         <Tag color="blue">
                                             Đang xem dữ liệu đến ngày {selectedDate.format('DD/MM/YYYY')}
+                                        </Tag>
+                                    )}
+                                </Space>
+                                <Divider style={{ margin: '12px 0' }} />
+                                <Space wrap>
+                                    <Text strong>Lọc theo loại vùng nuôi:</Text>
+                                    <Segmented
+                                        value={areaTypeFilter}
+                                        onChange={(value) => setAreaTypeFilter(value)}
+                                        options={[
+                                            { label: 'Tất cả', value: null },
+                                            { label: 'Hàu', value: 'oyster' },
+                                            { label: 'Cá giò', value: 'cobia' },
+                                        ]}
+                                        style={{ minWidth: 200 }}
+                                    />
+                                    {areaTypeFilter && (
+                                        <Tag color="green">
+                                            Đang lọc: {areaTypeFilter === 'oyster' ? 'Hàu' : 'Cá giò'}
                                         </Tag>
                                     )}
                                 </Space>
