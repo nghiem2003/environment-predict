@@ -940,7 +940,7 @@ const AdminStats = () => {
                                             { label: 'Hàu', value: 'oyster' },
                                             { label: 'Cá giò', value: 'cobia' },
                                         ]}
-                                        style={{ minWidth: 200 }}
+
                                     />
                                     {areaTypeFilter && (
                                         <Tag color="green">
