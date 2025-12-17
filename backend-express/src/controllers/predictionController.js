@@ -1448,20 +1448,31 @@ exports.getAllPredictionChartData = async (req, res) => {
 // Stats for predictions: latest prediction ratio (good/average/poor) per area
 exports.getLatestPredictionStats = async (req, res) => {
   try {
-    const { role, province, district, beforeDate } = req.query;
+    const { role, province, district, beforeDate, areaType } = req.query;
 
-    // Build area filter based on user role
-    const areaWhere = {};
+    // Nếu có beforeDate, chỉ lấy predictions trước ngày đó
+    const predictionWhere = {};
+    if (beforeDate) {
+      const endOfDay = new Date(beforeDate);
+      endOfDay.setHours(23, 59, 59, 999);
+      predictionWhere.createdAt = { [Op.lte]: endOfDay };
+    }
+
+    // Filter by area type
+    if (areaType) {
+      predictionWhere['$Area.area_type$'] = areaType;
+    }
+
+    // Filter by province/district for managers
     if (role === 'manager') {
       if (district) {
-        areaWhere.district = district;
+        predictionWhere['$Area.district$'] = district;
       } else if (province) {
-        areaWhere.province = province;
+        predictionWhere['$Area.province$'] = province;
       }
     }
 
     // Nếu có beforeDate, chỉ lấy predictions trước ngày đó
-    const predictionWhere = {};
     if (beforeDate) {
       const endOfDay = new Date(beforeDate);
       endOfDay.setHours(23, 59, 59, 999);
@@ -1483,7 +1494,6 @@ exports.getLatestPredictionStats = async (req, res) => {
         {
           model: Area,
           attributes: ['id', 'name', 'area_type', 'province', 'district'],
-          where: Object.keys(areaWhere).length > 0 ? areaWhere : undefined,
           include: [
             {
               model: Province,
@@ -1547,13 +1557,7 @@ exports.getLatestPredictionStats = async (req, res) => {
 // Hỗ trợ tham số beforeDate để xem tại thời điểm cụ thể
 exports.getPredictionComparison = async (req, res) => {
   try {
-    const { role, province, district, beforeDate } = req.query;
-
-    const areaWhere = {};
-    if (role === 'manager') {
-      if (district) areaWhere.district = district;
-      else if (province) areaWhere.province = province;
-    }
+    const { role, province, district, beforeDate, areaType } = req.query;
 
     // Nếu có beforeDate, chỉ lấy predictions trước ngày đó
     const predictionWhere = {};
@@ -1563,6 +1567,20 @@ exports.getPredictionComparison = async (req, res) => {
       predictionWhere.createdAt = { [Op.lte]: endOfDay };
     }
 
+    // Filter by area type
+    if (areaType) {
+      predictionWhere['$Area.area_type$'] = areaType;
+    }
+
+    // Filter by province/district for managers
+    if (role === 'manager') {
+      if (district) {
+        predictionWhere['$Area.district$'] = district;
+      } else if (province) {
+        predictionWhere['$Area.province$'] = province;
+      }
+    }
+
     // Lấy tất cả predictions, sắp xếp theo area và thời gian
     const predictions = await Prediction.findAll({
       where: Object.keys(predictionWhere).length > 0 ? predictionWhere : undefined,
@@ -1570,7 +1588,6 @@ exports.getPredictionComparison = async (req, res) => {
         {
           model: Area,
           attributes: ['id', 'name', 'area_type'],
-          where: Object.keys(areaWhere).length > 0 ? areaWhere : undefined,
           include: [
             { model: Province, attributes: ['id', 'name'] },
             { model: District, attributes: ['id', 'name'] },
@@ -1681,13 +1698,7 @@ exports.getPredictionComparison = async (req, res) => {
 // Hỗ trợ tham số beforeDate để xem tại thời điểm cụ thể
 exports.getConsecutivePoorAreas = async (req, res) => {
   try {
-    const { role, province, district, minConsecutive = 2, beforeDate } = req.query;
-
-    const areaWhere = {};
-    if (role === 'manager') {
-      if (district) areaWhere.district = district;
-      else if (province) areaWhere.province = province;
-    }
+    const { role, province, district, minConsecutive = 2, beforeDate, areaType } = req.query;
 
     // Nếu có beforeDate, chỉ lấy predictions trước ngày đó
     const predictionWhere = {};
@@ -1697,6 +1708,20 @@ exports.getConsecutivePoorAreas = async (req, res) => {
       predictionWhere.createdAt = { [Op.lte]: endOfDay };
     }
 
+    // Filter by area type
+    if (areaType) {
+      predictionWhere['$Area.area_type$'] = areaType;
+    }
+
+    // Filter by province/district for managers
+    if (role === 'manager') {
+      if (district) {
+        predictionWhere['$Area.district$'] = district;
+      } else if (province) {
+        predictionWhere['$Area.province$'] = province;
+      }
+    }
+
     // Lấy tất cả predictions
     const predictions = await Prediction.findAll({
       where: Object.keys(predictionWhere).length > 0 ? predictionWhere : undefined,
@@ -1704,7 +1729,6 @@ exports.getConsecutivePoorAreas = async (req, res) => {
         {
           model: Area,
           attributes: ['id', 'name', 'area_type'],
-          where: Object.keys(areaWhere).length > 0 ? areaWhere : undefined,
           include: [
             { model: Province, attributes: ['id', 'name'] },
             { model: District, attributes: ['id', 'name'] },
@@ -1783,13 +1807,7 @@ exports.getConsecutivePoorAreas = async (req, res) => {
 // - Nếu không có dự đoán trong chu kỳ: lấy của chu kỳ gần nhất trước đó (carry forward)
 exports.getPredictionTrendByBatch = async (req, res) => {
   try {
-    const { role, province, district, limit = 12, beforeDate, period = 'month' } = req.query;
-
-    const areaWhere = {};
-    if (role === 'manager') {
-      if (district) areaWhere.district = district;
-      else if (province) areaWhere.province = province;
-    }
+    const { role, province, district, limit = 12, beforeDate, period = 'month', areaType } = req.query;
 
     // Ngày kết thúc (mặc định là hôm nay)
     const endDate = beforeDate ? new Date(beforeDate) : new Date();
@@ -1817,14 +1835,30 @@ exports.getPredictionTrendByBatch = async (req, res) => {
     }
     startDate.setHours(0, 0, 0, 0);
 
+    // Build prediction filter
+    const predictionWhere = { createdAt: { [Op.lte]: endDate } };
+
+    // Filter by area type
+    if (areaType) {
+      predictionWhere['$Area.area_type$'] = areaType;
+    }
+
+    // Filter by province/district for managers
+    if (role === 'manager') {
+      if (district) {
+        predictionWhere['$Area.district$'] = district;
+      } else if (province) {
+        predictionWhere['$Area.province$'] = province;
+      }
+    }
+
     // Lấy tất cả predictions trước endDate
     const predictions = await Prediction.findAll({
-      where: { createdAt: { [Op.lte]: endDate } },
+      where: Object.keys(predictionWhere).length > 0 ? predictionWhere : undefined,
       include: [
         {
           model: Area,
           attributes: ['id', 'name', 'area_type'],
-          where: Object.keys(areaWhere).length > 0 ? areaWhere : undefined,
         },
       ],
       order: [['createdAt', 'DESC']],
