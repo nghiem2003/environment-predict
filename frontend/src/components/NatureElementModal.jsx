@@ -59,7 +59,7 @@ const NatureElementModal = ({ visible, onCancel, onSuccess, editingElement = nul
       console.error('Error saving nature element:', error);
       message.error(
         error.response?.data?.error ||
-          `Không thể ${isEditMode ? 'cập nhật' : 'thêm'} yếu tố môi trường`
+        `Không thể ${isEditMode ? 'cập nhật' : 'thêm'} yếu tố môi trường`
       );
     } finally {
       setLoading(false);
@@ -83,7 +83,7 @@ const NatureElementModal = ({ visible, onCancel, onSuccess, editingElement = nul
       cancelText="Hủy"
       width={600}
       confirmLoading={loading}
-      destroyOnClose
+      destroyOnHidden
     >
       <Form form={form} layout="vertical">
         <Form.Item

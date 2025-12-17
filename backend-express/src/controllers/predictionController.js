@@ -16,12 +16,58 @@ const { sendPredictionNotification } = require('./emailController');
 const xlsx = require('xlsx');
 const { parseExcel2 } = require('../services/importService');
 const logger = require('../config/logger');
+const path = require('path');
 
 // Required fields for prediction model - only these should be saved to database
 const REQUIRED_FIELDS = [
   'R_PO4', 'O2Sat', 'O2ml_L', 'STheta', 'Salnty', 'R_DYNHT', 'T_degC',
   'R_Depth', 'Distance', 'Wind_Spd', 'Wave_Ht', 'Wave_Prd', 'IntChl', 'Dry_T'
 ];
+
+/**
+ * Extract Flask model key from model file path
+ * Flask loads models by file path and uses naming convention:
+ * - model/oyster/stack_gen_model.pkl -> oyster_stack
+ * - model/cobia/ridge_model.pkl -> cobia_ridge
+ * - shared_models/oyster__custom_model.pkl -> oyster_custom
+ */
+function getFlaskModelKey(model) {
+  if (!model || !model.model_file_path) {
+    return null;
+  }
+
+  const filePath = model.model_file_path;
+  const filename = path.basename(filePath, '.pkl');
+
+  // Check flat structure: species__algorithm_model
+  if (filename.includes('__')) {
+    const parts = filename.replace('_model', '').split('__');
+    if (parts.length >= 2) {
+      const species = parts[0];
+      let algorithm = parts[1];
+      if (algorithm === 'stack_gen') algorithm = 'stack';
+      return `${species}_${algorithm}`;
+    }
+  }
+
+  // Check folder structure: model/species/algorithm_model.pkl
+  const pathParts = filePath.split(/[\/\\]/);
+  if (pathParts.length >= 2) {
+    const species = pathParts[pathParts.length - 2]; // Parent folder (oyster/cobia)
+    let algorithm = filename.replace('_model', '');
+    if (algorithm === 'stack_gen') algorithm = 'stack';
+
+    // Remove species prefix if exists (e.g., oyster_ridge -> ridge)
+    const speciesPrefix = species + '_';
+    if (algorithm.startsWith(speciesPrefix)) {
+      algorithm = algorithm.substring(speciesPrefix.length);
+    }
+
+    return `${species}_${algorithm}`;
+  }
+
+  return null;
+}
 
 // Helper function to create prediction without Express req/res
 async function createPredictionInternal(userId, areaId, inputs, modelName, createdAt = null) {
@@ -31,8 +77,13 @@ async function createPredictionInternal(userId, areaId, inputs, modelName, creat
   }
 
   // Fetch model with nature elements and fallback values
+  // Support both model name (string) and model ID (integer)
+  const whereClause = typeof modelName === 'number' || !isNaN(parseInt(modelName))
+    ? { id: parseInt(modelName) }
+    : { name: modelName };
+
   const model = await MLModel.findOne({
-    where: { name: modelName },
+    where: whereClause,
     include: [
       {
         model: NatureElement,
@@ -49,6 +100,20 @@ async function createPredictionInternal(userId, areaId, inputs, modelName, creat
   if (!model) {
     logger.warn(`[Prediction] Model not found: ${modelName}. Proceeding without fallback values.`);
   }
+
+  // Get Flask model key from file path (e.g., "oyster_stack", "cobia_ridge")
+  const flaskModelKey = model ? getFlaskModelKey(model) : null;
+
+  if (!flaskModelKey && model) {
+    logger.warn(`[Prediction] Could not extract Flask model key from model file path`, {
+      modelId: model.id,
+      modelName: model.name,
+      modelFilePath: model.model_file_path
+    });
+  }
+
+  // Use Flask model key for API call, fallback to original modelName
+  const actualModelName = flaskModelKey || (model ? model.name : (typeof modelName === 'string' ? modelName : ''));
 
   // Build fallback map: elementName -> fallback_value (prioritize model-specific, then global)
   const fallbackMap = {};
@@ -117,22 +182,54 @@ async function createPredictionInternal(userId, areaId, inputs, modelName, creat
   flaskRequestData.lat = area.latitude;
   flaskRequestData.lon = area.longitude;
 
-  const endpoint = modelName.includes('oyster')
+  // Determine Flask endpoint based on actual model name
+  const endpoint = (actualModelName || '').toLowerCase().includes('oyster')
     ? '/predict/oyster'
     : '/predict/cobia';
   const flaskUrl = `${process.env.FLASK_API_URL}${endpoint}`;
 
+  // Log request to Flask
+  logger.info('[Flask Request] Sending prediction request', {
+    url: flaskUrl,
+    method: 'POST',
+    params: { model: actualModelName },
+    flaskModelKey: flaskModelKey,
+    originalModelName: model ? model.name : modelName,
+    modelFilePath: model ? model.model_file_path : null,
+    requestData: {
+      lat: flaskRequestData.lat,
+      lon: flaskRequestData.lon,
+      fieldsCount: Object.keys(flaskRequestData).length - 2, // Exclude lat/lon
+      fields: Object.keys(flaskRequestData).filter(k => k !== 'lat' && k !== 'lon'),
+    }
+  });
+  logger.debug('[Flask Request] Full request data', {
+    flaskRequestData
+  });
+
   let flaskResponse;
   try {
     flaskResponse = await axios.post(flaskUrl, flaskRequestData, {
-      params: { model: modelName },
+      params: { model: actualModelName || modelName },
+    });
+
+    // Log successful response
+    logger.info('[Flask Response] Received prediction response', {
+      status: flaskResponse.status,
+      prediction: flaskResponse.data?.prediction_result?.prediction,
+      model_used: flaskResponse.data?.prediction_result?.model_used,
+    });
+    logger.debug('[Flask Response] Full response data', {
+      data: flaskResponse.data
     });
   } catch (axiosError) {
-    logger.error('[Prediction] Flask API error', {
+    logger.error('[Flask Error] Failed to get prediction', {
       message: axiosError.message,
       status: axiosError.response?.status,
-      data: axiosError.response?.data,
-      url: flaskUrl
+      statusText: axiosError.response?.statusText,
+      errorData: axiosError.response?.data,
+      url: flaskUrl,
+      requestParams: { model: actualModelName || modelName },
     });
     throw new Error(axiosError.response?.data?.error || axiosError.message || 'Flask API error');
   }
@@ -664,7 +761,27 @@ exports.createBatchPrediction = async (req, res) => {
   const userId = req.user?.id || req.body.userId;
   const { areaId, modelName, data } = req.body;
   try {
-    const endpoint = modelName.includes('oyster')
+    // Support both model name (string) and model ID (integer)
+    let actualModelName = modelName;
+    let flaskModelKey = null;
+
+    if (typeof modelName === 'number' || !isNaN(parseInt(modelName))) {
+      const model = await MLModel.findByPk(parseInt(modelName));
+      if (model) {
+        flaskModelKey = getFlaskModelKey(model);
+        actualModelName = flaskModelKey || model.name;
+
+        if (!flaskModelKey) {
+          logger.warn(`[BatchPrediction] Could not extract Flask model key`, {
+            modelId: model.id,
+            modelName: model.name,
+            modelFilePath: model.model_file_path
+          });
+        }
+      }
+    }
+
+    const endpoint = (actualModelName || '').toLowerCase().includes('oyster')
       ? '/predict/oyster'
       : '/predict/cobia';
     const flaskUrl = `${process.env.FLASK_API_URL}${endpoint}`;
@@ -706,18 +823,45 @@ exports.createBatchPrediction = async (req, res) => {
       }
       logger.debug('[BatchPrediction] Flask request data (REQUIRED_FIELDS + lat/lon)', flaskRequestData);
 
+      // Log batch prediction request to Flask
+      logger.info('[Flask Batch Request] Sending prediction request', {
+        url: flaskUrl,
+        method: 'POST',
+        params: { model: actualModelName },
+        flaskModelKey: flaskModelKey,
+        originalModelName: modelName,
+        recordIndex: data.indexOf(inputs) + 1,
+        totalRecords: data.length,
+        requestData: {
+          lat: flaskRequestData.lat,
+          lon: flaskRequestData.lon,
+          fieldsCount: Object.keys(flaskRequestData).length - 2,
+        }
+      });
+
       let flaskResponse;
       try {
         flaskResponse = await axios.post(flaskUrl, flaskRequestData, {
-          params: { model: modelName },
+          params: { model: actualModelName || modelName },
+        });
+
+        // Log successful batch response
+        logger.info('[Flask Batch Response] Received prediction', {
+          status: flaskResponse.status,
+          recordIndex: data.indexOf(inputs) + 1,
+          prediction: flaskResponse.data?.prediction_result?.prediction,
+          model_used: flaskResponse.data?.prediction_result?.model_used,
         });
       } catch (axiosError) {
-        logger.error('[BatchPrediction] Flask API error', {
+        logger.error('[Flask Batch Error] Failed to get prediction', {
           message: axiosError.message,
           status: axiosError.response?.status,
-          data: axiosError.response?.data,
+          statusText: axiosError.response?.statusText,
+          errorData: axiosError.response?.data,
           url: flaskUrl,
-          recordIndex: data.indexOf(inputs)
+          recordIndex: data.indexOf(inputs) + 1,
+          totalRecords: data.length,
+          requestParams: { model: actualModelName || modelName },
         });
         throw new Error(`Flask API error: ${axiosError.response?.data?.error || axiosError.message || 'Unknown error'}`);
       }

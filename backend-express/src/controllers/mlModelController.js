@@ -140,6 +140,7 @@ exports.getAllMLModels = async (req, res) => {
         },
       ],
       order: [['createdAt', 'DESC']],
+      distinct: true,
     };
 
     // Optional pagination - if limit/offset provided, use pagination
