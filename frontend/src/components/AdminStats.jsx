@@ -942,11 +942,6 @@ const AdminStats = () => {
                                         ]}
 
                                     />
-                                    {areaTypeFilter && (
-                                        <Tag color="green">
-                                            Đang lọc: {areaTypeFilter === 'oyster' ? 'Hàu' : 'Cá giò'}
-                                        </Tag>
-                                    )}
                                 </Space>
                             </Card>
 
