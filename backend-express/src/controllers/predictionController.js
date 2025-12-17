@@ -721,7 +721,7 @@ exports.getPredictionsByUser = async (req, res) => {
         },
       ],
       order: [['createdAt', 'DESC']],
-      distinct: true, // Required for accurate count with multiple includes and many-to-many relationships
+      distinct: true, // Required for accurate count with many-to-many relationships
     };
 
     if (limit) {
@@ -1861,7 +1861,14 @@ exports.getPredictionTrendByBatch = async (req, res) => {
             const quarter = Math.floor(month / 3) + 1;
             periodKey = `${year}-Q${quarter}`;
             label = `Q${quarter}/${year}`;
-            current.setMonth(current.getMonth() + 3);
+
+            // Tăng lên tháng đầu của quarter tiếp theo
+            const nextQuarterStartMonth = quarter * 3;
+            if (nextQuarterStartMonth < 12) {
+              current.setMonth(nextQuarterStartMonth, 1);
+            } else {
+              current.setFullYear(year + 1, 0, 1);
+            }
             break;
           case 'month':
           default:
@@ -2195,7 +2202,7 @@ exports.deletePredictions = async (req, res) => {
       predictionIds: req.body?.predictionIds,
       userId: req.user?.id,
     });
-    return res.status(500).json({ error: 'Internal server error while deleting predictions' });
+    res.status(500).json({ error: 'Internal server error while deleting predictions' });
   }
 };
 
