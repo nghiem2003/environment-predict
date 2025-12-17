@@ -295,7 +295,6 @@ const EmailList = () => {
               className: 'email-pagination',
               position: ['bottomCenter'],
               ...pagination,
-              showQuickJumper: true,
               showSizeChanger: true,
               pageSizeOptions: [10, 20, 50, 100],
               onChange: (page, emailsPerPage) => { setPagination((prev) => ({ ...prev, current: page, emailsPerPage })); fetchSubscriptions(page, emailsPerPage); },

@@ -9,7 +9,7 @@ import {
 import {
     EnvironmentOutlined, UserOutlined, PieChartOutlined, BarChartOutlined,
     ArrowUpOutlined, ArrowDownOutlined, MinusOutlined, WarningOutlined,
-    CheckCircleOutlined, ExclamationCircleOutlined, CloseCircleOutlined,
+    CheckCircleOutlined, CloseCircleOutlined,
     DownOutlined, UpOutlined
 } from '@ant-design/icons';
 import * as am5 from '@amcharts/amcharts5';
@@ -17,6 +17,7 @@ import * as am5xy from '@amcharts/amcharts5/xy';
 import * as am5percent from '@amcharts/amcharts5/percent';
 import * as am5hierarchy from '@amcharts/amcharts5/hierarchy';
 import am5themes_Animated from '@amcharts/amcharts5/themes/Animated';
+import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
 
@@ -718,7 +719,7 @@ const AdminStats = () => {
 
                 const [predictionsRes, comparisonRes, consecutivePoorRes, trendByBatchRes, statsByAreaTypeRes] = await Promise.all([
                     axios.get('/api/express/predictions/stats/latest-ratio', { params: commonParams }),
-                    axios.get('/api/express/predictions/stats/comparison', { params: commonParams }),
+                    axios.get('/api/express/predictions/stats/comparison', { params: { ...commonParams, period: trendPeriod } }),
                     axios.get('/api/express/predictions/stats/consecutive-poor', { params: { ...commonParams, minConsecutive: 2 } }),
                     axios.get('/api/express/predictions/stats/trend-by-batch', { params: { ...commonParams, limit: 12, period: trendPeriod } }),
                     axios.get('/api/express/predictions/stats/by-area-type', { params: commonParams }),
@@ -931,13 +932,41 @@ const AdminStats = () => {
                             {/* === PHẦN 2: SO SÁNH KẾT QUẢ ĐỢT MỚI NHẤT VS ĐỢT TRƯỚC === */}
                             {stats.comparison && (
                                 <Card
-                                    title={<><BarChartOutlined /> So sánh kết quả đợt mới nhất với đợt trước</>}
+                                    title={
+                                        <Space direction="vertical" style={{ width: '100%' }}>
+                                            <Space>
+                                                <BarChartOutlined />
+                                                <span>So sánh kết quả đợt mới nhất với đợt trước</span>
+                                                <Text type="secondary" style={{ fontSize: 12 }}>
+                                                    (Theo chu kỳ: {trendPeriod === 'day' ? 'Ngày' : trendPeriod === 'week' ? 'Tuần' : trendPeriod === 'month' ? 'Tháng' : 'Quý'})
+                                                </Text>
+                                            </Space>
+                                        </Space>
+                                    }
+                                    extra={
+                                        <Space>
+                                            <Segmented
+                                                size="medium"
+                                                value={trendPeriod}
+                                                onChange={(val) => setTrendPeriod(val)}
+                                                options={[
+                                                    { label: 'Ngày', value: 'day' },
+                                                    { label: 'Tuần', value: 'week' },
+                                                    { label: 'Tháng', value: 'month' },
+                                                    { label: 'Quý', value: 'quarter' },
+                                                ]}
+                                            />
+                                        </Space>
+                                    }
                                 >
                                     <Row gutter={[24, 16]}>
                                         {/* Đợt hiện tại */}
                                         <Col xs={24} md={8}>
                                             <div style={{ textAlign: 'center', padding: '16px', background: '#f6ffed', borderRadius: 8 }}>
-                                                <Text strong style={{ fontSize: 16 }}>Đợt hiện tại</Text>
+                                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                                    <Text strong style={{ fontSize: 16 }}>Thời điểm hiện tại</Text>
+                                                    <Text type="secondary" style={{ fontSize: 12 }}>({selectedDate?.format('DD/MM/YYYY') || new Date().toLocaleDateString('vi-VN')})</Text>
+                                                </div>
                                                 <div style={{ marginTop: 16, display: 'flex', justifyContent: 'space-around' }}>
                                                     <div>
                                                         <div style={{ fontSize: 28, fontWeight: 'bold', color: '#52c41a' }}>
@@ -964,7 +993,7 @@ const AdminStats = () => {
                                         {/* Thay đổi */}
                                         <Col xs={24} md={8}>
                                             <div style={{ textAlign: 'center', padding: '16px', background: '#f5f5f5', borderRadius: 8 }}>
-                                                <Text strong style={{ fontSize: 16 }}>Thay đổi</Text>
+                                                <Text strong style={{ fontSize: 16 }}>Thay đổi so với {trendPeriod === 'day' ? 'ngày' : trendPeriod === 'week' ? 'tuần' : trendPeriod === 'month' ? 'tháng' : 'quý'} trước</Text>
                                                 <div style={{ marginTop: 16, display: 'flex', justifyContent: 'space-around' }}>
                                                     <Tooltip title="Vùng cải thiện kết quả">
                                                         <div>
@@ -997,7 +1026,15 @@ const AdminStats = () => {
                                         {/* Đợt trước */}
                                         <Col xs={24} md={8}>
                                             <div style={{ textAlign: 'center', padding: '16px', background: '#f0f0f0', borderRadius: 8 }}>
-                                                <Text strong style={{ fontSize: 16, color: '#8c8c8c' }}>Đợt trước</Text>
+                                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                                    <Text strong style={{ fontSize: 16, color: '#8c8c8c' }}>{trendPeriod === 'day' ? 'Ngày' : trendPeriod === 'week' ? 'Tuần' : trendPeriod === 'month' ? 'Tháng' : 'Quý'} trước</Text>
+                                                    <Text type="secondary" style={{ fontSize: 12 }}>
+                                                        {trendPeriod === 'quarter' ?
+                                                            `(${dayjs(selectedDate || new Date()).subtract(1, 'quarter').format('Q/YYYY')})` :
+                                                            `(${dayjs(selectedDate || new Date()).subtract(1, trendPeriod).format('DD/MM/YYYY')})`
+                                                        }
+                                                    </Text>
+                                                </div>
                                                 <div style={{ marginTop: 16, display: 'flex', justifyContent: 'space-around' }}>
                                                     <div>
                                                         <div style={{ fontSize: 28, fontWeight: 'bold', color: '#8c8c8c' }}>
