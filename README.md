@@ -6,8 +6,10 @@ npm run dev
 
 
 run flask:
-pip install -r 'requirements.txt'
-python test_api.py
+python -m venv venv
+pip install -r "requirements.txt"
+FLASK_APP=run.py flask run --port=5001 --host=0.0.0.0
 
+or use docker compose for quick deploy
 
-use pgadmin or postgre shell to run the backup_dump.sql file
+use pgadmin or postgre shell to run the backup_dump file
