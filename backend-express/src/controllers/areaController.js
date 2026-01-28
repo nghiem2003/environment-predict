@@ -213,9 +213,18 @@ exports.getAreaStatsByType = async (req, res) => {
       order: [['area_type', 'ASC']],
     });
 
+    const getAreaTypeName = (areaType) => {
+      const map = {
+        'oyster': 'Hàu',
+        'cobia': 'Cá giò',
+        'mangrove': 'Rừng ngập mặn'
+      };
+      return map[areaType] || areaType;
+    };
+
     const byType = distributionRaw.map((row) => ({
       type: row.area_type,
-      name: row.area_type === 'oyster' ? 'Hàu' : row.area_type === 'cobia' ? 'Cá giò' : row.area_type,
+      name: getAreaTypeName(row.area_type),
       count: Number(row.get('count')) || 0,
     }));
 
@@ -263,9 +272,18 @@ exports.getAreaStatsCombined = async (req, res) => {
       group: ['area_type'],
     });
 
+    const getAreaTypeNameForCombined = (areaType) => {
+      const map = {
+        'oyster': 'Hàu',
+        'cobia': 'Cá giò',
+        'mangrove': 'Rừng ngập mặn'
+      };
+      return map[areaType] || areaType;
+    };
+
     const byType = byTypeRaw.map((row) => ({
       type: row.area_type,
-      name: row.area_type === 'oyster' ? 'Hàu' : row.area_type === 'cobia' ? 'Cá giò' : row.area_type,
+      name: getAreaTypeNameForCombined(row.area_type),
       count: Number(row.get('count')) || 0,
     }));
 
@@ -318,7 +336,14 @@ exports.getAreaStatsCombined = async (req, res) => {
       provinceId: row.province,
       provinceName: row.Province ? row.Province.name : 'Không xác định',
       type: row.area_type,
-      typeName: row.area_type === 'oyster' ? 'Hàu' : row.area_type === 'cobia' ? 'Cá giò' : row.area_type,
+      typeName: (() => {
+        const map = {
+          'oyster': 'Hàu',
+          'cobia': 'Cá giò',
+          'mangrove': 'Rừng ngập mặn'
+        };
+        return map[row.area_type] || row.area_type;
+      })(),
       count: Number(row.get('count')) || 0,
     }));
 
@@ -466,9 +491,9 @@ exports.createArea = async (req, res) => {
     const { name, latitude, longitude, province, district, area_type } =
       req.body;
 
-    if (area_type !== 'oyster' && area_type !== 'cobia') {
+    if (area_type !== 'oyster' && area_type !== 'cobia' && area_type !== 'mangrove') {
       return res.status(400).json({
-        error: 'Invalid area_type. It must be either "oyster" or "cobia".',
+        error: 'Invalid area_type. It must be either "oyster", "cobia", or "mangrove".',
       });
     }
 
@@ -583,9 +608,9 @@ exports.updateArea = async (req, res) => {
     const { name, latitude, longitude, province, district, area, area_type } =
       req.body;
 
-    if (area_type !== 'oyster' && area_type !== 'cobia') {
+    if (area_type !== 'oyster' && area_type !== 'cobia' && area_type !== 'mangrove') {
       return res.status(400).json({
-        error: 'Invalid area_type. It must be either "oyster" or "cobia".',
+        error: 'Invalid area_type. It must be either "oyster", "cobia", or "mangrove".',
       });
     }
 

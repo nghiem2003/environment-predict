@@ -1,0 +1,8 @@
+{
+  "secondary_service": {
+    "port": 5002,
+    "url": "http://flask_backend_v2:5002",
+    "enabled": true,
+    "description": "Flask Secondary Service for new XGBoost models (>= 2.0.0). Use service name in Docker, localhost in local dev."
+  }
+}

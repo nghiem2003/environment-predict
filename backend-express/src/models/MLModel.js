@@ -36,7 +36,7 @@ const MLModel = sequelize.define(
       allowNull: true,
     },
     area_type: {
-      type: DataTypes.ENUM('oyster', 'cobia'),
+      type: DataTypes.ENUM('oyster', 'cobia', 'mangrove'),
       allowNull: true,
     },
     is_active: {

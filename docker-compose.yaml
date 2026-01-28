@@ -51,6 +51,46 @@ services:
     restart: always
     ports:
       - "5001:5001"
+    environment:
+      - FLASK_ENV=production
+      - FLASK_PORT=5001
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./backend-flask/shared_models:/app/shared_models
+      - ./backend-flask/model:/app/model
+      - ./backend-flask/data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  flask_backend_v2:
+    build:
+      context: ./backend-flask
+      dockerfile: Dockerfile.v2
+    container_name: flask_backend_v2
+    networks:
+      - proxy_network
+    restart: always
+    ports:
+      - "5002:5002"
+    environment:
+      - FLASK_ENV=production
+      - FLASK_PORT=5002
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./backend-flask/shared_models_v2:/app/shared_models_v2
+      - ./backend-flask/model_v2:/app/model_v2
+      - ./backend-flask/data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
   frontend:
     build: ./frontend
     container_name: frontend

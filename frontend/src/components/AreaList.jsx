@@ -376,13 +376,28 @@ const AreaList = () => {
       // Fetch area data and populate form
       const fetchAreaAndUpdate = async () => {
         try {
+          // Ensure regionList and districtList are loaded first
+          let regionsData = regionList;
+          let districtsData = districtList;
+
+          if (regionList.length === 0 || districtList.length === 0) {
+            const [regionsRes, districtsRes] = await Promise.all([
+              axios.get('/api/express/areas/provinces'),
+              axios.get('/api/express/areas/districts')
+            ]);
+            regionsData = regionsRes.data;
+            districtsData = districtsRes.data;
+            setRegionList(regionsData);
+            setDistrictList(districtsData);
+          }
+
           const response = await axios.get(`/api/express/areas/area/${areaId}`);
           const areaData = response.data;
 
           // Filter districts based on the area's province
           const areaProvince = areaData.province || userInfo?.province;
           setFilteredDistrictList(
-            districtList.filter(
+            districtsData.filter(
               (district) => district.province_id === areaProvince
             )
           );
@@ -398,9 +413,18 @@ const AreaList = () => {
             area_type: areaData.area_type || 'oyster',
           });
 
-          // Auto-fill central meridian from province
+          // Auto-fill central meridian from province (now regionList is guaranteed to be loaded)
           if (areaProvince) {
-            setCentralMeridianFromProvince(areaProvince);
+            const province = regionsData.find(p => p.id === areaProvince);
+            if (province?.central_meridian) {
+              setProvinceCentralMeridian(province.central_meridian);
+            } else {
+              setProvinceCentralMeridian(null);
+              if (coordinateType === 'vn2000') {
+                setCoordinateType('wgs84');
+                message.warning('Tỉnh này chưa có kinh tuyến trục, chỉ có thể sử dụng WGS84');
+              }
+            }
           } else {
             setProvinceCentralMeridian(null);
           }
@@ -993,6 +1017,7 @@ const AreaList = () => {
                     <Select>
                       <Option value="oyster">{t('area_list.filter.oyster') || 'Oyster'}</Option>
                       <Option value="cobia">{t('area_list.filter.cobia') || 'Cobia'}</Option>
+                      <Option value="mangrove">{t('area_list.filter.mangrove') || 'Mangrove'}</Option>
                     </Select>
                   </Form.Item>
 
@@ -1185,6 +1210,7 @@ const AreaList = () => {
                       {t('area_list.filter.oyster')}
                     </Option>
                     <Option value="cobia">{t('area_list.filter.cobia')}</Option>
+                    <Option value="mangrove">{t('area_list.filter.mangrove') || 'Mangrove'}</Option>
                   </Select>
                 </Form.Item>
                 <Form.Item>

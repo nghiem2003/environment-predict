@@ -665,9 +665,15 @@ const MLModelManagement = () => {
       width: 120,
       render: (type) => {
         if (!type) return '-';
+        const typeMap = {
+          'oyster': { color: 'blue', name: 'Hàu' },
+          'cobia': { color: 'green', name: 'Cá giò' },
+          'mangrove': { color: 'purple', name: 'Rừng ngập mặn' }
+        };
+        const typeInfo = typeMap[type] || { color: 'default', name: type };
         return (
-          <Tag color={type === 'oyster' ? 'blue' : 'green'}>
-            {type === 'oyster' ? 'Hàu' : 'Cá giò'}
+          <Tag color={typeInfo.color}>
+            {typeInfo.name}
           </Tag>
         );
       },
@@ -981,6 +987,7 @@ const MLModelManagement = () => {
                 <Select placeholder="Chọn loại khu vực" allowClear>
                   <Option value="oyster">Hàu</Option>
                   <Option value="cobia">Cá giò</Option>
+                  <Option value="mangrove">Rừng ngập mặn</Option>
                 </Select>
               </Form.Item>
             </Col>

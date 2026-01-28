@@ -25,10 +25,395 @@ const REQUIRED_FIELDS = [
 ];
 
 /**
+ * Helper function to get Vietnamese name for area type
+ * @param {string} areaType - Area type ('oyster', 'cobia', 'mangrove')
+ * @returns {string} Vietnamese name
+ */
+function getAreaTypeName(areaType) {
+  const map = {
+    'oyster': 'Hàu',
+    'cobia': 'Cá giò',
+    'mangrove': 'Rừng ngập mặn'
+  };
+  return map[areaType] || areaType;
+}
+
+/**
+ * Check environmental quality guards for Oyster (Hàu)
+ * Returns true if any critical threshold is violated (should return -1 immediately)
+ * @param {Object} inputs - Input values with nature element names as keys
+ * @returns {Object} { violated: boolean, reason: string }
+ */
+function checkOysterGuards(inputs) {
+  const getValue = (key) => {
+    const value = inputs[key];
+    if (value === null || value === undefined || value === '') return null;
+    const num = Number.parseFloat(value);
+    return isNaN(num) ? null : num;
+  };
+
+  // DO (Oxy hòa tan) - mg/L: > 3.0 -> Gây chết
+  const doValue = getValue('O2ml_L');
+  if (doValue !== null && doValue <= 3.0) {
+    return { violated: true, reason: `DO (Oxy hòa tan) = ${doValue} mg/L <= 3.0 (Gây chết)` };
+  }
+
+  // Nhiệt độ nước - độ C: > 12; >35 -> Gây chết
+  const tempValue = getValue('T_degC');
+  if (tempValue !== null && (tempValue < 12 || tempValue > 35)) {
+    return { violated: true, reason: `Nhiệt độ nước = ${tempValue}°C (Gây chết: <12 hoặc >35)` };
+  }
+
+  // Độ mặn - phần nghìn: > 5; >40 -> Gây chết
+  const salValue = getValue('Salnty');
+  if (salValue !== null && (salValue < 5 || salValue > 40)) {
+    return { violated: true, reason: `Độ mặn = ${salValue} phần nghìn (Gây chết: <5 hoặc >40)` };
+  }
+
+  // pH: > 5.0; > 9.5 -> Gây chết
+  // Note: pH might not be in inputs, skip if not present
+
+  // Tổng chất rắn TSS - mg/L: > 150 -> Gây chết
+  // Note: TSS might not be in inputs, skip if not present
+
+  // Hydrocarbon (TPH) - mg/L: > 0.1 -> Gây chết
+  // Note: TPH might not be in inputs, skip if not present
+
+  // Tổng Coliform - CFU/100ml: > 5000 -> Gây chết
+  // Note: Coliform might not be in inputs, skip if not present
+
+  // Amoni (NH4+) - mg/L: > 1.0 -> Gây chết
+  // Note: NH4+ might not be in inputs, skip if not present
+
+  // Phosphate (PO4 3-) - mg/L: > 0.5 -> Gây chết
+  const po4Value = getValue('R_PO4');
+  if (po4Value !== null && po4Value > 0.5) {
+    return { violated: true, reason: `Phosphate (PO4 3-) = ${po4Value} mg/L > 0.5 (Gây chết)` };
+  }
+
+  // Fluoride (F-) - mg/L: > 5.0 -> Gây chết
+  // Note: F- might not be in inputs, skip if not present
+
+  // Cyanide (CN-) - mg/L: > 0.05 -> Gây chết
+  // Note: CN- might not be in inputs, skip if not present
+
+  // Arsenic (As) - mg/L: > 0.1 -> Gây chết
+  // Note: As might not be in inputs, skip if not present
+
+  // Cadmi (Cd) - mg/L: > 0.05 -> Gây chết
+  // Note: Cd might not be in inputs, skip if not present
+
+  // Chì (Pb) - mg/L: > 0.5 -> Gây chết
+  // Note: Pb might not be in inputs, skip if not present
+
+  // Chromi (Cr 6+) - mg/L: > 0.1 -> Gây chết
+  // Note: Cr 6+ might not be in inputs, skip if not present
+
+  // Tổng Chromi (Cr) - mg/L: > 0.5 -> Gây chết
+  // Note: Cr might not be in inputs, skip if not present
+
+  // Đồng (Cu) - mg/L: > 0.2 -> Gây chết
+  // Note: Cu might not be in inputs, skip if not present
+
+  // Kẽm (Zn) - mg/L: > 1.0 -> Gây chết
+  // Note: Zn might not be in inputs, skip if not present
+
+  // Mangan (Mn) - mg/L: > 2.0 -> Gây chết
+  // Note: Mn might not be in inputs, skip if not present
+
+  // Sắt (Fe) - mg/L: > 3.0 -> Gây chết
+  // Note: Fe might not be in inputs, skip if not present
+
+  // Thủy ngân (Hg) - mg/L: > 0.005 -> Gây chết
+  // Note: Hg might not be in inputs, skip if not present
+
+  // Các chỉ tiêu khác (dầu mỡ, phenol, BVTV, etc.) - skip if not in inputs
+
+  return { violated: false, reason: null };
+}
+
+/**
+ * Check environmental quality guards for Cobia (Cá giò)
+ * Returns true if any critical threshold is violated (should return -1 immediately)
+ * @param {Object} inputs - Input values with nature element names as keys
+ * @returns {Object} { violated: boolean, reason: string }
+ */
+function checkCobiaGuards(inputs) {
+  const getValue = (key) => {
+    const value = inputs[key];
+    if (value === null || value === undefined || value === '') return null;
+    const num = Number.parseFloat(value);
+    return isNaN(num) ? null : num;
+  };
+
+  // Độ mặn - ‰: > 3 ; >40 -> Gây chết
+  const salValue = getValue('Salnty');
+  if (salValue !== null && (salValue < 3 || salValue > 40)) {
+    return { violated: true, reason: `Độ mặn = ${salValue}‰ (Gây chết: <3 hoặc >40)` };
+  }
+
+  // pH: > 6.5 ; >9.5 -> Gây chết
+  // Note: pH might not be in inputs, skip if not present
+
+  // Nhiệt độ nước biển - °C: > 18 ; >35 -> Gây chết
+  const tempValue = getValue('T_degC');
+  if (tempValue !== null && (tempValue < 18 || tempValue > 35)) {
+    return { violated: true, reason: `Nhiệt độ nước biển = ${tempValue}°C (Gây chết: <18 hoặc >35)` };
+  }
+
+  // Oxy hòa tan (DO) - mg/L: > 3.0 -> Gây chết
+  const doValue = getValue('O2ml_L');
+  if (doValue !== null && doValue <= 3.0) {
+    return { violated: true, reason: `Oxy hòa tan (DO) = ${doValue} mg/L <= 3.0 (Gây chết)` };
+  }
+
+  // Tổng chất rắn lơ lửng (TSS) - mg/L: >150 -> Gây chết
+  // Note: TSS might not be in inputs, skip if not present
+
+  // Amoni (NH₄⁺-N) - mg/L: >1.0 -> Gây chết
+  // Note: NH4+ might not be in inputs, skip if not present
+
+  // Phosphate (PO₄³⁻-P) - mg/L: >1.0 -> Gây chết
+  const po4Value = getValue('R_PO4');
+  if (po4Value !== null && po4Value > 1.0) {
+    return { violated: true, reason: `Phosphate (PO₄³⁻-P) = ${po4Value} mg/L > 1.0 (Gây chết)` };
+  }
+
+  // Fluoride (F⁻) - mg/L: >5.0 -> Gây chết
+  // Note: F- might not be in inputs, skip if not present
+
+  // Cyanide (CN⁻) - mg/L: >0.05 -> Gây chết
+  // Note: CN- might not be in inputs, skip if not present
+
+  // Asen (As) - mg/L: >0.1 -> Gây chết
+  // Note: As might not be in inputs, skip if not present
+
+  // Cadimi (Cd) - mg/L: >0.05 -> Gây chết
+  // Note: Cd might not be in inputs, skip if not present
+
+  // Chì (Pb) - mg/L: >0.5 -> Gây chết
+  // Note: Pb might not be in inputs, skip if not present
+
+  // Crom VI (Cr⁶⁺) - mg/L: >0.1 -> Gây chết
+  // Note: Cr 6+ might not be in inputs, skip if not present
+
+  // Tổng Crom (Cr) - mg/L: >0.5 -> Gây chết
+  // Note: Cr might not be in inputs, skip if not present
+
+  // Đồng (Cu) - mg/L: >1.0 -> Gây chết
+  // Note: Cu might not be in inputs, skip if not present
+
+  // Kẽm (Zn) - mg/L: >2.0 -> Gây chết
+  // Note: Zn might not be in inputs, skip if not present
+
+  // Mangan (Mn) - mg/L: >2.0 -> Gây chết
+  // Note: Mn might not be in inputs, skip if not present
+
+  // Sắt (Fe) - mg/L: >3.0 -> Gây chết
+  // Note: Fe might not be in inputs, skip if not present
+
+  // Tổng dầu mỡ khoáng - mg/L: >20 -> Gây chết
+  // Note: Dầu mỡ might not be in inputs, skip if not present
+
+  return { violated: false, reason: null };
+}
+
+/**
+ * Check environmental quality guards for Mangrove (Rừng ngập mặn)
+ * Returns true if any critical threshold is violated (should return -1 immediately)
+ * @param {Object} inputs - Input values with nature element names as keys
+ * @returns {Object} { violated: boolean, reason: string }
+ */
+function checkMangroveGuards(inputs) {
+  const getValue = (key) => {
+    const value = inputs[key];
+    if (value === null || value === undefined || value === '') return null;
+    const num = Number.parseFloat(value);
+    return isNaN(num) ? null : num;
+  };
+
+  // TODO: Add specific guard checks for mangrove based on environmental quality standards
+  // For now, using similar logic to oyster/cobia as placeholder
+  // Độ mặn - phần nghìn: check range (to be defined)
+  // Nhiệt độ nước - độ C: check range (to be defined)
+  // Oxy hòa tan (DO) - mg/L: check minimum (to be defined)
+  // Phosphate (PO4 3-) - mg/L: check maximum (to be defined)
+
+  // Placeholder: return no violation for now
+  // User should update this with specific mangrove guard criteria
+  return { violated: false, reason: null };
+}
+
+/**
+ * Check environmental quality guards for Mangrove using Excel headers (original column names)
+ * Based on QCVN 10/2023 standards with thresholds from Excel header row
+ * @param {Object} headerValueMap - Map of original Excel header names to values
+ * @returns {Object} { violated: boolean, reason: string }
+ */
+function checkMangroveGuardsFromExcelHeaders(headerValueMap) {
+  const getValue = (headerNames) => {
+    // Accept array of possible header names (with or without "(đất)")
+    const names = Array.isArray(headerNames) ? headerNames : [headerNames];
+
+    for (const headerName of names) {
+      // Try exact match first
+      let value = headerValueMap[headerName];
+      if (value === null || value === undefined || value === '') {
+        // Try case-insensitive match
+        const lowerHeader = headerName.toLowerCase();
+        for (const [key, val] of Object.entries(headerValueMap)) {
+          const keyLower = key.toLowerCase();
+          // Match exact or with/without "(đất)"
+          if (keyLower === lowerHeader ||
+            keyLower === lowerHeader + ' (đất)' ||
+            keyLower === lowerHeader.replace(' (đất)', '') ||
+            keyLower.replace(' (đất)', '') === lowerHeader) {
+            value = val;
+            break;
+          }
+        }
+      }
+      if (value !== null && value !== undefined && value !== '') {
+        // Handle "<" prefix (e.g., "<0,02" -> treat as 0)
+        if (typeof value === 'string' && value.trim().startsWith('<')) {
+          return 0; // Value is below detection limit, treat as 0 for guard check
+        }
+        const num = Number.parseFloat(String(value).replace(',', '.'));
+        if (!isNaN(num)) return num;
+      }
+    }
+    return null;
+  };
+
+  // Nhiệt độ không khí - °C: > 10 ; >40 -> Gây chết
+  const tempAirValue = getValue(['Nhiệt độ không khí', 'Nhiệt độ không khí (°C)']);
+  if (tempAirValue !== null && (tempAirValue < 10 || tempAirValue > 40)) {
+    return { violated: true, reason: `Nhiệt độ không khí = ${tempAirValue}°C (Gây chết: <10 hoặc >40)` };
+  }
+
+  // Lượng mưa - mm/năm: > 500 -> Gây chết
+  const rainValue = getValue(['Lượng mưa', 'Lượng mưa (mm/năm)']);
+  if (rainValue !== null && rainValue < 500) {
+    return { violated: true, reason: `Lượng mưa = ${rainValue} mm/năm < 500 (Gây chết)` };
+  }
+
+  // Độ mặn nước - ‰: > 1 ; >35 -> Gây chết
+  const salValue = getValue(['Độ mặn nước', 'Độ mặn', 'Độ muối', 'Độ mặn nước (‰)']);
+  if (salValue !== null && (salValue < 1 || salValue > 35)) {
+    return { violated: true, reason: `Độ mặn nước = ${salValue}‰ (Gây chết: <1 hoặc >35)` };
+  }
+
+  // Độ kiềm - mg/L: > 20 ; >400 -> Gây chết
+  const alkalinityValue = getValue(['Độ kiềm', 'Độ kiềm (mg/L)']);
+  if (alkalinityValue !== null && (alkalinityValue < 20 || alkalinityValue > 400)) {
+    return { violated: true, reason: `Độ kiềm = ${alkalinityValue} mg/L (Gây chết: <20 hoặc >400)` };
+  }
+
+  // pH nước - -: > 5.5 ; >9.5 -> Gây chết
+  const pHValue = getValue(['pH nước', 'pH', 'pH nước (-)']);
+  if (pHValue !== null && (pHValue < 5.5 || pHValue > 9.5)) {
+    return { violated: true, reason: `pH nước = ${pHValue} (Gây chết: <5,5 hoặc >9,5)` };
+  }
+
+  // NH₃ - mg/L: > 1.0 -> Gây chết
+  const nh3Value = getValue(['NH₃', 'NH3', 'NH₃ (mg/L)']);
+  if (nh3Value !== null && nh3Value > 1.0) {
+    return { violated: true, reason: `NH₃ = ${nh3Value} mg/L > 1,0 (Gây chết)` };
+  }
+
+  // H₂S - mg/L: > 0.20 -> Gây chết
+  const h2sValue = getValue(['H₂S', 'H2S', 'H₂S (mg/L)']);
+  if (h2sValue !== null && h2sValue > 0.20) {
+    return { violated: true, reason: `H₂S = ${h2sValue} mg/L > 0,20 (Gây chết)` };
+  }
+
+  // Nhiệt độ nước - °C: > 10 ; >35 -> Gây chết
+  const tempWaterValue = getValue(['Nhiệt độ nước', 'Nhiệt độ nước biển', 'Nhiệt độ nước (°C)']);
+  if (tempWaterValue !== null && (tempWaterValue < 10 || tempWaterValue > 35)) {
+    return { violated: true, reason: `Nhiệt độ nước = ${tempWaterValue}°C (Gây chết: <10 hoặc >35)` };
+  }
+
+  // Oxy hòa tan (DO) - mg/L: > 1.0 -> Gây chết
+  const doValue = getValue(['Oxy hòa tan (DO)', 'DO', 'Oxy hòa tan', 'DO (mg/L)']);
+  if (doValue !== null && doValue < 1.0) {
+    return { violated: true, reason: `Oxy hòa tan (DO) = ${doValue} mg/L < 1,0 (Gây chết)` };
+  }
+
+  // BOD₅ - mg/L: > 100 -> Gây chết
+  const bod5Value = getValue(['BOD₅', 'BOD5', 'BOD₅ (mg/L)']);
+  if (bod5Value !== null && bod5Value > 100) {
+    return { violated: true, reason: `BOD₅ = ${bod5Value} mg/L > 100 (Gây chết)` };
+  }
+
+  // COD - mg/L: > 300 -> Gây chết
+  const codValue = getValue(['COD', 'COD (mg/L)']);
+  if (codValue !== null && codValue > 300) {
+    return { violated: true, reason: `COD = ${codValue} mg/L > 300 (Gây chết)` };
+  }
+
+  // TSS - mg/L: > 200 -> Gây chết
+  const tssValue = getValue(['TSS', 'TSS (mg/L)']);
+  if (tssValue !== null && tssValue > 200) {
+    return { violated: true, reason: `TSS = ${tssValue} mg/L > 200 (Gây chết)` };
+  }
+
+  // As (đất) - mg/kg đất khô: > 50 -> Gây chết (check với hoặc không có "(đất)")
+  const asValue = getValue(['As (đất)', 'As', 'As (mg/kg đất khô)']);
+  if (asValue !== null && asValue > 50) {
+    return { violated: true, reason: `As (đất) = ${asValue} mg/kg đất khô > 50 (Gây chết)` };
+  }
+
+  // Cd (đất) - mg/kg đất khô: > 10 -> Gây chết
+  const cdValue = getValue(['Cd (đất)', 'Cd', 'Cd (mg/kg đất khô)']);
+  if (cdValue !== null && cdValue > 10) {
+    return { violated: true, reason: `Cd (đất) = ${cdValue} mg/kg đất khô > 10 (Gây chết)` };
+  }
+
+  // Pb (đất) - mg/kg đất khô: > 500 -> Gây chết
+  const pbValue = getValue(['Pb (đất)', 'Pb', 'Pb (mg/kg đất khô)']);
+  if (pbValue !== null && pbValue > 500) {
+    return { violated: true, reason: `Pb (đất) = ${pbValue} mg/kg đất khô > 500 (Gây chết)` };
+  }
+
+  // Cu (đất) - mg/kg đất khô: > 300 -> Gây chết
+  const cuValue = getValue(['Cu (đất)', 'Cu', 'Cu (mg/kg đất khô)']);
+  if (cuValue !== null && cuValue > 300) {
+    return { violated: true, reason: `Cu (đất) = ${cuValue} mg/kg đất khô > 300 (Gây chết)` };
+  }
+
+  // Zn (đất) - mg/kg đất khô: > 600 -> Gây chết
+  const znValue = getValue(['Zn (đất)', 'Zn', 'Zn (mg/kg đất khô)']);
+  if (znValue !== null && znValue > 600) {
+    return { violated: true, reason: `Zn (đất) = ${znValue} mg/kg đất khô > 600 (Gây chết)` };
+  }
+
+  // Chế độ ngập triều: Ngập liên tục -> Gây chết
+  const tideValue = getValue(['Chế độ ngập triều', 'Chế độ ngập triều (-)']);
+  if (tideValue !== null && typeof tideValue === 'string') {
+    const tideLower = tideValue.toLowerCase();
+    if (tideLower.includes('ngập liên tục') || tideLower === 'ngập liên tục') {
+      return { violated: true, reason: `Chế độ ngập triều = ${tideValue} (Gây chết: Ngập liên tục)` };
+    }
+  }
+
+  // Đặc tính nền đất: Đá/sỏi -> Gây chết
+  const soilValue = getValue(['Đặc tính nền đất', 'Đặc tính nền đất (-)']);
+  if (soilValue !== null && typeof soilValue === 'string') {
+    const soilLower = soilValue.toLowerCase();
+    if (soilLower.includes('đá') || soilLower.includes('sỏi') || soilLower === 'đá/sỏi') {
+      return { violated: true, reason: `Đặc tính nền đất = ${soilValue} (Gây chết: Đá/sỏi)` };
+    }
+  }
+
+  return { violated: false, reason: null };
+}
+
+/**
  * Extract Flask model key from model file path
  * Flask loads models by file path and uses naming convention:
  * - model/oyster/stack_gen_model.pkl -> oyster_stack
  * - model/cobia/ridge_model.pkl -> cobia_ridge
+ * - model/mangrove/stack_gen_model.pkl -> mangrove_stack
  * - shared_models/oyster__custom_model.pkl -> oyster_custom
  */
 function getFlaskModelKey(model) {
@@ -183,10 +568,93 @@ async function createPredictionInternal(userId, areaId, inputs, modelName, creat
   flaskRequestData.lon = area.longitude;
 
   // Determine Flask endpoint based on actual model name
-  const endpoint = (actualModelName || '').toLowerCase().includes('oyster')
-    ? '/predict/oyster'
-    : '/predict/cobia';
+  const modelNameLower = (actualModelName || '').toLowerCase();
+  let endpoint = '/predict/cobia'; // default
+  if (modelNameLower.includes('oyster')) {
+    endpoint = '/predict/oyster';
+  } else if (modelNameLower.includes('mangrove')) {
+    endpoint = '/predict/mangrove';
+  }
   const flaskUrl = `${process.env.FLASK_API_URL}${endpoint}`;
+
+  // Check environmental quality guards before calling Flask API
+  // Only check if guard_violated flag is not already set (for direct API calls, not from Excel)
+  let guardCheck = null;
+  if (inputs.guard_violated === true) {
+    // Guard already checked at extraction level (from Excel)
+    guardCheck = { violated: true, reason: inputs.guard_reason || 'Guard violated during data extraction' };
+  } else {
+    // Check guard for direct API calls (not from Excel)
+    const isOyster = modelNameLower.includes('oyster');
+    const isMangrove = modelNameLower.includes('mangrove');
+    if (isOyster) {
+      guardCheck = checkOysterGuards(inputs);
+    } else if (isMangrove) {
+      guardCheck = checkMangroveGuards(inputs);
+    } else {
+      guardCheck = checkCobiaGuards(inputs); // default to cobia
+    }
+  }
+
+  if (guardCheck.violated) {
+    logger.warn('[Prediction] Environmental quality guard violated - returning -1 immediately', {
+      modelName: actualModelName || modelName,
+      reason: guardCheck.reason,
+      inputs: Object.keys(inputs)
+    });
+
+    // Return -1 immediately without calling Flask API
+    const predictionData = {
+      user_id: userId,
+      area_id: areaId,
+      prediction_text: '-1',
+    };
+
+    if (createdAt && !isNaN(new Date(createdAt).getTime())) {
+      const customDate = new Date(createdAt);
+      predictionData.createdAt = customDate;
+      predictionData.updatedAt = customDate;
+      logger.debug('[Prediction] Using custom createdAt', { createdAt: customDate });
+    }
+
+    const predictionRecord = await Prediction.create(predictionData);
+    logger.info('[Prediction] Created prediction record with -1 (guard violation)', {
+      predictionId: predictionRecord.id,
+      areaId,
+      userId,
+      reason: guardCheck.reason
+    });
+
+    // Save filtered inputs
+    let savedElements = 0;
+    for (const [elementName, value] of Object.entries(filteredInputs)) {
+      const entry = await NatureElement.findOne({
+        where: { name: elementName },
+      });
+
+      if (!entry) {
+        logger.warn(`[Prediction] NatureElement not found: ${elementName}`);
+        continue;
+      }
+
+      await PredictionNatureElement.create({
+        prediction_id: predictionRecord.id,
+        nature_element_id: entry.id,
+        value,
+      });
+      savedElements++;
+    }
+
+    logger.info(`[Prediction] Saved ${savedElements} nature elements to database`);
+
+    return {
+      prediction_id: predictionRecord.id,
+      prediction_text: '-1',
+      model_used: modelName,
+      guard_violated: true,
+      guard_reason: guardCheck.reason
+    };
+  }
 
   // Log request to Flask
   logger.info('[Flask Request] Sending prediction request', {
@@ -781,9 +1249,13 @@ exports.createBatchPrediction = async (req, res) => {
       }
     }
 
-    const endpoint = (actualModelName || '').toLowerCase().includes('oyster')
-      ? '/predict/oyster'
-      : '/predict/cobia';
+    const modelNameLower = (actualModelName || '').toLowerCase();
+    let endpoint = '/predict/cobia'; // default
+    if (modelNameLower.includes('oyster')) {
+      endpoint = '/predict/oyster';
+    } else if (modelNameLower.includes('mangrove')) {
+      endpoint = '/predict/mangrove';
+    }
     const flaskUrl = `${process.env.FLASK_API_URL}${endpoint}`;
 
     const predictionsResult = [];
@@ -822,6 +1294,65 @@ exports.createBatchPrediction = async (req, res) => {
         flaskRequestData.lon = area.longitude;
       }
       logger.debug('[BatchPrediction] Flask request data (REQUIRED_FIELDS + lat/lon)', flaskRequestData);
+
+      // Check if guard was violated during data extraction (from Excel)
+      if (inputs.guard_violated) {
+        logger.warn('[BatchPrediction] Environmental quality guard violated - returning -1 immediately', {
+          modelName: actualModelName || modelName,
+          reason: inputs.guard_reason,
+          recordIndex: data.indexOf(inputs) + 1,
+          totalRecords: data.length,
+          inputs: Object.keys(inputs)
+        });
+
+        // Return -1 immediately without calling Flask API
+        const predictionData = {
+          user_id: userId,
+          area_id: areaId,
+          prediction_text: '-1',
+        };
+
+        if (createdAt && !isNaN(new Date(createdAt).getTime())) {
+          const customDate = new Date(createdAt);
+          predictionData.createdAt = customDate;
+          predictionData.updatedAt = customDate;
+          logger.debug('[BatchPrediction] Using custom timestamp', { customDate });
+        }
+
+        const predictionRecord = await Prediction.create(predictionData);
+        logger.debug('[BatchPrediction] New prediction created with -1 (guard violation)', {
+          predictionId: predictionRecord.id,
+          reason: inputs.guard_reason
+        });
+
+        // Save filtered inputs
+        for (const [elementName, value] of Object.entries(filteredInputs)) {
+          const entry = await NatureElement.findOne({
+            where: { name: elementName },
+          });
+
+          if (!entry) {
+            logger.warn(`[BatchPrediction] NatureElement not found: ${elementName}`);
+            continue;
+          }
+
+          await PredictionNatureElement.create({
+            prediction_id: predictionRecord.id,
+            nature_element_id: entry.id,
+            value: value,
+          });
+        }
+
+        predictionsResult.push({
+          prediction_id: predictionRecord.id,
+          prediction_text: '-1',
+          inputs,
+          guard_violated: true,
+          guard_reason: inputs.guard_reason
+        });
+
+        continue; // Skip Flask API call and move to next record
+      }
 
       // Log batch prediction request to Flask
       logger.info('[Flask Batch Request] Sending prediction request', {
@@ -992,13 +1523,19 @@ exports.createBatchPredictionFromExcel = async (req, res) => {
     // Try wide format mapping
     if (rowsObjects.length) {
       const headerMap = {};
-      Object.keys(rowsObjects[0]).forEach(h => headerMap[h] = mapHeaderToFeature(h));
+      const rawHeaders = Object.keys(rowsObjects[0]); // Original Excel headers
+      rawHeaders.forEach(h => headerMap[h] = mapHeaderToFeature(h));
       if (Object.values(headerMap).some(Boolean)) {
         logger.info('[Excel] Wide header map -> feature:', { headerMap });
         normalized = rowsObjects.map((r) => {
           const obj = {};
+          const headerValueMap = {}; // Map original headers to values for guard checking
           for (const [h, v] of Object.entries(r)) {
             const feat = headerMap[h];
+            // Store original header -> value mapping for guard checking
+            if (h && v !== null && v !== undefined && v !== '') {
+              headerValueMap[h] = v;
+            }
             if (!feat) continue;
             let num = v === '' || v === null || v === undefined ? null : Number(v);
             if (feat === 'O2ml_L') {
@@ -1009,6 +1546,8 @@ exports.createBatchPredictionFromExcel = async (req, res) => {
           }
           const createdAtKey = Object.keys(r).find(k => /created|date|ngay|thoi gian/.test(norm(k)));
           if (createdAtKey) obj.createdAt = r[createdAtKey];
+          // Store headerValueMap for guard checking
+          obj.headerValueMap = headerValueMap;
           return obj;
         }).filter(o => Object.keys(o).length > 0);
       }
@@ -1084,11 +1623,51 @@ exports.createBatchPredictionFromExcel = async (req, res) => {
       return res.status(400).json({ error: 'Could not detect any usable indicators from Excel', debug: { rowsObjects: rowsObjects.length, rowsMatrix: rowsMatrix.length } });
     }
 
+    // Check environmental quality guards for each normalized record
+    const modelNameLower = (modelName || '').toLowerCase();
+    const isOyster = modelNameLower.includes('oyster');
+    const isMangrove = modelNameLower.includes('mangrove');
+    normalized = normalized.map((record) => {
+      let guardCheck;
+      // Extract headerValueMap if exists (for mangrove guard checking)
+      const headerValueMap = record.headerValueMap;
+      // Remove headerValueMap from record before passing to other guards
+      const { headerValueMap: _, ...recordWithoutHeaderMap } = record;
+
+      if (isMangrove && headerValueMap) {
+        // For mangrove, use Excel header-based guard checking
+        guardCheck = checkMangroveGuardsFromExcelHeaders(headerValueMap);
+      } else if (isOyster) {
+        guardCheck = checkOysterGuards(recordWithoutHeaderMap);
+      } else if (isMangrove) {
+        guardCheck = checkMangroveGuards(recordWithoutHeaderMap);
+      } else {
+        guardCheck = checkCobiaGuards(recordWithoutHeaderMap); // default to cobia
+      }
+      if (guardCheck.violated) {
+        logger.warn('[Excel] Environmental quality guard violated', {
+          modelName,
+          reason: guardCheck.reason,
+          record: Object.keys(record)
+        });
+        return {
+          ...record,
+          guard_violated: true,
+          guard_reason: guardCheck.reason
+        };
+      }
+      return {
+        ...record,
+        guard_violated: false,
+        guard_reason: null
+      };
+    });
+
     // Reuse existing batch controller logic with parsed data
     logger.info('[Excel] Sending normalized data to batch:', { size: normalized.length });
 
     req.body = { userId, areaId, modelName, data: normalized };
-    logger.debug('[Excel] Normalized data:', normalized);
+    logger.debug('[Excel] Normalized data with guard flags:', normalized);
 
     return exports.createBatchPrediction(req, res);
   } catch (error) {
@@ -1126,6 +1705,94 @@ exports.createBatchPredictionFromExcel2 = async (req, res) => {
 
       try {
         const inputs = row.metrics;
+
+        // Check environmental quality guards before processing
+        const modelNameLower = (modelName || '').toLowerCase();
+        const isOyster = modelNameLower.includes('oyster');
+        const isMangrove = modelNameLower.includes('mangrove');
+        let guardCheck;
+        if (isMangrove && row.headerValueMap) {
+          // For mangrove, use Excel header-based guard checking
+          guardCheck = checkMangroveGuardsFromExcelHeaders(row.headerValueMap);
+        } else if (isOyster) {
+          guardCheck = checkOysterGuards(inputs);
+        } else if (isMangrove) {
+          guardCheck = checkMangroveGuards(inputs);
+        } else {
+          guardCheck = checkCobiaGuards(inputs); // default to cobia
+        }
+
+        if (guardCheck.violated) {
+          logger.warn(`[Excel2] Environmental quality guard violated for row ${index + 1}/${parsed.length}`, {
+            modelName,
+            reason: guardCheck.reason,
+            areaName: row.areaName,
+            inputs: Object.keys(inputs)
+          });
+
+          // Calculate createdAt from year and quarter if available
+          let createdAt = null;
+          if (row.year && row.quarter) {
+            const month = (row.quarter - 1) * 3;
+            createdAt = new Date(row.year, month, 1);
+          }
+
+          // Create prediction with -1 directly without calling Flask API
+          const area = await Area.findByPk(row.areaId);
+          if (!area) {
+            throw new Error('Area not found');
+          }
+
+          const predictionData = {
+            user_id: userId,
+            area_id: row.areaId,
+            prediction_text: '-1',
+          };
+
+          if (createdAt && !isNaN(new Date(createdAt).getTime())) {
+            const customDate = new Date(createdAt);
+            predictionData.createdAt = customDate;
+            predictionData.updatedAt = customDate;
+          }
+
+          const predictionRecord = await Prediction.create(predictionData);
+          logger.info(`[Excel2] Created prediction with -1 (guard violation) for row ${index + 1}/${parsed.length}`, {
+            areaName: row.areaName,
+            predictionId: predictionRecord.id,
+            reason: guardCheck.reason
+          });
+
+          // Save inputs
+          for (const [elementName, value] of Object.entries(inputs)) {
+            const entry = await NatureElement.findOne({
+              where: { name: elementName },
+            });
+
+            if (!entry) {
+              logger.warn(`[Excel2] NatureElement not found: ${elementName}`);
+              continue;
+            }
+
+            await PredictionNatureElement.create({
+              prediction_id: predictionRecord.id,
+              nature_element_id: entry.id,
+              value: Number.parseFloat(value) || 0,
+            });
+          }
+
+          results.push({
+            success: true,
+            data: {
+              prediction_id: predictionRecord.id,
+              prediction_text: '-1',
+              model_used: modelName,
+              guard_violated: true,
+              guard_reason: guardCheck.reason
+            }
+          });
+          created++;
+          continue; // Skip Flask API call
+        }
 
         // Calculate createdAt from year and quarter if available
         let createdAt = null;
@@ -1777,7 +2444,7 @@ exports.getConsecutivePoorAreas = async (req, res) => {
           areaId: area.id,
           areaName: area.name,
           areaType: area.area_type,
-          areaTypeName: area.area_type === 'oyster' ? 'Hàu' : 'Cá giò',
+          areaTypeName: getAreaTypeName(area.area_type),
           province: area.Province?.name,
           district: area.District?.name,
           consecutiveCount: consecutivePoor,
@@ -2083,6 +2750,11 @@ exports.getPredictionStatsByAreaType = async (req, res) => {
         previous: { good: 0, average: 0, poor: 0, total: 0 },
         changes: { improved: 0, unchanged: 0, worsened: 0 }
       },
+      mangrove: {
+        current: { good: 0, average: 0, poor: 0, total: 0 },
+        previous: { good: 0, average: 0, poor: 0, total: 0 },
+        changes: { improved: 0, unchanged: 0, worsened: 0 }
+      },
     };
 
     Object.values(areaData).forEach(({ area, latest, previous }) => {
@@ -2113,6 +2785,7 @@ exports.getPredictionStatsByAreaType = async (req, res) => {
       byAreaType: [
         { type: 'oyster', name: 'Hàu', ...statsByType.oyster },
         { type: 'cobia', name: 'Cá giò', ...statsByType.cobia },
+        { type: 'mangrove', name: 'Rừng ngập mặn', ...statsByType.mangrove },
       ],
     });
   } catch (error) {
@@ -2489,7 +3162,7 @@ exports.exportPredictionsToExcel = async (req, res) => {
           month: prediction.createdAt ? `Tháng ${month}` : '-',
           areaName: prediction.Area?.name || '-',
           // Use snake_case area_type from database
-          areaType: prediction.Area?.area_type === 'oyster' ? 'Hàu' : prediction.Area?.area_type === 'cobia' ? 'Cá giò' : '-',
+          areaType: prediction.Area?.area_type ? getAreaTypeName(prediction.Area.area_type) : '-',
           province: prediction.Area?.Province?.name || '-',
           district: prediction.Area?.District?.name || '-',
           areaSize: (prediction.Area?.area !== null && prediction.Area?.area !== undefined) ? prediction.Area.area : '-',

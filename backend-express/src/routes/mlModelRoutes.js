@@ -39,7 +39,7 @@ const { upload } = require('../middlewares/uploadModel');
  *         name: area_type
  *         schema:
  *           type: string
- *           enum: [oyster, cobia]
+ *           enum: [oyster, cobia, mangrove]
  *         description: Filter by area type
  *       - in: query
  *         name: search
@@ -118,7 +118,7 @@ router.post('/check-duplicate', authenticate, checkDuplicate);
  *                 description: Path to model file
  *               area_type:
  *                 type: string
- *                 enum: [oyster, cobia]
+ *                 enum: [oyster, cobia, mangrove]
  *                 description: Area type for this model
  *               is_active:
  *                 type: boolean
@@ -180,7 +180,7 @@ router.post('/', authenticate, authorize(['admin']), createMLModel);
  *                 type: string
  *               area_type:
  *                 type: string
- *                 enum: [oyster, cobia]
+ *                 enum: [oyster, cobia, mangrove]
  *               is_active:
  *                 type: boolean
  *               natureElements:

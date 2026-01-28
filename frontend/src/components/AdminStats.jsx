@@ -611,7 +611,7 @@ const AdminStats = () => {
         userCount: 0,
         predictionPieData: [],
         areaDistributionData: [],
-        areaTypeData: [], // Phân bố theo loại vùng (oyster/cobia)
+        areaTypeData: [], // Phân bố theo loại vùng (oyster/cobia/mangrove)
         byTypePerProvince: [], // Phân bố chi tiết theo loại và tỉnh
         emailSeriesRaw: [],
         // Thống kê dự đoán mới
@@ -624,7 +624,7 @@ const AdminStats = () => {
     const [timeGranularity, setTimeGranularity] = useState('day');
     const [selectedDate, setSelectedDate] = useState(null); // Date filter cho prediction stats
     const [trendPeriod, setTrendPeriod] = useState('month'); // Chu kỳ cho biểu đồ xu hướng
-    const [areaTypeFilter, setAreaTypeFilter] = useState(null); // Filter theo loại vùng nuôi: null (tất cả), 'oyster', 'cobia'
+    const [areaTypeFilter, setAreaTypeFilter] = useState(null); // Filter theo loại vùng nuôi: null (tất cả), 'oyster', 'cobia', 'mangrove'
     const [poorAreasExpanded, setPoorAreasExpanded] = useState(false); // Mở rộng danh sách vùng xấu
     const fetchingRef = useRef(false);
     const predictionFetchingRef = useRef(false);
@@ -675,7 +675,7 @@ const AdminStats = () => {
                 const areaTypeDistribution = (byType || []).map((item, index) => ({
                     name: item.name,
                     value: item.count,
-                    fill: index === 0 ? COLORS[0] : COLORS[3], // Xanh lá cho Hàu, Xanh dương cho Cá giò
+                    fill: index === 0 ? COLORS[0] : index === 1 ? COLORS[3] : COLORS[4], // Xanh lá cho Hàu, Xanh dương cho Cá giò, Tím cho Rừng ngập mặn
                 }));
 
                 console.log('📊 [AdminStats] Area type distribution:', areaTypeDistribution);
@@ -797,7 +797,7 @@ const AdminStats = () => {
             emailLastFetchRef.current = { granularity: timeGranularity, timestamp: Date.now() };
 
             try {
-                const { role, province, district } = decoded;
+                const { role, province,district } = decoded;
                 const emailParams = {
                     is_active: true,
                     granularity: timeGranularity,
@@ -939,6 +939,7 @@ const AdminStats = () => {
                                             { label: 'Tất cả', value: null },
                                             { label: 'Hàu', value: 'oyster' },
                                             { label: 'Cá giò', value: 'cobia' },
+                                            { label: 'Rừng ngập mặn', value: 'mangrove' },
                                         ]}
 
                                     />
@@ -1291,12 +1292,12 @@ const AdminStats = () => {
                                 {stats.areaTypeData && stats.areaTypeData.length > 0 && (
                                     <Col xs={24} lg={12}>
                                         <Card
-                                            title={<><PieChartOutlined /> Tỷ lệ loại vùng (Hàu/Cá giò)</>}
+                                            title={<><PieChartOutlined /> Tỷ lệ loại vùng (Hàu/Cá giò/Rừng ngập mặn)</>}
                                             styles={{ body: { padding: 0 } }}
                                         >
                                             <PieChartComponent
                                                 data={stats.areaTypeData}
-                                                colors={[COLORS[0], COLORS[3]]}
+                                                colors={[COLORS[0], COLORS[3], COLORS[5]]}
                                             />
                                         </Card>
                                     </Col>

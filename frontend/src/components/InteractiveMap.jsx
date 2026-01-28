@@ -95,6 +95,7 @@ const createCustomIcon = (color) => {
 
 const oysterIcon = createCustomIcon('#1890ff');
 const cobiaIcon = createCustomIcon('#52c41a');
+const mangroveIcon = createCustomIcon('#722ed1'); // Purple color for mangrove
 
 // VN2000 projection builder (TM lon0°, k0=0.9999)
 const getVN2000Proj4 = (lon0) => `+proj=tmerc +lat_0=0 +lon_0=${lon0} +k=0.9999 +x_0=500000 +y_0=0 +ellps=WGS84 +towgs84=-191.904,-39.303,-111.450,0,0,0,0 +units=m +no_defs`;
@@ -351,9 +352,20 @@ function PredictionCircle({ area, prediction }) {
     );
 }
 
+// Helper function to get area type info
+const getAreaTypeInfo = (areaType) => {
+    const map = {
+        'oyster': { icon: oysterIcon, color: 'blue', name: 'Oyster', nameVi: 'Hàu' },
+        'cobia': { icon: cobiaIcon, color: 'green', name: 'Cobia', nameVi: 'Cá giò' },
+        'mangrove': { icon: mangroveIcon, color: 'purple', name: 'Mangrove', nameVi: 'Rừng ngập mặn' }
+    };
+    return map[areaType] || { icon: oysterIcon, color: 'blue', name: areaType, nameVi: areaType };
+};
+
 // Component for individual area markers with prediction circles
 function AreaMarker({ area, prediction, onAreaClick, onViewDetails, selectedArea, navigate, isDetailView }) {
-    const icon = area.area_type === 'oyster' ? oysterIcon : cobiaIcon;
+    const areaTypeInfo = getAreaTypeInfo(area.area_type);
+    const icon = areaTypeInfo.icon;
 
     // Get prediction result and color from prediction_text (categorical)
     const getPredictionInfo = () => {
@@ -394,8 +406,8 @@ function AreaMarker({ area, prediction, onAreaClick, onViewDetails, selectedArea
                         <Space direction="vertical" size="medium" style={{ width: '100%' }}>
                             <div>
                                 <Text strong>Loại: </Text>
-                                <Tag color={area.area_type === 'oyster' ? 'blue' : 'green'}>
-                                    {area.area_type === 'oyster' ? 'Oyster' : 'Cobia'}
+                                <Tag color={areaTypeInfo.color}>
+                                    {areaTypeInfo.name}
                                 </Tag>
                             </div>
                             <div>
@@ -1058,8 +1070,8 @@ const InteractiveMap = () => {
                                                                     {area.Province?.name}, {area.District?.name}
                                                                 </Text>
                                                                 <Space>
-                                                                    <Tag color={area.area_type === 'oyster' ? 'blue' : 'green'} size="medium">
-                                                                        {area.area_type === 'oyster' ? t('common.oyster') : t('common.cobia')}
+                                                                    <Tag color={getAreaTypeInfo(area.area_type).color} size="medium">
+                                                                        {getAreaTypeInfo(area.area_type).nameVi}
                                                                     </Tag>
                                                                     {area.area && (
                                                                         <Text type="secondary" style={{ fontSize: '11px' }}>
@@ -1114,8 +1126,8 @@ const InteractiveMap = () => {
                                     <Space direction="vertical" style={{ width: '100%' }}>
                                         <div>
                                             <Text strong>{t('detail.typeLabel')}: </Text>
-                                            <Tag color={selectedArea.area_type === 'oyster' ? 'blue' : 'green'}>
-                                                {selectedArea.area_type === 'oyster' ? t('common.oyster') : t('common.cobia')}
+                                            <Tag color={getAreaTypeInfo(selectedArea.area_type).color}>
+                                                {getAreaTypeInfo(selectedArea.area_type).nameVi}
                                             </Tag>
                                         </div>
                                         <div>
@@ -1398,6 +1410,7 @@ const InteractiveMap = () => {
                                 >
                                     <Option value="oyster">{t('common.oyster')}</Option>
                                     <Option value="cobia">{t('common.cobia')}</Option>
+                                    <Option value="mangrove">{t('common.mangrove') || 'Mangrove'}</Option>
                                 </Select>
                             </div>
 

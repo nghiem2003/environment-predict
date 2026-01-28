@@ -12,7 +12,7 @@ const Area = sequelize.define(
     area: { type: DataTypes.DOUBLE, allowNull: false },
     province: { type: DataTypes.UUID, allowNull: true },
     district: { type: DataTypes.UUID, allowNull: true },
-    area_type: { type: DataTypes.ENUM('oyster', 'cobia'), allowNull: false },
+    area_type: { type: DataTypes.ENUM('oyster', 'cobia', 'mangrove'), allowNull: false },
   },
   { timestamps: false, tableName: 'diagnose_areas' }
 );

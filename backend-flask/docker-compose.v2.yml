@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  flask_backend_v2:
+    build:
+      context: .
+      dockerfile: Dockerfile.v2
+    container_name: flask_backend_v2
+    ports:
+      - "5002:5002"
+    environment:
+      - FLASK_ENV=production
+      - FLASK_PORT=5002
+      - PYTHONUNBUFFERED=1
+    volumes:
+      # Mount shared models directory for v2 models
+      - ./shared_models_v2:/app/shared_models_v2
+      - ./model_v2:/app/model_v2
+      # Share data cache with primary service
+      - ./data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - app_network
+
+networks:
+  app_network:
+    driver: bridge

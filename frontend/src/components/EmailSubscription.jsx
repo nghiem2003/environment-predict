@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import {
   Card,
   Form,
@@ -16,6 +16,7 @@ import {
   MailOutlined,
   CheckCircleOutlined,
   ExclamationCircleOutlined,
+  ArrowLeftOutlined,
 } from '@ant-design/icons';
 import axios from '../axios';
 
@@ -24,6 +25,7 @@ const { Title, Text } = Typography;
 const EmailSubscription = () => {
   const { t } = useTranslation();
   const { areaId } = useParams();
+  const navigate = useNavigate();
   const [form] = Form.useForm();
   const [otpForm] = Form.useForm();
   const [isSubscribed, setIsSubscribed] = useState(false);
@@ -179,6 +181,15 @@ const EmailSubscription = () => {
             <MailOutlined />
             <span>{t('email.subscriptions')}</span>
           </Space>
+        }
+        extra={
+          <Button
+            type="default"
+            icon={<ArrowLeftOutlined />}
+            onClick={() => navigate('/interactive-map')}
+          >
+            Quay về
+          </Button>
         }
         style={{ maxWidth: 500, width: '100%' }}
       >

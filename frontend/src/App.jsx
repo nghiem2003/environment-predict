@@ -339,6 +339,7 @@ const App = () => {
               textOverflow: "ellipsis",
               whiteSpace: "nowrap",
             }}
+            onClick={() => navigate('/interactive-map')}
           >
             Prediction System
           </Title>

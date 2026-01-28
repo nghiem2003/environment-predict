@@ -464,7 +464,17 @@ def process_prediction_request(user_data, species, credentials):
     # Use thread-safe model retrieval
     model = model_loader.get_model(model_name)
     if not model:
-        # Provide helpful error with available models
+        # Model not found in primary service - forward to secondary service
+        from .service_forwarder import service_forwarder
+        if service_forwarder.forward_enabled:
+            print(f"Model '{model_name}' not found in primary service, forwarding to secondary...")
+            forwarded_response, status_code = service_forwarder.forward_prediction_request(
+                species, user_data
+            )
+            # Return forwarded response
+            return forwarded_response, status_code, final_features
+        
+        # If forwarding disabled, return error
         available = model_loader.get_available_models()
         return {
             "error": f"Model '{model_name}' not found",

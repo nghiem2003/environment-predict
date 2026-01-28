@@ -1,7 +1,7 @@
 {
   "welcomePage": {
     "title": "Welcome to the Aquaculture Prediction System",
-    "subtitle": "Select your area to start predicting the environment for oyster and cobia farming.",
+    "subtitle": "Select your area to start predicting the environment for oyster, cobia, and mangrove farming.",
     "searchPlaceholder": "Search for an area..."
   },
   "userList": {
@@ -149,6 +149,7 @@
       "all": "All",
       "oyster": "Oyster",
       "cobia": "Cobia",
+      "mangrove": "Mangrove",
       "min_lat": "Min Lat",
       "max_lat": "Max Lat",
       "min_long": "Min Long",
@@ -321,6 +322,7 @@
     "filter": "Filter",
     "oyster": "Oyster",
     "cobia": "Cobia",
+    "mangrove": "Mangrove",
     "viewDetails": "View Details",
     "subscribeEmail": "Subscribe to Email Alerts",
     "showDetails": "Show details",

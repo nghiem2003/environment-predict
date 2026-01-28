@@ -381,7 +381,7 @@ router.post(
  *         name: areaType
  *         schema:
  *           type: string
- *           enum: [oyster, cobia]
+ *           enum: [oyster, cobia, mangrove]
  *         description: Filter by area type
  *       - in: query
  *         name: province

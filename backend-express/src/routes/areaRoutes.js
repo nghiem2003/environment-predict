@@ -95,7 +95,7 @@ const router = express.Router();
      *                         example: "123e4567-e89b-12d3-a456-426614174001"
      *                       area_type:
      *                         type: string
-     *                         enum: [oyster, cobia]
+     *                         enum: [oyster, cobia, mangrove]
      *                         description: Type of aquaculture area
      *                         example: "oyster"
      *                 total:
@@ -417,8 +417,8 @@ router.get(
      *                   example: "123e4567-e89b-12d3-a456-426614174001"
      *                 area_type:
      *                   type: string
-     *                   enum: [oyster, cobia]
-     *                   description: Type of aquaculture area
+ *                   enum: [oyster, cobia, mangrove]
+ *                   description: Type of aquaculture area
      *                   example: "oyster"
      *             examples:
      *               success:

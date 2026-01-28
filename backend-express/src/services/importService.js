@@ -129,14 +129,22 @@ async function parseExcel2(buffer) {
             const timeCell = row[COL_TIME];
             const { year, quarter } = parseQuarterYear(timeCell);
             const features = {};
+            const headerValueMap = {}; // Map original Excel headers to values for guard checking
             for (let c = 3; c < headers.length && c < row.length; c++) {
                 const key = headers[c];
                 if (!key) continue;
                 const val = parseNumeric(row[c]);
                 if (val == null) continue;
+                const rawHeader = String(rawHeaders[c] || '').trim();
+
+                // Store original header -> value mapping for guard checking
+                if (rawHeader) {
+                    headerValueMap[rawHeader] = val;
+                }
+
                 if (key === 'DO_mgL') { features.O2ml_L = val / 1.429; continue; }
                 if (key === 'R_PO4') {
-                    const raw = String(rawHeaders[c] || '').toLowerCase();
+                    const raw = rawHeader.toLowerCase();
                     const isPo4P = /po4\s*-?\s*p|p\s*-?\s*po4/.test(raw) || /po4p/.test(raw);
                     const molarP = 30.973762;
                     const molarPO4 = 94.9714;
@@ -185,6 +193,7 @@ async function parseExcel2(buffer) {
                 year,
                 quarter,
                 metrics: features,
+                headerValueMap: headerValueMap, // Original Excel headers -> values for guard checking
             });
         }
     }
